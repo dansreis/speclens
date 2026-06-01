@@ -170,9 +170,8 @@ export function Minimap({ headings, containerRef }: Props) {
 			sx={{
 				position: "relative",
 				flexShrink: 0,
-				width: SPINE_WIDTH,
-				borderRight: 1,
-				borderColor: "divider",
+				width: pinned ? SPINE_WIDTH + PANEL_WIDTH : SPINE_WIDTH,
+				transition: "width 200ms ease-in-out",
 			}}
 			onPointerEnter={() => setHovering(true)}
 			onPointerLeave={() => setHovering(false)}
@@ -180,6 +179,7 @@ export function Minimap({ headings, containerRef }: Props) {
 			<Box
 				ref={railRef}
 				sx={{
+					width: SPINE_WIDTH,
 					height: "100%",
 					position: "relative",
 					display: "flex",
@@ -188,6 +188,8 @@ export function Minimap({ headings, containerRef }: Props) {
 					gap: `${BAR_GAP}px`,
 					py: `${RAIL_PADDING_Y}px`,
 					overflow: "hidden",
+					borderRight: 1,
+					borderColor: "divider",
 				}}
 			>
 				<Box
@@ -243,7 +245,7 @@ export function Minimap({ headings, containerRef }: Props) {
 					position: "absolute",
 					top: 0,
 					bottom: 0,
-					left: "100%",
+					left: `${SPINE_WIDTH}px`,
 					width: open ? PANEL_WIDTH : 0,
 					opacity: open ? 1 : 0,
 					pointerEvents: open ? "auto" : "none",
@@ -253,9 +255,10 @@ export function Minimap({ headings, containerRef }: Props) {
 					bgcolor: "background.paper",
 					borderRight: 1,
 					borderColor: "divider",
-					boxShadow: 3,
+					boxShadow: pinned ? 0 : 3,
 					overflow: "hidden",
-					transition: "width 200ms ease-in-out, opacity 200ms ease-in-out",
+					transition:
+						"width 200ms ease-in-out, opacity 200ms ease-in-out, box-shadow 200ms",
 				}}
 			>
 				<Box
