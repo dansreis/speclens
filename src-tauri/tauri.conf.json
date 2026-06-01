@@ -14,7 +14,9 @@
       {
         "title": "SpecLens",
         "width": 1280,
-        "height": 900
+        "height": 900,
+        "minWidth": 1280,
+        "minHeight": 900
       }
     ],
     "security": {
