@@ -16,7 +16,18 @@ const BAR_GAP = 8;
 const RAIL_PADDING_Y = 20;
 
 function barWidth(depth: number): number {
-	return depth <= 1 ? 18 : 10;
+	switch (depth) {
+		case 1:
+			return 20;
+		case 2:
+			return 14;
+		case 3:
+			return 10;
+		case 4:
+			return 6;
+		default:
+			return 2;
+	}
 }
 
 export function Minimap({ headings, containerRef }: Props) {
@@ -37,6 +48,30 @@ export function Minimap({ headings, containerRef }: Props) {
 		const container = containerRef.current;
 		if (!container || headings.length === 0) return;
 		const visibleSet = new Set<string>();
+		let lastActive: string | null = null;
+
+		const computeIndicator = () => {
+			const indices: number[] = [];
+			for (let i = 0; i < headings.length; i++) {
+				if (visibleSet.has(headings[i].slug)) indices.push(i);
+			}
+			if (indices.length > 0) {
+				const firstIdx = indices[0];
+				const lastIdx = indices[indices.length - 1];
+				const top = RAIL_PADDING_Y + firstIdx * (BAR_HEIGHT + BAR_GAP) - 4;
+				const bottom =
+					RAIL_PADDING_Y + lastIdx * (BAR_HEIGHT + BAR_GAP) + BAR_HEIGHT + 4;
+				const height = Math.max(INDICATOR_MIN_HEIGHT, bottom - top);
+				setIndicator({ top, height });
+			} else if (lastActive) {
+				const idx = headings.findIndex((h) => h.slug === lastActive);
+				if (idx >= 0) {
+					const top = RAIL_PADDING_Y + idx * (BAR_HEIGHT + BAR_GAP) - 4;
+					setIndicator({ top, height: INDICATOR_MIN_HEIGHT });
+				}
+			}
+		};
+
 		const observer = new IntersectionObserver(
 			(entries) => {
 				for (const entry of entries) {
@@ -60,8 +95,12 @@ export function Minimap({ headings, containerRef }: Props) {
 							topId = id;
 						}
 					}
-					if (topId) setActiveSlug(topId);
+					if (topId) {
+						lastActive = topId;
+						setActiveSlug(topId);
+					}
 				}
+				computeIndicator();
 			},
 			{
 				root: container,
@@ -74,39 +113,9 @@ export function Minimap({ headings, containerRef }: Props) {
 		for (const el of els) {
 			if (el.id) observer.observe(el);
 		}
-		setActiveSlug(els[0]?.id ?? null);
+		lastActive = els[0]?.id ?? null;
+		setActiveSlug(lastActive);
 		return () => observer.disconnect();
-	}, [containerRef, headings]);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: re-runs when source changes so the indicator reflects the new scrollHeight
-	useEffect(() => {
-		const container = containerRef.current;
-		const rail = railRef.current;
-		if (!container || !rail) return;
-		const update = () => {
-			const railHeight = rail.clientHeight;
-			const scrollTop = container.scrollTop;
-			const scrollHeight = container.scrollHeight;
-			const clientHeight = container.clientHeight;
-			if (scrollHeight <= clientHeight) {
-				setIndicator({ top: 0, height: railHeight });
-				return;
-			}
-			const ratioHeight = clientHeight / scrollHeight;
-			const height = Math.max(INDICATOR_MIN_HEIGHT, ratioHeight * railHeight);
-			const ratioTop = scrollTop / (scrollHeight - clientHeight);
-			const top = ratioTop * (railHeight - height);
-			setIndicator({ top, height });
-		};
-		update();
-		container.addEventListener("scroll", update);
-		const ro = new ResizeObserver(update);
-		ro.observe(container);
-		ro.observe(rail);
-		return () => {
-			container.removeEventListener("scroll", update);
-			ro.disconnect();
-		};
 	}, [containerRef, headings]);
 
 	const scrollToSlug = (slug: string) => {
@@ -133,13 +142,16 @@ export function Minimap({ headings, containerRef }: Props) {
 		const container = containerRef.current;
 		const rail = railRef.current;
 		if (!drag || !container || !rail) return;
-		const railHeight = rail.clientHeight;
 		const newTop = e.clientY - drag.railTop - drag.offset;
-		const maxTop = railHeight - indicator.height;
-		const clampedTop = Math.max(0, Math.min(newTop, maxTop));
-		const ratio = maxTop > 0 ? clampedTop / maxTop : 0;
-		container.scrollTop =
-			ratio * (container.scrollHeight - container.clientHeight);
+		const idx = Math.round(
+			(newTop - RAIL_PADDING_Y + 4) / (BAR_HEIGHT + BAR_GAP),
+		);
+		const clampedIdx = Math.max(0, Math.min(idx, headings.length - 1));
+		const heading = headings[clampedIdx];
+		const el = container.querySelector<HTMLElement>(
+			`#${CSS.escape(heading.slug)}`,
+		);
+		el?.scrollIntoView({ behavior: "auto", block: "start" });
 	};
 
 	const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
