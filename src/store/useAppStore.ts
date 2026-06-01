@@ -11,7 +11,9 @@ interface AppState {
 export const useAppStore = create<AppState>()(
 	persist(
 		(set) => ({
-			themeMode: "light",
+			themeMode: window.matchMedia("(prefers-color-scheme: dark)").matches
+				? "dark"
+				: "light",
 			setThemeMode: (mode) => set({ themeMode: mode }),
 			toggleThemeMode: () =>
 				set((state) => ({
