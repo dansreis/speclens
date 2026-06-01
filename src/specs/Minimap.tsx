@@ -1,4 +1,6 @@
-import { Box, IconButton, Typography } from "@mui/material";
+import PushPinIcon from "@mui/icons-material/PushPin";
+import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
+import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { Heading } from "../lib/extractHeadings";
@@ -269,19 +271,22 @@ export function Minimap({ headings, containerRef }: Props) {
 					<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
 						Table of Contents
 					</Typography>
-					<IconButton
-						size="small"
-						onClick={() => setPinned((p) => !p)}
-						aria-label={
-							pinned ? "Unpin Table of Contents" : "Pin Table of Contents"
-						}
-						sx={{
-							fontSize: "0.875rem",
-							color: pinned ? "primary.main" : "text.secondary",
-						}}
-					>
-						📌
-					</IconButton>
+					<Tooltip title={pinned ? "Unpin ToC" : "Pin ToC"}>
+						<IconButton
+							size="small"
+							onClick={() => setPinned((p) => !p)}
+							aria-label={pinned ? "Unpin ToC" : "Pin ToC"}
+							sx={{
+								color: pinned ? "primary.main" : "text.secondary",
+							}}
+						>
+							{pinned ? (
+								<PushPinIcon fontSize="small" />
+							) : (
+								<PushPinOutlinedIcon fontSize="small" />
+							)}
+						</IconButton>
+					</Tooltip>
 				</Box>
 				<Box sx={{ flex: 1, overflowY: "auto", pb: 1 }}>
 					{headings.map((h) => {
