@@ -1,4 +1,3 @@
-import type { PaletteMode } from "@mui/material";
 import {
 	Box,
 	CssBaseline,
@@ -6,13 +5,14 @@ import {
 	ThemeProvider,
 	Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useAppStore } from "./store/useAppStore";
 import { createAppTheme } from "./theme/theme";
 
 function App() {
-	const [mode, setMode] = useState<PaletteMode>("light");
-	const theme = useMemo(() => createAppTheme(mode), [mode]);
-	const toggleMode = () => setMode((m) => (m === "light" ? "dark" : "light"));
+	const themeMode = useAppStore((s) => s.themeMode);
+	const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
+	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
 	return (
 		<ThemeProvider theme={theme}>
@@ -28,8 +28,8 @@ function App() {
 				}}
 			>
 				<IconButton
-					onClick={toggleMode}
-					aria-label={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
+					onClick={toggleThemeMode}
+					aria-label={`Switch to ${themeMode === "light" ? "dark" : "light"} mode`}
 					sx={{
 						position: "fixed",
 						top: 16,
@@ -37,7 +37,7 @@ function App() {
 						fontSize: "1.25rem",
 					}}
 				>
-					{mode === "light" ? "🌙" : "☀️"}
+					{themeMode === "light" ? "🌙" : "☀️"}
 				</IconButton>
 				<Box
 					component="img"
