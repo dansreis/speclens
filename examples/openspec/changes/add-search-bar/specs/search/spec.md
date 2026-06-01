@@ -5,6 +5,8 @@
 ### Requirement: Persistent search bar in header
 SpecLens SHALL render a search bar in the app header that is visible on all views except the onboarding screen.
 
+The search bar SHALL be openable via <kbd>Cmd</kbd>+<kbd>K</kbd> on macOS and <kbd>Ctrl</kbd>+<kbd>K</kbd> elsewhere.
+
 #### Scenario: Visible on the main workspace
 - WHEN the user is viewing a repo workspace
 - THEN the search bar is rendered in the header
@@ -15,6 +17,12 @@ SpecLens SHALL render a search bar in the app header that is visible on all view
 
 ### Requirement: Substring match on titles and slugs
 The search SHALL return any change, proposal, or capability whose title or slug contains the query as a case-insensitive substring.
+
+| Match field | Source                 | Weight |
+| ----------- | ---------------------- | ------ |
+| title       | `proposal.md` H1       | 1.0    |
+| slug        | folder name            | 0.8    |
+| capability  | `specs/<name>/spec.md` | 0.5    |
 
 #### Scenario: Title match
 - GIVEN a capability named "theming" exists
@@ -28,7 +36,7 @@ The search SHALL return any change, proposal, or capability whose title or slug 
 - THEN that spec does not appear in the result list
 
 ### Requirement: Selecting a result navigates and closes
-Selecting a result with mouse click or Enter SHALL navigate to the matching document and close the dropdown.
+Selecting a result with mouse click or <kbd>Enter</kbd> SHALL navigate to the matching document and close the dropdown.
 
 #### Scenario: Click navigates
 - GIVEN the dropdown shows "theming"
@@ -37,10 +45,12 @@ Selecting a result with mouse click or Enter SHALL navigate to the matching docu
 - AND the dropdown closes
 
 ### Requirement: Escape closes without navigating
-Pressing Escape while the dropdown is open SHALL close it without changing the current view.
+Pressing <kbd>Esc</kbd> while the dropdown is open SHALL close it without changing the current view.
+
+For background on the design pattern, see https://www.nngroup.com/articles/search-visible-and-simple/.
 
 #### Scenario: Escape returns focus
 - GIVEN the dropdown is open
-- WHEN the user presses Escape
+- WHEN the user presses <kbd>Esc</kbd>
 - THEN the dropdown closes
 - AND the current view is unchanged

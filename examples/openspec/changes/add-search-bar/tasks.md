@@ -3,6 +3,8 @@
 ## 1. Component
 
 - [ ] `src/search/SearchBar.tsx` — controlled input with a result dropdown
+  - [ ] Highlight the active result on hover
+  - [ ] Up/Down arrow keys move the selection
 - [ ] Debounce input by 150ms so the result list doesn't flicker on every keystroke
 - [ ] Empty-state copy when no results match
 
@@ -10,6 +12,7 @@
 
 - [ ] Build an in-memory index of `{ kind, title, slug, path }` on app load
 - [ ] Refresh the index when the active repo changes
+- [ ] ~~Pre-compute Levenshtein distance for every entry~~ — switched to substring matching, see proposal
 - [ ] Case-insensitive substring match on title and slug
 
 ## 3. Integration
