@@ -1,50 +1,55 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import "./App.css";
+import type { PaletteMode } from "@mui/material";
+import {
+	Box,
+	CssBaseline,
+	IconButton,
+	ThemeProvider,
+	Typography,
+} from "@mui/material";
+import { useMemo, useState } from "react";
+import { createAppTheme } from "./theme/theme";
 
 function App() {
-	const [greetMsg, setGreetMsg] = useState("");
-	const [name, setName] = useState("");
-
-	async function greet() {
-		// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-		setGreetMsg(await invoke("greet", { name }));
-	}
+	const [mode, setMode] = useState<PaletteMode>("light");
+	const theme = useMemo(() => createAppTheme(mode), [mode]);
+	const toggleMode = () => setMode((m) => (m === "light" ? "dark" : "light"));
 
 	return (
-		<main className="container">
-			<h1>Welcome to Tauri + React</h1>
-
-			<div className="row">
-				<a href="https://vite.dev" target="_blank" rel="noopener">
-					<img src="/vite.svg" className="logo vite" alt="Vite logo" />
-				</a>
-				<a href="https://tauri.app" target="_blank" rel="noopener">
-					<img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-				</a>
-				<a href="https://react.dev" target="_blank" rel="noopener">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			<p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-			<form
-				className="row"
-				onSubmit={(e) => {
-					e.preventDefault();
-					greet();
+		<ThemeProvider theme={theme}>
+			<CssBaseline />
+			<Box
+				sx={{
+					minHeight: "100vh",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: 3,
 				}}
 			>
-				<input
-					id="greet-input"
-					onChange={(e) => setName(e.currentTarget.value)}
-					placeholder="Enter a name..."
+				<IconButton
+					onClick={toggleMode}
+					aria-label={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
+					sx={{
+						position: "fixed",
+						top: 16,
+						right: 16,
+						fontSize: "1.25rem",
+					}}
+				>
+					{mode === "light" ? "🌙" : "☀️"}
+				</IconButton>
+				<Box
+					component="img"
+					src="/speclens.png"
+					alt="SpecLens"
+					sx={{ width: 128, height: 128 }}
 				/>
-				<button type="submit">Greet</button>
-			</form>
-			<p>{greetMsg}</p>
-		</main>
+				<Typography variant="h3" component="h1">
+					SpecLens
+				</Typography>
+			</Box>
+		</ThemeProvider>
 	);
 }
 
