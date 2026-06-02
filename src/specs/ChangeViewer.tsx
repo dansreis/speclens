@@ -1,0 +1,105 @@
+import { Box, Tab, Tabs, Typography } from "@mui/material";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Change } from "../lib/exampleLoader";
+import { extractHeadings } from "../lib/extractHeadings";
+import { countTaskCompletion } from "../lib/tasksCompletion";
+import { MarkdownView } from "./MarkdownView";
+import { Minimap } from "./Minimap";
+
+type TabKey = "proposal" | "tasks" | "specs";
+
+interface Props {
+	change: Change;
+}
+
+export function ChangeViewer({ change }: Props) {
+	const [tab, setTab] = useState<TabKey>("proposal");
+	const capabilities = Object.keys(change.specs);
+	const contentRef = useRef<HTMLDivElement | null>(null);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: resets viewer when the selected change changes
+	useEffect(() => {
+		setTab("proposal");
+		contentRef.current?.scrollTo({ top: 0 });
+	}, [change]);
+
+	const specsSource = useMemo(
+		() => capabilities.map((cap) => change.specs[cap]).join("\n\n"),
+		[capabilities, change.specs],
+	);
+
+	const currentSource =
+		tab === "proposal"
+			? change.proposal
+			: tab === "tasks"
+				? change.tasks
+				: specsSource || null;
+
+	const headings = useMemo(
+		() => (currentSource ? extractHeadings(currentSource) : []),
+		[currentSource],
+	);
+
+	const handleTabChange = (v: TabKey) => {
+		setTab(v);
+		contentRef.current?.scrollTo({ top: 0 });
+	};
+
+	const taskCount = change.tasks ? countTaskCompletion(change.tasks) : null;
+	const tasksLabel =
+		taskCount && taskCount.total > 0
+			? `Tasks (${taskCount.done}/${taskCount.total})`
+			: "Tasks";
+
+	return (
+		<Box
+			sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}
+		>
+			<Box sx={{ px: 4, pt: 3 }}>
+				<Typography variant="h4" component="h2">
+					{change.name}
+				</Typography>
+				{change.archived && (
+					<Typography variant="caption" color="text.secondary">
+						archived
+					</Typography>
+				)}
+			</Box>
+			<Tabs
+				value={tab}
+				onChange={(_, v) => handleTabChange(v as TabKey)}
+				sx={{ px: 4, borderBottom: 1, borderColor: "divider" }}
+			>
+				<Tab value="proposal" label="Proposal" />
+				<Tab value="tasks" label={tasksLabel} />
+				<Tab
+					value="specs"
+					label={`Specs${capabilities.length ? ` (${capabilities.length})` : ""}`}
+				/>
+			</Tabs>
+			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
+				<Minimap headings={headings} containerRef={contentRef} />
+				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
+					{tab === "proposal" &&
+						(change.proposal ? (
+							<MarkdownView source={change.proposal} />
+						) : (
+							<Typography color="text.secondary">No proposal.md</Typography>
+						))}
+					{tab === "tasks" &&
+						(change.tasks ? (
+							<MarkdownView source={change.tasks} />
+						) : (
+							<Typography color="text.secondary">No tasks.md</Typography>
+						))}
+					{tab === "specs" &&
+						(capabilities.length === 0 ? (
+							<Typography color="text.secondary">No specs</Typography>
+						) : (
+							<MarkdownView source={specsSource} />
+						))}
+				</Box>
+			</Box>
+		</Box>
+	);
+}
