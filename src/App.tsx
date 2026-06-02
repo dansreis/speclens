@@ -95,6 +95,10 @@ function App() {
 	const [commentsPinned, setCommentsPinned] = useState(false);
 	const [statsOpen, setStatsOpen] = useState(false);
 	const [searchOpen, setSearchOpen] = useState(false);
+
+	useEffect(() => {
+		if (!activeChange) setCommentsOpen(false);
+	}, [activeChange]);
 	const activeTab = useAppStore((s) => s.activeTab);
 	const statsSource = useMemo(
 		() => (statsOpen ? getCurrentSource(activeChange, activeTab) : null),
