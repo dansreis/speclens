@@ -8,6 +8,7 @@ import {
 	ListItemText,
 	Menu,
 	MenuItem,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -32,7 +33,11 @@ const isMac =
 	typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
 const modKey = isMac ? "⌘" : "Ctrl+";
 
-export function RepositorySwitcher() {
+interface SwitcherProps {
+	collapsed?: boolean;
+}
+
+export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 	const [active, setActive] = useState<Repo>(mockRepos[0]);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const open = Boolean(anchorEl);
@@ -65,72 +70,88 @@ export function RepositorySwitcher() {
 		return () => document.removeEventListener("keydown", handler);
 	}, []);
 
-	return (
-		<>
-			<ButtonBase
-				onClick={handleOpen}
-				aria-haspopup="menu"
-				aria-expanded={open ? "true" : undefined}
+	const trigger = (
+		<ButtonBase
+			onClick={handleOpen}
+			aria-haspopup="menu"
+			aria-expanded={open ? "true" : undefined}
+			sx={{
+				width: "100%",
+				display: "flex",
+				alignItems: "center",
+				gap: 1.25,
+				px: collapsed ? 0.5 : 1,
+				py: 0.75,
+				borderRadius: 1,
+				textAlign: "left",
+				justifyContent: collapsed ? "center" : "flex-start",
+				transition: "background-color 150ms",
+				"&:hover": { bgcolor: "action.hover" },
+			}}
+		>
+			<Box
 				sx={{
+					width: 32,
+					height: 32,
+					borderRadius: 1,
+					bgcolor: "primary.main",
+					color: "primary.contrastText",
 					display: "flex",
 					alignItems: "center",
-					gap: 1.25,
-					px: 1,
-					py: 0.75,
-					borderRadius: 1,
-					textAlign: "left",
-					transition: "background-color 150ms",
-					"&:hover": { bgcolor: "action.hover" },
+					justifyContent: "center",
+					flexShrink: 0,
 				}}
 			>
-				<Box
-					sx={{
-						width: 32,
-						height: 32,
-						borderRadius: 1,
-						bgcolor: "primary.main",
-						color: "primary.contrastText",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						flexShrink: 0,
-					}}
-				>
-					<FolderIcon sx={{ fontSize: 18 }} />
-				</Box>
-				<Box
-					sx={{
-						display: "flex",
-						flexDirection: "column",
-						minWidth: 0,
-						maxWidth: 220,
-					}}
-				>
-					<Typography
-						variant="body2"
+				<FolderIcon sx={{ fontSize: 18 }} />
+			</Box>
+			{!collapsed && (
+				<>
+					<Box
 						sx={{
-							fontWeight: 600,
-							lineHeight: 1.2,
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-							whiteSpace: "nowrap",
+							display: "flex",
+							flexDirection: "column",
+							minWidth: 0,
+							maxWidth: 220,
 						}}
 					>
-						{active.name}
-					</Typography>
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						sx={{ lineHeight: 1.2 }}
-					>
-						{active.subtitle}
-					</Typography>
-				</Box>
-				<UnfoldMoreIcon
-					fontSize="small"
-					sx={{ ml: 0.5, color: "text.secondary" }}
-				/>
-			</ButtonBase>
+						<Typography
+							variant="body2"
+							sx={{
+								fontWeight: 600,
+								lineHeight: 1.2,
+								overflow: "hidden",
+								textOverflow: "ellipsis",
+								whiteSpace: "nowrap",
+							}}
+						>
+							{active.name}
+						</Typography>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ lineHeight: 1.2 }}
+						>
+							{active.subtitle}
+						</Typography>
+					</Box>
+					<UnfoldMoreIcon
+						fontSize="small"
+						sx={{ ml: 0.5, color: "text.secondary" }}
+					/>
+				</>
+			)}
+		</ButtonBase>
+	);
+
+	return (
+		<>
+			{collapsed ? (
+				<Tooltip title={active.name} placement="right" arrow>
+					{trigger}
+				</Tooltip>
+			) : (
+				trigger
+			)}
 			<Menu
 				anchorEl={anchorEl}
 				open={open}

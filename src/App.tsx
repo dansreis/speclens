@@ -1,12 +1,17 @@
-// import DarkModeIcon from "@mui/icons-material/DarkMode";
-// import LightModeIcon from "@mui/icons-material/LightMode";
-import { Box, CssBaseline, ThemeProvider, Typography } from "@mui/material";
+import MenuOpenIcon from "@mui/icons-material/MenuOpen";
+import {
+	Box,
+	CssBaseline,
+	IconButton,
+	ThemeProvider,
+	Tooltip,
+	Typography,
+} from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { getCurrentSource } from "./lib/documentSource";
 import { changes } from "./lib/exampleLoader";
-import { RepositorySwitcher } from "./repos/RepositorySwitcher";
-import { ChangesSidebar } from "./specs/ChangesSidebar";
+import { AppSidebar } from "./sidebar/AppSidebar";
 import { ChangeViewer } from "./specs/ChangeViewer";
 import { DocumentStatsModal } from "./specs/DocumentStatsModal";
 import { useAppStore } from "./store/useAppStore";
@@ -18,10 +23,11 @@ function changeKey(c: { slug: string; archived: boolean }): string {
 
 function App() {
 	const themeMode = useAppStore((s) => s.themeMode);
-	// const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
 	const selectedKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
+	const toggleSidebarCollapsed = useAppStore((s) => s.toggleSidebarCollapsed);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
 	useEffect(() => {
@@ -54,81 +60,87 @@ function App() {
 				sx={{
 					height: "100vh",
 					display: "flex",
-					flexDirection: "column",
+					flexDirection: "row",
 				}}
 			>
-				<Box
-					component="header"
-					sx={{
-						display: "flex",
-						alignItems: "center",
-						gap: 1.5,
-						px: 2,
-						py: 1,
-						borderBottom: 1,
-						borderColor: "divider",
-					}}
-				>
-					<RepositorySwitcher />
-					<Box sx={{ flex: 1 }} />
-					{/*
-					<Tooltip
-						title={`Switch to ${themeMode === "light" ? "dark" : "light"} mode`}
-					>
-						<IconButton
-							onClick={toggleThemeMode}
-							aria-label={`Switch to ${themeMode === "light" ? "dark" : "light"} mode`}
-							sx={{ color: "text.secondary" }}
-						>
-							{themeMode === "light" ? (
-								<DarkModeIcon fontSize="small" />
-							) : (
-								<LightModeIcon fontSize="small" />
-							)}
-						</IconButton>
-					 </Tooltip>
-					*/}
-				</Box>
+				<AppSidebar
+					changes={changes}
+					selectedKey={selectedKey}
+					onSelect={handleSelectChange}
+				/>
 				<Box
 					sx={{
 						flex: 1,
 						display: "flex",
-						minHeight: 0,
-						position: "relative",
+						flexDirection: "column",
+						minWidth: 0,
 					}}
 				>
-					<ChangesSidebar
-						changes={changes}
-						selectedKey={selectedKey}
-						onSelect={handleSelectChange}
-					/>
-					{selectedChange ? (
-						<ChangeViewer
-							change={selectedChange}
-							commentsOpen={commentsOpen}
-							onToggleComments={() => setCommentsOpen((o) => !o)}
-							onOpenStats={() => setStatsOpen(true)}
-						/>
-					) : (
-						<Box
-							sx={{
-								flex: 1,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-							}}
+					<Box
+						component="header"
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+							px: 1.5,
+							py: 0.5,
+							borderBottom: 1,
+							borderColor: "divider",
+						}}
+					>
+						<Tooltip
+							title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
 						>
-							<Typography color="text.secondary">
-								Select a change from the sidebar
-							</Typography>
-						</Box>
-					)}
-					<CommentsPanel
-						open={commentsOpen}
-						pinned={commentsPinned}
-						onClose={() => setCommentsOpen(false)}
-						onTogglePin={() => setCommentsPinned((p) => !p)}
-					/>
+							<IconButton
+								onClick={toggleSidebarCollapsed}
+								aria-label="Toggle sidebar"
+								size="small"
+								sx={{
+									color: "text.secondary",
+									transform: sidebarCollapsed ? "rotate(180deg)" : "none",
+									transition: "transform 200ms",
+								}}
+							>
+								<MenuOpenIcon fontSize="small" />
+							</IconButton>
+						</Tooltip>
+					</Box>
+					<Box
+						sx={{
+							flex: 1,
+							display: "flex",
+							minHeight: 0,
+							position: "relative",
+						}}
+					>
+						{selectedChange ? (
+							<ChangeViewer
+								change={selectedChange}
+								commentsOpen={commentsOpen}
+								onToggleComments={() => setCommentsOpen((o) => !o)}
+								onOpenStats={() => setStatsOpen(true)}
+							/>
+						) : (
+							<Box
+								sx={{
+									flex: 1,
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+								}}
+							>
+								<Typography color="text.secondary">
+									Select a change from the sidebar
+								</Typography>
+							</Box>
+						)}
+						<CommentsPanel
+							open={commentsOpen}
+							pinned={commentsPinned}
+							onClose={() => setCommentsOpen(false)}
+							onTogglePin={() => setCommentsPinned((p) => !p)}
+						/>
+					</Box>
 				</Box>
 			</Box>
 			<DocumentStatsModal

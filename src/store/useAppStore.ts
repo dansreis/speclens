@@ -23,6 +23,9 @@ interface AppState {
 
 	scrollTarget: ScrollTarget | null;
 	setScrollTarget: (target: ScrollTarget | null) => void;
+
+	sidebarCollapsed: boolean;
+	toggleSidebarCollapsed: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -45,10 +48,17 @@ export const useAppStore = create<AppState>()(
 
 			scrollTarget: null,
 			setScrollTarget: (target) => set({ scrollTarget: target }),
+
+			sidebarCollapsed: false,
+			toggleSidebarCollapsed: () =>
+				set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 		}),
 		{
 			name: "speclens.app-state",
-			partialize: (state) => ({ themeMode: state.themeMode }),
+			partialize: (state) => ({
+				themeMode: state.themeMode,
+				sidebarCollapsed: state.sidebarCollapsed,
+			}),
 		},
 	),
 );
