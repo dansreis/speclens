@@ -1,15 +1,6 @@
-import BarChartIcon from "@mui/icons-material/BarChart";
-import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import {
-	Box,
-	CssBaseline,
-	IconButton,
-	ThemeProvider,
-	Tooltip,
-	Typography,
-} from "@mui/material";
+// import DarkModeIcon from "@mui/icons-material/DarkMode";
+// import LightModeIcon from "@mui/icons-material/LightMode";
+import { Box, CssBaseline, ThemeProvider, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { getCurrentSource } from "./lib/documentSource";
@@ -27,7 +18,7 @@ function changeKey(c: { slug: string; archived: boolean }): string {
 
 function App() {
 	const themeMode = useAppStore((s) => s.themeMode);
-	const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
+	// const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
 	const selectedKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -80,26 +71,7 @@ function App() {
 				>
 					<RepositorySwitcher />
 					<Box sx={{ flex: 1 }} />
-					<Tooltip title="Document statistics">
-						<IconButton
-							onClick={() => setStatsOpen(true)}
-							aria-label="Document statistics"
-							sx={{ color: "text.secondary" }}
-						>
-							<BarChartIcon fontSize="small" />
-						</IconButton>
-					</Tooltip>
-					<Tooltip title="Comments">
-						<IconButton
-							onClick={() => setCommentsOpen((o) => !o)}
-							aria-label="Toggle comments"
-							sx={{
-								color: commentsOpen ? "primary.main" : "text.secondary",
-							}}
-						>
-							<ChatBubbleOutlinedIcon fontSize="small" />
-						</IconButton>
-					</Tooltip>
+					{/*
 					<Tooltip
 						title={`Switch to ${themeMode === "light" ? "dark" : "light"} mode`}
 					>
@@ -114,7 +86,8 @@ function App() {
 								<LightModeIcon fontSize="small" />
 							)}
 						</IconButton>
-					</Tooltip>
+					 </Tooltip>
+					*/}
 				</Box>
 				<Box
 					sx={{
@@ -130,7 +103,12 @@ function App() {
 						onSelect={handleSelectChange}
 					/>
 					{selectedChange ? (
-						<ChangeViewer change={selectedChange} />
+						<ChangeViewer
+							change={selectedChange}
+							commentsOpen={commentsOpen}
+							onToggleComments={() => setCommentsOpen((o) => !o)}
+							onOpenStats={() => setStatsOpen(true)}
+						/>
 					) : (
 						<Box
 							sx={{

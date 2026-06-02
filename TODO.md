@@ -15,6 +15,7 @@ User-configurable settings, surfaced via a Settings panel/modal and persisted (l
 - [ ] **Minimap behavior** — show always / on hover only / off; visible-bars detection threshold
 - [ ] **Font family** for markdown content (currently inherits MUI default)
 - [ ] **Comments panel width** — currently hardcoded `340` in `src/comments/CommentsPanel.tsx`
+- [ ] **Comments always pinned** — currently comments pinned by default 
 
 ## Foundations / plumbing
 

@@ -1,4 +1,6 @@
-import { Box, Tab, Tabs, Typography } from "@mui/material";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
+import { Box, IconButton, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef } from "react";
 import { getCurrentSource } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
@@ -10,9 +12,17 @@ import { Minimap } from "./Minimap";
 
 interface Props {
 	change: Change;
+	commentsOpen: boolean;
+	onToggleComments: () => void;
+	onOpenStats: () => void;
 }
 
-export function ChangeViewer({ change }: Props) {
+export function ChangeViewer({
+	change,
+	commentsOpen,
+	onToggleComments,
+	onOpenStats,
+}: Props) {
 	const tab = useAppStore((s) => s.activeTab);
 	const setTab = useAppStore((s) => s.setActiveTab);
 	const capabilities = Object.keys(change.specs);
@@ -53,15 +63,47 @@ export function ChangeViewer({ change }: Props) {
 		<Box
 			sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}
 		>
-			<Box sx={{ px: 4, pt: 3 }}>
-				<Typography variant="h4" component="h2">
-					{change.name}
-				</Typography>
-				{change.archived && (
-					<Typography variant="caption" color="text.secondary">
-						archived
+			<Box
+				sx={{
+					px: 4,
+					pt: 3,
+					display: "flex",
+					alignItems: "center",
+					gap: 2,
+				}}
+			>
+				<Box sx={{ flex: 1, minWidth: 0 }}>
+					<Typography variant="h4" component="h2">
+						{change.name}
 					</Typography>
-				)}
+					{change.archived && (
+						<Typography variant="caption" color="text.secondary">
+							archived
+						</Typography>
+					)}
+				</Box>
+				<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+					<Tooltip title="Document statistics">
+						<IconButton
+							onClick={onOpenStats}
+							aria-label="Document statistics"
+							sx={{ color: "text.secondary" }}
+						>
+							<BarChartIcon fontSize="small" />
+						</IconButton>
+					</Tooltip>
+					<Tooltip title="Comments">
+						<IconButton
+							onClick={onToggleComments}
+							aria-label="Toggle comments"
+							sx={{
+								color: commentsOpen ? "primary.main" : "text.secondary",
+							}}
+						>
+							<ChatBubbleOutlinedIcon fontSize="small" />
+						</IconButton>
+					</Tooltip>
+				</Box>
 			</Box>
 			<Tabs
 				value={tab}
