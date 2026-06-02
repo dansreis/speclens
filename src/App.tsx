@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { getCurrentSource } from "./lib/documentSource";
 import { changes } from "./lib/exampleLoader";
+import { RepositorySwitcher } from "./repos/RepositorySwitcher";
 import { ChangesSidebar } from "./specs/ChangesSidebar";
 import { ChangeViewer } from "./specs/ChangeViewer";
 import { DocumentStatsModal } from "./specs/DocumentStatsModal";
@@ -77,15 +78,8 @@ function App() {
 						borderColor: "divider",
 					}}
 				>
-					<Box
-						component="img"
-						src="/speclens.png"
-						alt=""
-						sx={{ width: 28, height: 28 }}
-					/>
-					<Typography variant="h6" component="h1" sx={{ flex: 1 }}>
-						SpecLens
-					</Typography>
+					<RepositorySwitcher />
+					<Box sx={{ flex: 1 }} />
 					<Tooltip title="Document statistics">
 						<IconButton
 							onClick={() => setStatsOpen(true)}
