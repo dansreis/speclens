@@ -15,6 +15,9 @@ interface AppState {
 	setThemeMode: (mode: PaletteMode) => void;
 	toggleThemeMode: () => void;
 
+	selectedRepoId: string | null;
+	setSelectedRepoId: (id: string | null) => void;
+
 	selectedChangeKey: string | null;
 	setSelectedChangeKey: (key: string | null) => void;
 
@@ -40,6 +43,14 @@ export const useAppStore = create<AppState>()(
 					themeMode: state.themeMode === "light" ? "dark" : "light",
 				})),
 
+			selectedRepoId: null,
+			setSelectedRepoId: (id) =>
+				set({
+					selectedRepoId: id,
+					selectedChangeKey: null,
+					activeTab: "proposal",
+				}),
+
 			selectedChangeKey: null,
 			setSelectedChangeKey: (key) => set({ selectedChangeKey: key }),
 
@@ -58,6 +69,7 @@ export const useAppStore = create<AppState>()(
 			partialize: (state) => ({
 				themeMode: state.themeMode,
 				sidebarCollapsed: state.sidebarCollapsed,
+				selectedRepoId: state.selectedRepoId,
 			}),
 		},
 	),

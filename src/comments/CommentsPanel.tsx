@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import type { AppComment } from "../lib/comments";
-import { changes } from "../lib/exampleLoader";
+import { repos } from "../lib/exampleLoader";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
@@ -136,6 +136,7 @@ function CommentItem({
 export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const [filter, setFilter] = useState<Filter>("unresolved");
 	const comments = useCommentsStore((s) => s.comments);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
@@ -146,7 +147,8 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 		const parts = h.documentId.split("/");
 		const tab = parts[parts.length - 1] as TabKey;
 		const slug = parts.slice(0, -1).join("/");
-		const change = changes.find((c) => c.slug === slug);
+		const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+		const change = activeRepo?.changes.find((c) => c.slug === slug);
 		if (!change) return;
 		const key = `${change.archived ? "archive/" : ""}${change.slug}`;
 		setSelectedChangeKey(key);

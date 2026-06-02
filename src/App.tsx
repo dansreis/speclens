@@ -10,7 +10,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { getCurrentSource } from "./lib/documentSource";
-import { changes } from "./lib/exampleLoader";
+import { repos } from "./lib/exampleLoader";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { ChangeViewer } from "./specs/ChangeViewer";
 import { DocumentStatsModal } from "./specs/DocumentStatsModal";
@@ -23,6 +23,7 @@ function changeKey(c: { slug: string; archived: boolean }): string {
 
 function App() {
 	const themeMode = useAppStore((s) => s.themeMode);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const selectedKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -30,11 +31,14 @@ function App() {
 	const toggleSidebarCollapsed = useAppStore((s) => s.toggleSidebarCollapsed);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
+	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+	const changes = activeRepo?.changes ?? [];
+
 	useEffect(() => {
 		if (!selectedKey && changes[0]) {
 			setSelectedKey(changeKey(changes[0]));
 		}
-	}, [selectedKey, setSelectedKey]);
+	}, [selectedKey, setSelectedKey, changes]);
 
 	const selectedChange =
 		changes.find((c) => changeKey(c) === selectedKey) ?? null;

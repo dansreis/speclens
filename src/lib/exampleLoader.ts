@@ -1,3 +1,10 @@
+export type RepoType = "private" | "organization" | "local";
+
+export interface RepoConfig {
+	name: string;
+	type: RepoType;
+}
+
 export interface Change {
 	slug: string;
 	name: string;
@@ -7,13 +14,26 @@ export interface Change {
 	specs: Record<string, string>;
 }
 
-const files = import.meta.glob("/examples/openspec/changes/**/*.md", {
+export interface Repo {
+	id: string;
+	name: string;
+	type: RepoType;
+	changes: Change[];
+}
+
+const mdFiles = import.meta.glob("/examples/*/openspec/changes/**/*.md", {
 	eager: true,
 	query: "?raw",
 	import: "default",
 }) as Record<string, string>;
 
+const configFiles = import.meta.glob("/examples/*/config.json", {
+	eager: true,
+	import: "default",
+}) as Record<string, RepoConfig>;
+
 interface ParsedPath {
+	repoId: string;
 	slug: string;
 	archived: boolean;
 	kind: "proposal" | "tasks" | "spec";
@@ -21,17 +41,20 @@ interface ParsedPath {
 }
 
 function parsePath(path: string): ParsedPath | null {
-	const rel = path.replace("/examples/openspec/changes/", "");
-	const parts = rel.split("/");
+	const m = path.match(/^\/examples\/([^/]+)\/openspec\/changes\/(.+)$/);
+	if (!m) return null;
+	const repoId = m[1];
+	const parts = m[2].split("/");
 	const archived = parts[0] === "archive";
 	if (archived) parts.shift();
 	const slug = parts[0];
 	if (!slug) return null;
 	const rest = parts.slice(1);
-	if (rest[0] === "proposal.md") return { slug, archived, kind: "proposal" };
-	if (rest[0] === "tasks.md") return { slug, archived, kind: "tasks" };
+	if (rest[0] === "proposal.md")
+		return { repoId, slug, archived, kind: "proposal" };
+	if (rest[0] === "tasks.md") return { repoId, slug, archived, kind: "tasks" };
 	if (rest[0] === "specs" && rest[1] && rest[2] === "spec.md")
-		return { slug, archived, kind: "spec", capability: rest[1] };
+		return { repoId, slug, archived, kind: "spec", capability: rest[1] };
 	return null;
 }
 
@@ -42,13 +65,19 @@ function slugToName(slug: string): string {
 		.join(" ");
 }
 
-function buildChanges(): Change[] {
-	const map = new Map<string, Change>();
-	for (const [path, content] of Object.entries(files)) {
+function buildRepos(): Repo[] {
+	const changesByRepo = new Map<string, Map<string, Change>>();
+
+	for (const [path, content] of Object.entries(mdFiles)) {
 		const parsed = parsePath(path);
 		if (!parsed) continue;
+		let changesMap = changesByRepo.get(parsed.repoId);
+		if (!changesMap) {
+			changesMap = new Map();
+			changesByRepo.set(parsed.repoId, changesMap);
+		}
 		const key = `${parsed.archived ? "archive/" : ""}${parsed.slug}`;
-		let change = map.get(key);
+		let change = changesMap.get(key);
 		if (!change) {
 			change = {
 				slug: parsed.slug,
@@ -58,14 +87,31 @@ function buildChanges(): Change[] {
 				tasks: null,
 				specs: {},
 			};
-			map.set(key, change);
+			changesMap.set(key, change);
 		}
 		if (parsed.kind === "proposal") change.proposal = content;
 		else if (parsed.kind === "tasks") change.tasks = content;
 		else if (parsed.kind === "spec" && parsed.capability)
 			change.specs[parsed.capability] = content;
 	}
-	return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+	const out: Repo[] = [];
+	for (const [path, config] of Object.entries(configFiles)) {
+		const m = path.match(/^\/examples\/([^/]+)\/config\.json$/);
+		if (!m) continue;
+		const repoId = m[1];
+		const changes = [...(changesByRepo.get(repoId)?.values() ?? [])].sort(
+			(a, b) => a.name.localeCompare(b.name),
+		);
+		out.push({
+			id: repoId,
+			name: config.name,
+			type: config.type,
+			changes,
+		});
+	}
+
+	return out.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export const changes: Change[] = buildChanges();
+export const repos: Repo[] = buildRepos();

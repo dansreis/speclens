@@ -1,5 +1,8 @@
 import AddIcon from "@mui/icons-material/Add";
+import ComputerIcon from "@mui/icons-material/Computer";
 import FolderIcon from "@mui/icons-material/Folder";
+import GroupIcon from "@mui/icons-material/Group";
+import LockIcon from "@mui/icons-material/Lock";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import {
 	Box,
@@ -12,22 +15,14 @@ import {
 	Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import { type RepoType, repos } from "../lib/exampleLoader";
+import { useAppStore } from "../store/useAppStore";
 
-interface Repo {
-	id: string;
-	name: string;
-	subtitle: string;
+function typeIcon(type: RepoType) {
+	if (type === "private") return <LockIcon sx={{ fontSize: 14 }} />;
+	if (type === "organization") return <GroupIcon sx={{ fontSize: 14 }} />;
+	return <ComputerIcon sx={{ fontSize: 14 }} />;
 }
-
-const mockRepos: Repo[] = [
-	{ id: "speclens", name: "danielreis/speclens", subtitle: "private" },
-	{ id: "gitspec", name: "danielreis/gitspec", subtitle: "private" },
-	{
-		id: "openspec-demo",
-		name: "speclens/openspec-demo",
-		subtitle: "organization",
-	},
-];
 
 const isMac =
 	typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
@@ -38,15 +33,24 @@ interface SwitcherProps {
 }
 
 export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
-	const [active, setActive] = useState<Repo>(mockRepos[0]);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
+	const setSelectedRepoId = useAppStore((s) => s.setSelectedRepoId);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const open = Boolean(anchorEl);
+
+	useEffect(() => {
+		if (!selectedRepoId && repos[0]) {
+			setSelectedRepoId(repos[0].id);
+		}
+	}, [selectedRepoId, setSelectedRepoId]);
+
+	const active = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 
 	const handleOpen = (e: React.MouseEvent<HTMLElement>) =>
 		setAnchorEl(e.currentTarget);
 	const handleClose = () => setAnchorEl(null);
-	const handleSelect = (repo: Repo) => {
-		setActive(repo);
+	const handleSelect = (id: string) => {
+		setSelectedRepoId(id);
 		handleClose();
 	};
 
@@ -62,13 +66,15 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 			)
 				return;
 			const num = Number.parseInt(e.key, 10);
-			if (!Number.isInteger(num) || num < 1 || num > mockRepos.length) return;
+			if (!Number.isInteger(num) || num < 1 || num > repos.length) return;
 			e.preventDefault();
-			setActive(mockRepos[num - 1]);
+			setSelectedRepoId(repos[num - 1].id);
 		};
 		document.addEventListener("keydown", handler);
 		return () => document.removeEventListener("keydown", handler);
-	}, []);
+	}, [setSelectedRepoId]);
+
+	if (!active) return null;
 
 	const trigger = (
 		<ButtonBase
@@ -131,7 +137,7 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 							color="text.secondary"
 							sx={{ lineHeight: 1.2 }}
 						>
-							{active.subtitle}
+							{active.type}
 						</Typography>
 					</Box>
 					<UnfoldMoreIcon
@@ -170,11 +176,11 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 				>
 					Repositories
 				</Typography>
-				{mockRepos.map((repo, i) => (
+				{repos.map((repo, i) => (
 					<MenuItem
 						key={repo.id}
 						selected={repo.id === active.id}
-						onClick={() => handleSelect(repo)}
+						onClick={() => handleSelect(repo.id)}
 						sx={{ gap: 1.25, py: 1 }}
 					>
 						<Box
@@ -188,14 +194,17 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 								alignItems: "center",
 								justifyContent: "center",
 								flexShrink: 0,
+								color: "text.secondary",
 							}}
 						>
-							<FolderIcon sx={{ fontSize: 14 }} />
+							{typeIcon(repo.type)}
 						</Box>
 						<ListItemText
 							primary={repo.name}
+							secondary={repo.type}
 							slotProps={{
 								primary: { variant: "body2" },
+								secondary: { variant: "caption" },
 							}}
 						/>
 						<Typography
