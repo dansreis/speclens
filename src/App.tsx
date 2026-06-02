@@ -9,7 +9,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { changes } from "./lib/exampleLoader";
 import { ChangesSidebar } from "./specs/ChangesSidebar";
@@ -24,13 +24,24 @@ function changeKey(c: { slug: string; archived: boolean }): string {
 function App() {
 	const themeMode = useAppStore((s) => s.themeMode);
 	const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
+	const selectedKey = useAppStore((s) => s.selectedChangeKey);
+	const setSelectedKey = useAppStore((s) => s.setSelectedChangeKey);
+	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 
-	const [selectedKey, setSelectedKey] = useState<string | null>(
-		changes[0] ? changeKey(changes[0]) : null,
-	);
+	useEffect(() => {
+		if (!selectedKey && changes[0]) {
+			setSelectedKey(changeKey(changes[0]));
+		}
+	}, [selectedKey, setSelectedKey]);
+
 	const selectedChange =
 		changes.find((c) => changeKey(c) === selectedKey) ?? null;
+
+	const handleSelectChange = (key: string) => {
+		setSelectedKey(key);
+		setActiveTab("proposal");
+	};
 
 	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [commentsPinned, setCommentsPinned] = useState(false);
@@ -104,7 +115,7 @@ function App() {
 					<ChangesSidebar
 						changes={changes}
 						selectedKey={selectedKey}
-						onSelect={setSelectedKey}
+						onSelect={handleSelectChange}
 					/>
 					{selectedChange ? (
 						<ChangeViewer change={selectedChange} />

@@ -1,25 +1,25 @@
 import { Box, Tab, Tabs, Typography } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
 import { countTaskCompletion } from "../lib/tasksCompletion";
+import { type TabKey, useAppStore } from "../store/useAppStore";
 import { MarkdownView } from "./MarkdownView";
 import { Minimap } from "./Minimap";
-
-type TabKey = "proposal" | "tasks" | "specs";
 
 interface Props {
 	change: Change;
 }
 
 export function ChangeViewer({ change }: Props) {
-	const [tab, setTab] = useState<TabKey>("proposal");
+	const tab = useAppStore((s) => s.activeTab);
+	const setTab = useAppStore((s) => s.setActiveTab);
 	const capabilities = Object.keys(change.specs);
 	const contentRef = useRef<HTMLDivElement | null>(null);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: resets viewer when the selected change changes
 	useEffect(() => {
-		setTab("proposal");
+		if (useAppStore.getState().scrollTarget) return;
 		contentRef.current?.scrollTo({ top: 0 });
 	}, [change]);
 
@@ -42,7 +42,6 @@ export function ChangeViewer({ change }: Props) {
 
 	const handleTabChange = (v: TabKey) => {
 		setTab(v);
-		contentRef.current?.scrollTo({ top: 0 });
 	};
 
 	const taskCount = change.tasks ? countTaskCompletion(change.tasks) : null;
@@ -82,13 +81,19 @@ export function ChangeViewer({ change }: Props) {
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
 					{tab === "proposal" &&
 						(change.proposal ? (
-							<MarkdownView source={change.proposal} />
+							<MarkdownView
+								source={change.proposal}
+								documentId={`${change.slug}/proposal`}
+							/>
 						) : (
 							<Typography color="text.secondary">No proposal.md</Typography>
 						))}
 					{tab === "tasks" &&
 						(change.tasks ? (
-							<MarkdownView source={change.tasks} />
+							<MarkdownView
+								source={change.tasks}
+								documentId={`${change.slug}/tasks`}
+							/>
 						) : (
 							<Typography color="text.secondary">No tasks.md</Typography>
 						))}
@@ -96,7 +101,10 @@ export function ChangeViewer({ change }: Props) {
 						(capabilities.length === 0 ? (
 							<Typography color="text.secondary">No specs</Typography>
 						) : (
-							<MarkdownView source={specsSource} />
+							<MarkdownView
+								source={specsSource}
+								documentId={`${change.slug}/specs`}
+							/>
 						))}
 				</Box>
 			</Box>

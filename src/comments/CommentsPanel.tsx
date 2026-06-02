@@ -12,11 +12,14 @@ import {
 	Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
+import type { AppComment } from "../lib/comments";
+import { changes } from "../lib/exampleLoader";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
-import { type MockComment, mockComments } from "./mockComments";
+import { type TabKey, useAppStore } from "../store/useAppStore";
+import { useCommentsStore } from "../store/useCommentsStore";
 
 const PANEL_WIDTH = 340;
 
@@ -29,7 +32,14 @@ interface Props {
 	onTogglePin: () => void;
 }
 
-function CommentItem({ comment }: { comment: MockComment }) {
+function CommentItem({
+	comment,
+	onJump,
+}: {
+	comment: AppComment;
+	onJump: (comment: AppComment) => void;
+}) {
+	const jumpable = Boolean(comment.highlight);
 	return (
 		<Box
 			sx={{
@@ -79,25 +89,35 @@ function CommentItem({ comment }: { comment: MockComment }) {
 				)}
 			</Box>
 			{comment.quote && (
-				<Box
-					sx={{
-						borderLeft: 3,
-						borderColor: "primary.light",
-						pl: 1.25,
-						py: 0.5,
-						mb: 1,
-						bgcolor: "action.hover",
-						borderRadius: "0 4px 4px 0",
-					}}
+				<Tooltip
+					title={jumpable ? "Jump to highlight" : ""}
+					arrow
+					disableHoverListener={!jumpable}
 				>
-					<Typography
-						variant="caption"
-						color="text.secondary"
-						sx={{ fontStyle: "italic" }}
+					<Box
+						onClick={jumpable ? () => onJump(comment) : undefined}
+						sx={{
+							borderLeft: 3,
+							borderColor: "primary.light",
+							pl: 1.25,
+							py: 0.5,
+							mb: 1,
+							bgcolor: "action.hover",
+							borderRadius: "0 4px 4px 0",
+							cursor: jumpable ? "pointer" : "default",
+							transition: "background-color 150ms",
+							"&:hover": jumpable ? { bgcolor: "action.selected" } : undefined,
+						}}
 					>
-						“{comment.quote}”
-					</Typography>
-				</Box>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ fontStyle: "italic" }}
+						>
+							“{comment.quote}”
+						</Typography>
+					</Box>
+				</Tooltip>
 			)}
 			<Typography
 				variant="body2"
@@ -115,19 +135,41 @@ function CommentItem({ comment }: { comment: MockComment }) {
 
 export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const [filter, setFilter] = useState<Filter>("unresolved");
+	const comments = useCommentsStore((s) => s.comments);
+	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
+	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
+
+	const handleJump = (comment: AppComment) => {
+		const h = comment.highlight;
+		if (!h) return;
+		const parts = h.documentId.split("/");
+		const tab = parts[parts.length - 1] as TabKey;
+		const slug = parts.slice(0, -1).join("/");
+		const change = changes.find((c) => c.slug === slug);
+		if (!change) return;
+		const key = `${change.archived ? "archive/" : ""}${change.slug}`;
+		setSelectedChangeKey(key);
+		setActiveTab(tab);
+		setScrollTarget({
+			documentId: h.documentId,
+			text: h.text,
+			occurrence: h.occurrence,
+		});
+	};
 
 	const counts = useMemo(() => {
-		const unresolved = mockComments.filter((c) => !c.resolved).length;
-		const resolved = mockComments.length - unresolved;
+		const unresolved = comments.filter((c) => !c.resolved).length;
+		const resolved = comments.length - unresolved;
 		return { unresolved, resolved };
-	}, []);
+	}, [comments]);
 
 	const visibleComments = useMemo(
 		() =>
-			mockComments.filter((c) =>
+			comments.filter((c) =>
 				filter === "unresolved" ? !c.resolved : c.resolved,
 			),
-		[filter],
+		[comments, filter],
 	);
 
 	const pinnedSx = {
@@ -233,7 +275,9 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 						</Typography>
 					</Box>
 				) : (
-					visibleComments.map((c) => <CommentItem key={c.id} comment={c} />)
+					visibleComments.map((c) => (
+						<CommentItem key={c.id} comment={c} onJump={handleJump} />
+					))
 				)}
 			</Box>
 		</Box>

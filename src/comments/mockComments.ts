@@ -1,14 +1,6 @@
-export interface MockComment {
-	id: string;
-	author: string;
-	initials: string;
-	timestamp: Date;
-	body: string;
-	quote?: string;
-	resolved: boolean;
-}
+import type { AppComment } from "../lib/comments";
 
-export const mockComments: MockComment[] = [
+export const mockComments: AppComment[] = [
 	{
 		id: "c1",
 		author: "Daniel Reis",
@@ -17,6 +9,11 @@ export const mockComments: MockComment[] = [
 		quote: "exact-substring is fine for the first pass",
 		body: "Should we consider fuzzy matching here? Users will misspell their queries — particularly for capability names like 'theming'.",
 		resolved: false,
+		highlight: {
+			text: "exact-substring is fine for the first pass",
+			occurrence: 1,
+			documentId: "add-search-bar/proposal",
+		},
 	},
 	{
 		id: "c2",
