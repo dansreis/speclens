@@ -29,7 +29,19 @@ interface AppState {
 
 	sidebarCollapsed: boolean;
 	toggleSidebarCollapsed: () => void;
+
+	markdownZoom: number;
+	zoomIn: () => void;
+	zoomOut: () => void;
+	resetZoom: () => void;
 }
+
+const ZOOM_MIN = 0.7;
+const ZOOM_MAX = 1.6;
+const ZOOM_STEP = 0.1;
+
+const clampZoom = (z: number) =>
+	Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) * 100) / 100;
 
 export const useAppStore = create<AppState>()(
 	persist(
@@ -63,6 +75,17 @@ export const useAppStore = create<AppState>()(
 			sidebarCollapsed: false,
 			toggleSidebarCollapsed: () =>
 				set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+			markdownZoom: 1,
+			zoomIn: () =>
+				set((state) => ({
+					markdownZoom: clampZoom(state.markdownZoom + ZOOM_STEP),
+				})),
+			zoomOut: () =>
+				set((state) => ({
+					markdownZoom: clampZoom(state.markdownZoom - ZOOM_STEP),
+				})),
+			resetZoom: () => set({ markdownZoom: 1 }),
 		}),
 		{
 			name: "speclens.app-state",
@@ -70,6 +93,7 @@ export const useAppStore = create<AppState>()(
 				themeMode: state.themeMode,
 				sidebarCollapsed: state.sidebarCollapsed,
 				selectedRepoId: state.selectedRepoId,
+				markdownZoom: state.markdownZoom,
 			}),
 		},
 	),

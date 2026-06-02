@@ -44,6 +44,7 @@ export function MarkdownView({ source, documentId }: Props) {
 	const addComment = useCommentsStore((s) => s.addComment);
 	const scrollTarget = useAppStore((s) => s.scrollTarget);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
+	const markdownZoom = useAppStore((s) => s.markdownZoom);
 
 	const highlights: HighlightTarget[] = documentId
 		? comments
@@ -138,10 +139,36 @@ export function MarkdownView({ source, documentId }: Props) {
 			<Box
 				ref={contentRef}
 				sx={{
-					"& h1": { typography: "h4", mt: 4, mb: 2 },
-					"& h2": { typography: "h5", mt: 3, mb: 1.5 },
-					"& h3": { typography: "h6", mt: 2, mb: 1 },
-					"& h4, & h5, & h6": { typography: "subtitle1", mt: 2, mb: 1 },
+					fontSize: `${markdownZoom}rem`,
+					transition: "font-size 150ms ease-out",
+					"& h1": {
+						fontSize: "2.125em",
+						fontWeight: 400,
+						lineHeight: 1.235,
+						mt: 4,
+						mb: 2,
+					},
+					"& h2": {
+						fontSize: "1.5em",
+						fontWeight: 400,
+						lineHeight: 1.334,
+						mt: 3,
+						mb: 1.5,
+					},
+					"& h3": {
+						fontSize: "1.25em",
+						fontWeight: 500,
+						lineHeight: 1.6,
+						mt: 2,
+						mb: 1,
+					},
+					"& h4, & h5, & h6": {
+						fontSize: "1em",
+						fontWeight: 400,
+						lineHeight: 1.75,
+						mt: 2,
+						mb: 1,
+					},
 					"& p": { lineHeight: 1.65, mb: 1.5 },
 					"& ul, & ol": { pl: 3, mb: 1.5 },
 					"& li": { mb: 0.5 },

@@ -1,6 +1,16 @@
 import BarChartIcon from "@mui/icons-material/BarChart";
 import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
-import { Box, IconButton, Tab, Tabs, Tooltip, Typography } from "@mui/material";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ZoomOutIcon from "@mui/icons-material/ZoomOut";
+import {
+	Box,
+	Button,
+	IconButton,
+	Tab,
+	Tabs,
+	Tooltip,
+	Typography,
+} from "@mui/material";
 import { useEffect, useMemo, useRef } from "react";
 import { getCurrentSource } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
@@ -25,6 +35,10 @@ export function ChangeViewer({
 }: Props) {
 	const tab = useAppStore((s) => s.activeTab);
 	const setTab = useAppStore((s) => s.setActiveTab);
+	const markdownZoom = useAppStore((s) => s.markdownZoom);
+	const zoomIn = useAppStore((s) => s.zoomIn);
+	const zoomOut = useAppStore((s) => s.zoomOut);
+	const resetZoom = useAppStore((s) => s.resetZoom);
 	const capabilities = Object.keys(change.specs);
 	const contentRef = useRef<HTMLDivElement | null>(null);
 
@@ -82,7 +96,50 @@ export function ChangeViewer({
 						</Typography>
 					)}
 				</Box>
-				<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+				<Box
+					sx={{
+						display: "flex",
+						gap: 0.5,
+						flexShrink: 0,
+						alignItems: "center",
+					}}
+				>
+					<Tooltip title="Zoom out (⌘−)">
+						<IconButton
+							onClick={zoomOut}
+							aria-label="Zoom out"
+							size="small"
+							sx={{ color: "text.secondary" }}
+						>
+							<ZoomOutIcon fontSize="small" />
+						</IconButton>
+					</Tooltip>
+					<Tooltip title="Reset zoom (⌘0)">
+						<Button
+							onClick={resetZoom}
+							size="small"
+							sx={{
+								minWidth: 44,
+								px: 0.5,
+								color: "text.secondary",
+								fontFamily: "ui-monospace, monospace",
+								fontSize: "0.75rem",
+								textTransform: "none",
+							}}
+						>
+							{Math.round(markdownZoom * 100)}%
+						</Button>
+					</Tooltip>
+					<Tooltip title="Zoom in (⌘+)">
+						<IconButton
+							onClick={zoomIn}
+							aria-label="Zoom in"
+							size="small"
+							sx={{ color: "text.secondary" }}
+						>
+							<ZoomInIcon fontSize="small" />
+						</IconButton>
+					</Tooltip>
 					<Tooltip title="Document statistics">
 						<IconButton
 							onClick={onOpenStats}

@@ -29,7 +29,36 @@ function App() {
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
 	const toggleSidebarCollapsed = useAppStore((s) => s.toggleSidebarCollapsed);
+	const zoomIn = useAppStore((s) => s.zoomIn);
+	const zoomOut = useAppStore((s) => s.zoomOut);
+	const resetZoom = useAppStore((s) => s.resetZoom);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
+
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			const modifier = e.metaKey || e.ctrlKey;
+			if (!modifier || e.altKey) return;
+			const target = e.target as HTMLElement | null;
+			if (
+				target?.tagName === "INPUT" ||
+				target?.tagName === "TEXTAREA" ||
+				target?.isContentEditable
+			)
+				return;
+			if (e.key === "=" || e.key === "+") {
+				e.preventDefault();
+				zoomIn();
+			} else if (e.key === "-") {
+				e.preventDefault();
+				zoomOut();
+			} else if (e.key === "0") {
+				e.preventDefault();
+				resetZoom();
+			}
+		};
+		document.addEventListener("keydown", handler);
+		return () => document.removeEventListener("keydown", handler);
+	}, [zoomIn, zoomOut, resetZoom]);
 
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 	const changes = activeRepo?.changes ?? [];
