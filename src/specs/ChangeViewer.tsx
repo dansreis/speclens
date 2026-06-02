@@ -78,33 +78,35 @@ export function ChangeViewer({ change }: Props) {
 			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
 				<Minimap headings={headings} containerRef={contentRef} />
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
-					{tab === "proposal" &&
-						(change.proposal ? (
-							<MarkdownView
-								source={change.proposal}
-								documentId={`${change.slug}/proposal`}
-							/>
-						) : (
-							<Typography color="text.secondary">No proposal.md</Typography>
-						))}
-					{tab === "tasks" &&
-						(change.tasks ? (
-							<MarkdownView
-								source={change.tasks}
-								documentId={`${change.slug}/tasks`}
-							/>
-						) : (
-							<Typography color="text.secondary">No tasks.md</Typography>
-						))}
-					{tab === "specs" &&
-						(capabilities.length === 0 ? (
-							<Typography color="text.secondary">No specs</Typography>
-						) : (
-							<MarkdownView
-								source={specsSource}
-								documentId={`${change.slug}/specs`}
-							/>
-						))}
+					<Box sx={{ maxWidth: 1000, mx: "auto" }}>
+						{tab === "proposal" &&
+							(change.proposal ? (
+								<MarkdownView
+									source={change.proposal}
+									documentId={`${change.slug}/proposal`}
+								/>
+							) : (
+								<Typography color="text.secondary">No proposal.md</Typography>
+							))}
+						{tab === "tasks" &&
+							(change.tasks ? (
+								<MarkdownView
+									source={change.tasks}
+									documentId={`${change.slug}/tasks`}
+								/>
+							) : (
+								<Typography color="text.secondary">No tasks.md</Typography>
+							))}
+						{tab === "specs" &&
+							(capabilities.length === 0 ? (
+								<Typography color="text.secondary">No specs</Typography>
+							) : (
+								<MarkdownView
+									source={specsSource}
+									documentId={`${change.slug}/specs`}
+								/>
+							))}
+					</Box>
 				</Box>
 			</Box>
 		</Box>
