@@ -5,6 +5,7 @@ import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import {
 	Box,
 	Button,
+	Chip,
 	IconButton,
 	Tab,
 	Tabs,
@@ -93,15 +94,31 @@ export function ChangeViewer({
 					gap: 2,
 				}}
 			>
-				<Box sx={{ flex: 1, minWidth: 0 }}>
+				<Box
+					sx={{
+						flex: 1,
+						minWidth: 0,
+						display: "flex",
+						alignItems: "center",
+						gap: 1.5,
+					}}
+				>
 					<Typography variant="h4" component="h2">
 						{change.name}
 					</Typography>
-					{change.archived && (
-						<Typography variant="caption" color="text.secondary">
-							archived
-						</Typography>
-					)}
+					<Chip
+						label={change.archived ? "Archived" : "Active"}
+						size="small"
+						variant="outlined"
+						sx={{
+							height: 22,
+							fontSize: "0.75rem",
+							fontWeight: 500,
+							borderWidth: 1.5,
+							color: change.archived ? "#d97706" : "success.main",
+							borderColor: change.archived ? "#d97706" : "success.main",
+						}}
+					/>
 				</Box>
 				<Box
 					sx={{

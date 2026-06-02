@@ -178,6 +178,8 @@ export function ChangesView({
 													sx={{
 														height: 18,
 														fontSize: "0.6875rem",
+														fontWeight: 500,
+														borderWidth: 1.5,
 														color: "text.secondary",
 														borderColor: "divider",
 														"& .MuiChip-label": { px: 0.75 },
@@ -219,6 +221,8 @@ export function ChangesView({
 										sx={{
 											height: 20,
 											fontSize: "0.6875rem",
+											fontWeight: 500,
+											borderWidth: 1.5,
 											color: change.archived ? "#d97706" : "success.main",
 											borderColor: change.archived ? "#d97706" : "success.main",
 										}}
