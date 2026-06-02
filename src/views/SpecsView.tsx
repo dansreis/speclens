@@ -4,28 +4,51 @@ import {
 	TextField,
 	ToggleButton,
 	ToggleButtonGroup,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import type { Change, Repo } from "../lib/exampleLoader";
+import { firstParagraphPreview } from "../lib/markdownPreview";
+import {
+	formatAbsoluteDateTime,
+	formatRelativeTime,
+} from "../lib/relativeTime";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
 
-type SortMode = "name" | "changes";
+type SortMode = "name" | "changes" | "recent";
 
 interface SpecRow {
 	capability: string;
 	changes: Change[];
+	preview: string;
+	latestDate: Date | null;
 }
 
 function buildSpecRows(repo: Repo | null): SpecRow[] {
 	if (!repo) return [];
 	const map = new Map<string, SpecRow>();
 	for (const change of repo.changes) {
-		for (const capability of Object.keys(change.specs)) {
-			const row = map.get(capability);
-			if (row) row.changes.push(change);
-			else map.set(capability, { capability, changes: [change] });
+		const content = change.specs;
+		for (const [capability, body] of Object.entries(content)) {
+			const existing = map.get(capability);
+			if (existing) {
+				existing.changes.push(change);
+				if (
+					change.createdAt &&
+					(!existing.latestDate || change.createdAt > existing.latestDate)
+				) {
+					existing.latestDate = change.createdAt;
+				}
+			} else {
+				map.set(capability, {
+					capability,
+					changes: [change],
+					preview: firstParagraphPreview(body),
+					latestDate: change.createdAt,
+				});
+			}
 		}
 	}
 	return [...map.values()];
@@ -60,12 +83,18 @@ export function SpecsView({
 		const sorted = [...base];
 		if (sort === "name") {
 			sorted.sort((a, b) => a.capability.localeCompare(b.capability));
-		} else {
+		} else if (sort === "changes") {
 			sorted.sort(
 				(a, b) =>
 					b.changes.length - a.changes.length ||
 					a.capability.localeCompare(b.capability),
 			);
+		} else {
+			sorted.sort((a, b) => {
+				const aT = a.latestDate?.getTime() ?? 0;
+				const bT = b.latestDate?.getTime() ?? 0;
+				return bT - aT || a.capability.localeCompare(b.capability);
+			});
 		}
 		return sorted;
 	}, [rows, filter, sort]);
@@ -119,6 +148,9 @@ export function SpecsView({
 					<ToggleButton value="changes" sx={{ textTransform: "none" }}>
 						By changes
 					</ToggleButton>
+					<ToggleButton value="recent" sx={{ textTransform: "none" }}>
+						Recent
+					</ToggleButton>
 				</ToggleButtonGroup>
 			</Box>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -135,7 +167,9 @@ export function SpecsView({
 							key={row.capability}
 							onClick={() => handleSelect(row.capability)}
 							sx={{
-								display: "block",
+								display: "flex",
+								alignItems: "stretch",
+								gap: 2,
 								textAlign: "left",
 								px: 2,
 								py: 1.5,
@@ -150,20 +184,57 @@ export function SpecsView({
 								},
 							}}
 						>
+							<Box sx={{ flex: 1, minWidth: 0 }}>
+								<Typography
+									variant="body2"
+									sx={{ fontWeight: 600, mb: row.preview ? 0.25 : 0 }}
+								>
+									{row.capability}
+								</Typography>
+								{row.preview && (
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{
+											display: "-webkit-box",
+											WebkitLineClamp: 1,
+											WebkitBoxOrient: "vertical",
+											overflow: "hidden",
+										}}
+									>
+										{row.preview}
+									</Typography>
+								)}
+							</Box>
 							<Box
 								sx={{
 									display: "flex",
-									alignItems: "center",
-									justifyContent: "space-between",
+									flexDirection: "column",
+									alignItems: "flex-end",
+									gap: 0.25,
+									flexShrink: 0,
+									minWidth: 100,
 								}}
 							>
-								<Typography variant="body2" sx={{ fontWeight: 600 }}>
-									{row.capability}
-								</Typography>
 								<Typography variant="caption" color="text.secondary">
 									{row.changes.length} change
 									{row.changes.length === 1 ? "" : "s"}
 								</Typography>
+								{row.latestDate && (
+									<Tooltip
+										title={formatAbsoluteDateTime(row.latestDate)}
+										arrow
+										placement="left"
+									>
+										<Typography
+											variant="caption"
+											color="text.disabled"
+											sx={{ cursor: "default" }}
+										>
+											{formatRelativeTime(row.latestDate)}
+										</Typography>
+									</Tooltip>
+								)}
 							</Box>
 						</ButtonBase>
 					))

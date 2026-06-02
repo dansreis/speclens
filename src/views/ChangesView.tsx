@@ -1,13 +1,20 @@
 import {
 	Box,
 	ButtonBase,
+	Chip,
 	TextField,
 	ToggleButton,
 	ToggleButtonGroup,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import type { Change, Repo } from "../lib/exampleLoader";
+import { firstParagraphPreview } from "../lib/markdownPreview";
+import {
+	formatAbsoluteDateTime,
+	formatRelativeTime,
+} from "../lib/relativeTime";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
@@ -18,11 +25,10 @@ function changeKey(c: Change): string {
 	return `${c.archived ? "archive/" : ""}${c.slug}`;
 }
 
-function statusBadge(change: Change): string {
-	if (change.archived) return "archived";
-	if (!change.tasks) return "no tasks";
+function progressLabel(change: Change): string | null {
+	if (!change.tasks) return null;
 	const { total, done } = countTaskCompletion(change.tasks);
-	if (total === 0) return "no tasks";
+	if (total === 0) return null;
 	return `${done}/${total} tasks`;
 }
 
@@ -43,17 +49,22 @@ export function ChangesView({
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const [filter, setFilter] = useState("");
-	const [status, setStatus] = useState<StatusFilter>("active");
+	const [status, setStatus] = useState<StatusFilter>("all");
 
 	const allChanges = repo?.changes ?? [];
 
 	const filtered = useMemo(() => {
 		const q = filter.trim().toLowerCase();
-		return allChanges.filter((c) => {
+		const base = allChanges.filter((c) => {
 			if (status === "active" && c.archived) return false;
 			if (status === "archived" && !c.archived) return false;
 			if (q && !c.name.toLowerCase().includes(q)) return false;
 			return true;
+		});
+		return base.sort((a, b) => {
+			const aT = a.createdAt?.getTime() ?? 0;
+			const bT = b.createdAt?.getTime() ?? 0;
+			return bT - aT || a.name.localeCompare(b.name);
 		});
 	}, [allChanges, filter, status]);
 
@@ -121,12 +132,16 @@ export function ChangesView({
 				) : (
 					filtered.map((change) => {
 						const key = changeKey(change);
+						const preview = firstParagraphPreview(change.proposal);
+						const progress = progressLabel(change);
 						return (
 							<ButtonBase
 								key={key}
 								onClick={() => handleSelect(key)}
 								sx={{
-									display: "block",
+									display: "flex",
+									alignItems: "stretch",
+									gap: 2,
 									textAlign: "left",
 									px: 2,
 									py: 1.5,
@@ -134,7 +149,6 @@ export function ChangesView({
 									borderColor: "divider",
 									borderRadius: 1,
 									bgcolor: "background.paper",
-									opacity: change.archived ? 0.7 : 1,
 									transition: "border-color 150ms, background-color 150ms",
 									"&:hover": {
 										borderColor: "primary.main",
@@ -142,19 +156,71 @@ export function ChangesView({
 									},
 								}}
 							>
+								<Box sx={{ flex: 1, minWidth: 0 }}>
+									<Typography
+										variant="body2"
+										sx={{ fontWeight: 600, mb: preview ? 0.25 : 0 }}
+									>
+										{change.name}
+									</Typography>
+									{preview && (
+										<Typography
+											variant="caption"
+											color="text.secondary"
+											sx={{
+												display: "-webkit-box",
+												WebkitLineClamp: 1,
+												WebkitBoxOrient: "vertical",
+												overflow: "hidden",
+											}}
+										>
+											{preview}
+										</Typography>
+									)}
+								</Box>
 								<Box
 									sx={{
 										display: "flex",
-										alignItems: "center",
-										justifyContent: "space-between",
+										flexDirection: "column",
+										alignItems: "flex-end",
+										gap: 0.5,
+										flexShrink: 0,
+										minWidth: 110,
 									}}
 								>
-									<Typography variant="body2" sx={{ fontWeight: 600 }}>
-										{change.name}
-									</Typography>
-									<Typography variant="caption" color="text.secondary">
-										{statusBadge(change)}
-									</Typography>
+									<Chip
+										label={change.archived ? "Archived" : "Active"}
+										size="small"
+										variant="outlined"
+										sx={{
+											height: 20,
+											fontSize: "0.6875rem",
+											color: change.archived
+												? "text.secondary"
+												: "primary.main",
+											borderColor: change.archived ? "divider" : "primary.main",
+										}}
+									/>
+									{progress && (
+										<Typography variant="caption" color="text.secondary">
+											{progress}
+										</Typography>
+									)}
+									{change.createdAt && (
+										<Tooltip
+											title={formatAbsoluteDateTime(change.createdAt)}
+											arrow
+											placement="left"
+										>
+											<Typography
+												variant="caption"
+												color="text.disabled"
+												sx={{ cursor: "default" }}
+											>
+												{formatRelativeTime(change.createdAt)}
+											</Typography>
+										</Tooltip>
+									)}
 								</Box>
 							</ButtonBase>
 						);

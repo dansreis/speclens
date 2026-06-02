@@ -9,10 +9,17 @@ export interface Change {
 	slug: string;
 	name: string;
 	archived: boolean;
+	createdAt: Date | null;
 	proposal: string | null;
 	tasks: string | null;
 	specs: Record<string, string>;
 }
+
+const mockTimestamps: Record<string, string> = {
+	"add-search-bar": "2026-05-22T10:00:00Z",
+	"add-keyboard-shortcuts": "2026-05-10T14:30:00Z",
+	"init-spec-viewer": "2026-04-02T09:15:00Z",
+};
 
 export interface Repo {
 	id: string;
@@ -79,10 +86,12 @@ function buildRepos(): Repo[] {
 		const key = `${parsed.archived ? "archive/" : ""}${parsed.slug}`;
 		let change = changesMap.get(key);
 		if (!change) {
+			const ts = mockTimestamps[parsed.slug];
 			change = {
 				slug: parsed.slug,
 				name: slugToName(parsed.slug),
 				archived: parsed.archived,
+				createdAt: ts ? new Date(ts) : null,
 				proposal: null,
 				tasks: null,
 				specs: {},
