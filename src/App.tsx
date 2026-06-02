@@ -1,6 +1,8 @@
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
+import SearchIcon from "@mui/icons-material/Search";
 import {
 	Box,
+	ButtonBase,
 	CssBaseline,
 	IconButton,
 	ThemeProvider,
@@ -11,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { getCurrentSource } from "./lib/documentSource";
 import { repos } from "./lib/exampleLoader";
+import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { DocumentStatsModal } from "./specs/DocumentStatsModal";
 import { useAppStore } from "./store/useAppStore";
@@ -59,6 +62,9 @@ function App() {
 			} else if (e.key === "0") {
 				e.preventDefault();
 				resetZoom();
+			} else if (e.key === "k" || e.key === "K") {
+				e.preventDefault();
+				setSearchOpen((o) => !o);
 			}
 		};
 		document.addEventListener("keydown", handler);
@@ -88,6 +94,7 @@ function App() {
 	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [commentsPinned, setCommentsPinned] = useState(false);
 	const [statsOpen, setStatsOpen] = useState(false);
+	const [searchOpen, setSearchOpen] = useState(false);
 	const activeTab = useAppStore((s) => s.activeTab);
 	const statsSource = useMemo(
 		() => (statsOpen ? getCurrentSource(activeChange, activeTab) : null),
@@ -149,6 +156,47 @@ function App() {
 							</IconButton>
 						</Tooltip>
 						<Breadcrumbs activeChange={activeChange} />
+						<Box sx={{ flex: 1 }} />
+						<ButtonBase
+							onClick={() => setSearchOpen(true)}
+							aria-label="Open search"
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								gap: 1,
+								px: 2,
+								py: 0.75,
+								borderRadius: 1,
+								bgcolor: "action.hover",
+								color: "text.secondary",
+								fontSize: "0.875rem",
+								minWidth: 220,
+								justifyContent: "flex-start",
+								transition: "background-color 150ms, color 150ms",
+								"&:hover": {
+									bgcolor: "action.selected",
+									color: "text.primary",
+								},
+							}}
+						>
+							<SearchIcon fontSize="small" />
+							<Box sx={{ flex: 1, textAlign: "left" }}>Search…</Box>
+							<Box
+								component="kbd"
+								sx={{
+									fontSize: "0.6875rem",
+									bgcolor: "background.default",
+									px: 0.75,
+									py: 0.25,
+									borderRadius: 0.5,
+									border: 1,
+									borderColor: "divider",
+									fontFamily: "ui-monospace, monospace",
+								}}
+							>
+								⌘K
+							</Box>
+						</ButtonBase>
 					</Box>
 					<Box
 						sx={{
@@ -207,6 +255,7 @@ function App() {
 				source={statsSource}
 				onClose={() => setStatsOpen(false)}
 			/>
+			<SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
 		</ThemeProvider>
 	);
 }
