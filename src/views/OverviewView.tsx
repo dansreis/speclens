@@ -14,7 +14,7 @@ export function OverviewView({ repo }: Props) {
 		: 0;
 
 	return (
-		<Box sx={{ p: 4, maxWidth: 1000, mx: "auto" }}>
+		<Box sx={{ p: 4, maxWidth: "90%", mx: "auto" }}>
 			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 3 }}>
 				Overview
 			</Typography>

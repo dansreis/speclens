@@ -75,7 +75,14 @@ export function ChangeViewer({
 
 	return (
 		<Box
-			sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}
+			sx={{
+				flex: 1,
+				display: "flex",
+				flexDirection: "column",
+				minWidth: 0,
+				minHeight: 0,
+				height: "100%",
+			}}
 		>
 			<Box
 				sx={{
@@ -177,7 +184,7 @@ export function ChangeViewer({
 			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
 				<Minimap headings={headings} containerRef={contentRef} />
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
-					<Box sx={{ maxWidth: 1000, mx: "auto" }}>
+					<Box sx={{ maxWidth: "90%", mx: "auto" }}>
 						{tab === "proposal" &&
 							(change.proposal ? (
 								<MarkdownView

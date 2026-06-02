@@ -95,7 +95,7 @@ export function ChangesView({
 	};
 
 	return (
-		<Box sx={{ p: 4, maxWidth: 1000, mx: "auto", width: "100%" }}>
+		<Box sx={{ p: 4, maxWidth: "90%", mx: "auto", width: "100%" }}>
 			<Box sx={{ display: "flex", gap: 1.5, alignItems: "center", mb: 2 }}>
 				<TextField
 					placeholder="Filter changes..."
@@ -195,10 +195,8 @@ export function ChangesView({
 										sx={{
 											height: 20,
 											fontSize: "0.6875rem",
-											color: change.archived
-												? "text.secondary"
-												: "primary.main",
-											borderColor: change.archived ? "divider" : "primary.main",
+											color: change.archived ? "#ca8a04" : "success.main",
+											borderColor: change.archived ? "#ca8a04" : "success.main",
 										}}
 									/>
 									{progress && (

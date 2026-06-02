@@ -1,10 +1,24 @@
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import SearchIcon from "@mui/icons-material/Search";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Box, ButtonBase, Dialog, InputBase, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import type React from "react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { repos } from "../lib/exampleLoader";
 import { useAppStore } from "../store/useAppStore";
+
+const SPEC_COLOR = "info" as const;
+const CHANGE_COLOR = "success" as const;
+
+const filterColor: Record<
+	"all" | "specs" | "changes",
+	"primary" | "info" | "success"
+> = {
+	all: "primary",
+	specs: SPEC_COLOR,
+	changes: CHANGE_COLOR,
+};
 
 type FilterKind = "all" | "specs" | "changes";
 
@@ -233,6 +247,9 @@ export function SearchPalette({ open, onClose }: Props) {
 	const renderResult = (result: Result, index: number) => {
 		const isActive = index === clampedActive;
 		const title = result.kind === "spec" ? result.capability : result.name;
+		const accent = result.kind === "spec" ? SPEC_COLOR : CHANGE_COLOR;
+		const Icon =
+			result.kind === "spec" ? DescriptionOutlinedIcon : TrendingUpIcon;
 		return (
 			<ButtonBase
 				key={
@@ -243,7 +260,9 @@ export function SearchPalette({ open, onClose }: Props) {
 				data-search-index={index}
 				onClick={() => handleSelect(result)}
 				sx={{
-					display: "block",
+					display: "flex",
+					alignItems: "flex-start",
+					gap: 1.25,
 					textAlign: "left",
 					width: "100%",
 					px: 2,
@@ -253,27 +272,37 @@ export function SearchPalette({ open, onClose }: Props) {
 					"&:hover": { bgcolor: "action.hover" },
 				}}
 			>
-				<Typography
-					variant="body2"
-					sx={{ fontWeight: 500, color: "text.primary" }}
-				>
-					{renderHighlighted(title, result.titleMatch)}
-				</Typography>
-				{result.snippet && (
+				<Icon
+					sx={{
+						fontSize: 16,
+						color: `${accent}.main`,
+						mt: 0.25,
+						flexShrink: 0,
+					}}
+				/>
+				<Box sx={{ flex: 1, minWidth: 0 }}>
 					<Typography
-						variant="caption"
-						color="text.secondary"
-						sx={{
-							display: "-webkit-box",
-							WebkitLineClamp: 1,
-							WebkitBoxOrient: "vertical",
-							overflow: "hidden",
-							mt: 0.25,
-						}}
+						variant="body2"
+						sx={{ fontWeight: 500, color: "text.primary" }}
 					>
-						{renderHighlightedMulti(result.snippet)}
+						{renderHighlighted(title, result.titleMatch)}
 					</Typography>
-				)}
+					{result.snippet && (
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{
+								display: "-webkit-box",
+								WebkitLineClamp: 1,
+								WebkitBoxOrient: "vertical",
+								overflow: "hidden",
+								mt: 0.25,
+							}}
+						>
+							{renderHighlightedMulti(result.snippet)}
+						</Typography>
+					)}
+				</Box>
 			</ButtonBase>
 		);
 	};
@@ -330,6 +359,7 @@ export function SearchPalette({ open, onClose }: Props) {
 				<Box sx={{ display: "flex", gap: 0.75, px: 2, pt: 1.25, pb: 0.5 }}>
 					{(["all", "specs", "changes"] as FilterKind[]).map((f) => {
 						const isActive = f === filter;
+						const c = filterColor[f];
 						return (
 							<ButtonBase
 								key={f}
@@ -344,12 +374,12 @@ export function SearchPalette({ open, onClose }: Props) {
 									fontSize: "0.75rem",
 									textTransform: "capitalize",
 									bgcolor: isActive
-										? (theme) => alpha(theme.palette.primary.main, 0.2)
+										? (theme) => alpha(theme.palette[c].main, 0.2)
 										: "action.hover",
-									color: isActive ? "primary.main" : "text.secondary",
+									color: isActive ? `${c}.main` : "text.secondary",
 									transition: "background-color 150ms, color 150ms",
 									"&:hover": {
-										color: isActive ? "primary.main" : "text.primary",
+										color: isActive ? `${c}.main` : "text.primary",
 									},
 								}}
 							>
@@ -386,8 +416,8 @@ export function SearchPalette({ open, onClose }: Props) {
 										pt: 1.5,
 										pb: 0.5,
 										fontSize: "0.6875rem",
-										fontWeight: 600,
-										color: "text.secondary",
+										fontWeight: 700,
+										color: `${SPEC_COLOR}.main`,
 										textTransform: "uppercase",
 										letterSpacing: "0.05em",
 									}}
@@ -405,8 +435,8 @@ export function SearchPalette({ open, onClose }: Props) {
 										pt: 1.5,
 										pb: 0.5,
 										fontSize: "0.6875rem",
-										fontWeight: 600,
-										color: "text.secondary",
+										fontWeight: 700,
+										color: `${CHANGE_COLOR}.main`,
 										textTransform: "uppercase",
 										letterSpacing: "0.05em",
 									}}

@@ -214,6 +214,7 @@ function App() {
 								flexDirection: "column",
 								overflowY: activeChange ? "hidden" : "auto",
 								minWidth: 0,
+								minHeight: 0,
 							}}
 						>
 							{!activeRepo ? (
