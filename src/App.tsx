@@ -1,3 +1,4 @@
+import BarChartIcon from "@mui/icons-material/BarChart";
 import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
@@ -11,9 +12,11 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
+import { getCurrentSource } from "./lib/documentSource";
 import { changes } from "./lib/exampleLoader";
 import { ChangesSidebar } from "./specs/ChangesSidebar";
 import { ChangeViewer } from "./specs/ChangeViewer";
+import { DocumentStatsModal } from "./specs/DocumentStatsModal";
 import { useAppStore } from "./store/useAppStore";
 import { createAppTheme } from "./theme/theme";
 
@@ -45,6 +48,12 @@ function App() {
 
 	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [commentsPinned, setCommentsPinned] = useState(false);
+	const [statsOpen, setStatsOpen] = useState(false);
+	const activeTab = useAppStore((s) => s.activeTab);
+	const statsSource = useMemo(
+		() => (statsOpen ? getCurrentSource(selectedChange, activeTab) : null),
+		[statsOpen, selectedChange, activeTab],
+	);
 
 	return (
 		<ThemeProvider theme={theme}>
@@ -77,6 +86,15 @@ function App() {
 					<Typography variant="h6" component="h1" sx={{ flex: 1 }}>
 						SpecLens
 					</Typography>
+					<Tooltip title="Document statistics">
+						<IconButton
+							onClick={() => setStatsOpen(true)}
+							aria-label="Document statistics"
+							sx={{ color: "text.secondary" }}
+						>
+							<BarChartIcon fontSize="small" />
+						</IconButton>
+					</Tooltip>
 					<Tooltip title="Comments">
 						<IconButton
 							onClick={() => setCommentsOpen((o) => !o)}
@@ -141,6 +159,11 @@ function App() {
 					/>
 				</Box>
 			</Box>
+			<DocumentStatsModal
+				open={statsOpen}
+				source={statsSource}
+				onClose={() => setStatsOpen(false)}
+			/>
 		</ThemeProvider>
 	);
 }

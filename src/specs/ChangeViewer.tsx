@@ -1,5 +1,6 @@
 import { Box, Tab, Tabs, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef } from "react";
+import { getCurrentSource } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
 import { countTaskCompletion } from "../lib/tasksCompletion";
@@ -28,12 +29,10 @@ export function ChangeViewer({ change }: Props) {
 		[capabilities, change.specs],
 	);
 
-	const currentSource =
-		tab === "proposal"
-			? change.proposal
-			: tab === "tasks"
-				? change.tasks
-				: specsSource || null;
+	const currentSource = useMemo(
+		() => getCurrentSource(change, tab),
+		[change, tab],
+	);
 
 	const headings = useMemo(
 		() => (currentSource ? extractHeadings(currentSource) : []),
