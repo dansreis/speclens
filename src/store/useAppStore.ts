@@ -4,6 +4,8 @@ import { persist } from "zustand/middleware";
 
 export type TabKey = "proposal" | "tasks" | "specs";
 
+export type AppView = "overview" | "specs" | "changes" | "graph" | "timeline";
+
 export interface ScrollTarget {
 	documentId: string;
 	text: string;
@@ -18,8 +20,14 @@ interface AppState {
 	selectedRepoId: string | null;
 	setSelectedRepoId: (id: string | null) => void;
 
+	view: AppView;
+	setView: (v: AppView) => void;
+
 	selectedChangeKey: string | null;
 	setSelectedChangeKey: (key: string | null) => void;
+
+	selectedSpec: string | null;
+	setSelectedSpec: (slug: string | null) => void;
 
 	activeTab: TabKey;
 	setActiveTab: (tab: TabKey) => void;
@@ -60,11 +68,23 @@ export const useAppStore = create<AppState>()(
 				set({
 					selectedRepoId: id,
 					selectedChangeKey: null,
+					selectedSpec: null,
 					activeTab: "proposal",
 				}),
 
+			view: "specs",
+			setView: (v) =>
+				set((state) => ({
+					view: v,
+					selectedChangeKey: v === "changes" ? state.selectedChangeKey : null,
+					selectedSpec: v === "specs" ? state.selectedSpec : null,
+				})),
+
 			selectedChangeKey: null,
 			setSelectedChangeKey: (key) => set({ selectedChangeKey: key }),
+
+			selectedSpec: null,
+			setSelectedSpec: (slug) => set({ selectedSpec: slug }),
 
 			activeTab: "proposal",
 			setActiveTab: (tab) => set({ activeTab: tab }),
@@ -94,6 +114,7 @@ export const useAppStore = create<AppState>()(
 				sidebarCollapsed: state.sidebarCollapsed,
 				selectedRepoId: state.selectedRepoId,
 				markdownZoom: state.markdownZoom,
+				view: state.view,
 			}),
 		},
 	),

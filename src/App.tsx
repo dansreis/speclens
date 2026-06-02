@@ -12,10 +12,15 @@ import { CommentsPanel } from "./comments/CommentsPanel";
 import { getCurrentSource } from "./lib/documentSource";
 import { repos } from "./lib/exampleLoader";
 import { AppSidebar } from "./sidebar/AppSidebar";
-import { ChangeViewer } from "./specs/ChangeViewer";
 import { DocumentStatsModal } from "./specs/DocumentStatsModal";
 import { useAppStore } from "./store/useAppStore";
 import { createAppTheme } from "./theme/theme";
+import { Breadcrumbs } from "./views/Breadcrumbs";
+import { ChangesView } from "./views/ChangesView";
+import { GraphView } from "./views/GraphView";
+import { OverviewView } from "./views/OverviewView";
+import { SpecsView } from "./views/SpecsView";
+import { TimelineView } from "./views/TimelineView";
 
 function changeKey(c: { slug: string; archived: boolean }): string {
 	return `${c.archived ? "archive/" : ""}${c.slug}`;
@@ -23,10 +28,10 @@ function changeKey(c: { slug: string; archived: boolean }): string {
 
 function App() {
 	const themeMode = useAppStore((s) => s.themeMode);
+	const view = useAppStore((s) => s.view);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
-	const selectedKey = useAppStore((s) => s.selectedChangeKey);
-	const setSelectedKey = useAppStore((s) => s.setSelectedChangeKey);
-	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
+	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
 	const toggleSidebarCollapsed = useAppStore((s) => s.toggleSidebarCollapsed);
 	const zoomIn = useAppStore((s) => s.zoomIn);
@@ -61,30 +66,39 @@ function App() {
 	}, [zoomIn, zoomOut, resetZoom]);
 
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
-	const changes = activeRepo?.changes ?? [];
 
-	useEffect(() => {
-		if (!selectedKey && changes[0]) {
-			setSelectedKey(changeKey(changes[0]));
+	const activeChange = useMemo(() => {
+		if (!activeRepo) return null;
+		if (view === "changes" && selectedChangeKey) {
+			return (
+				activeRepo.changes.find((c) => changeKey(c) === selectedChangeKey) ??
+				null
+			);
 		}
-	}, [selectedKey, setSelectedKey, changes]);
-
-	const selectedChange =
-		changes.find((c) => changeKey(c) === selectedKey) ?? null;
-
-	const handleSelectChange = (key: string) => {
-		setSelectedKey(key);
-		setActiveTab("proposal");
-	};
+		if (view === "specs" && selectedSpec) {
+			return (
+				activeRepo.changes.find((c) =>
+					Object.keys(c.specs).includes(selectedSpec),
+				) ?? null
+			);
+		}
+		return null;
+	}, [activeRepo, view, selectedChangeKey, selectedSpec]);
 
 	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [commentsPinned, setCommentsPinned] = useState(false);
 	const [statsOpen, setStatsOpen] = useState(false);
 	const activeTab = useAppStore((s) => s.activeTab);
 	const statsSource = useMemo(
-		() => (statsOpen ? getCurrentSource(selectedChange, activeTab) : null),
-		[statsOpen, selectedChange, activeTab],
+		() => (statsOpen ? getCurrentSource(activeChange, activeTab) : null),
+		[statsOpen, activeChange, activeTab],
 	);
+
+	const sharedDetailProps = {
+		commentsOpen,
+		onToggleComments: () => setCommentsOpen((o) => !o),
+		onOpenStats: () => setStatsOpen(true),
+	};
 
 	return (
 		<ThemeProvider theme={theme}>
@@ -96,11 +110,7 @@ function App() {
 					flexDirection: "row",
 				}}
 			>
-				<AppSidebar
-					changes={changes}
-					selectedKey={selectedKey}
-					onSelect={handleSelectChange}
-				/>
+				<AppSidebar />
 				<Box
 					sx={{
 						flex: 1,
@@ -114,11 +124,12 @@ function App() {
 						sx={{
 							display: "flex",
 							alignItems: "center",
-							gap: 1,
+							gap: 1.5,
 							px: 1.5,
 							py: 0.5,
 							borderBottom: 1,
 							borderColor: "divider",
+							minHeight: 44,
 						}}
 					>
 						<Tooltip
@@ -137,6 +148,7 @@ function App() {
 								<MenuOpenIcon fontSize="small" />
 							</IconButton>
 						</Tooltip>
+						<Breadcrumbs activeChange={activeChange} />
 					</Box>
 					<Box
 						sx={{
@@ -144,29 +156,43 @@ function App() {
 							display: "flex",
 							minHeight: 0,
 							position: "relative",
+							overflow: "hidden",
 						}}
 					>
-						{selectedChange ? (
-							<ChangeViewer
-								change={selectedChange}
-								commentsOpen={commentsOpen}
-								onToggleComments={() => setCommentsOpen((o) => !o)}
-								onOpenStats={() => setStatsOpen(true)}
-							/>
-						) : (
-							<Box
-								sx={{
-									flex: 1,
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-								}}
-							>
-								<Typography color="text.secondary">
-									Select a change from the sidebar
-								</Typography>
-							</Box>
-						)}
+						<Box
+							sx={{
+								flex: 1,
+								display: "flex",
+								flexDirection: "column",
+								overflowY: activeChange ? "hidden" : "auto",
+								minWidth: 0,
+							}}
+						>
+							{!activeRepo ? (
+								<Box
+									sx={{
+										flex: 1,
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+									}}
+								>
+									<Typography color="text.secondary">
+										No repository available
+									</Typography>
+								</Box>
+							) : view === "overview" ? (
+								<OverviewView repo={activeRepo} />
+							) : view === "specs" ? (
+								<SpecsView repo={activeRepo} {...sharedDetailProps} />
+							) : view === "changes" ? (
+								<ChangesView repo={activeRepo} {...sharedDetailProps} />
+							) : view === "graph" ? (
+								<GraphView />
+							) : (
+								<TimelineView />
+							)}
+						</Box>
 						<CommentsPanel
 							open={commentsOpen}
 							pinned={commentsPinned}
