@@ -10,15 +10,24 @@ export interface Change {
 	name: string;
 	archived: boolean;
 	createdAt: Date | null;
+	archivedAt: Date | null;
 	proposal: string | null;
 	tasks: string | null;
 	specs: Record<string, string>;
 }
 
-const mockTimestamps: Record<string, string> = {
-	"add-search-bar": "2026-05-22T10:00:00Z",
-	"add-keyboard-shortcuts": "2026-05-10T14:30:00Z",
-	"init-spec-viewer": "2026-04-02T09:15:00Z",
+interface MockTimestamps {
+	createdAt: string;
+	archivedAt?: string;
+}
+
+const mockTimestamps: Record<string, MockTimestamps> = {
+	"add-search-bar": { createdAt: "2026-05-22T10:00:00Z" },
+	"add-keyboard-shortcuts": { createdAt: "2026-05-10T14:30:00Z" },
+	"init-spec-viewer": {
+		createdAt: "2026-04-02T09:15:00Z",
+		archivedAt: "2026-05-01T16:42:00Z",
+	},
 };
 
 export interface Repo {
@@ -91,7 +100,8 @@ function buildRepos(): Repo[] {
 				slug: parsed.slug,
 				name: slugToName(parsed.slug),
 				archived: parsed.archived,
-				createdAt: ts ? new Date(ts) : null,
+				createdAt: ts ? new Date(ts.createdAt) : null,
+				archivedAt: ts?.archivedAt ? new Date(ts.archivedAt) : null,
 				proposal: null,
 				tasks: null,
 				specs: {},

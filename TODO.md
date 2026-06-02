@@ -23,6 +23,7 @@ User-configurable settings, surfaced via a Settings panel/modal and persisted (l
 
 Deferred during the rebuild; revisit when actually needed.
 
+- [] **Refactor Code** - code should be clean and using reusable components when possible
 - [ ] **i18n scaffolding** (next-intl) — was offered as a slice but skipped; English-only is fine until a second locale is needed
 - [ ] **Vitest setup** — `tasksCompletion.ts`, `extractHeadings.ts`, `documentStats.ts` etc. would benefit from unit tests
 - [ ] **Persist user-added comments** — currently in-memory only; lost on reload. `useCommentsStore` already uses Zustand so add `persist` middleware (mind Date serialization)

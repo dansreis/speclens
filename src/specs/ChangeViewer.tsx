@@ -201,7 +201,7 @@ export function ChangeViewer({
 			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
 				<Minimap headings={headings} containerRef={contentRef} />
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
-					<Box sx={{ maxWidth: "90%", mx: "auto" }}>
+					<Box>
 						{tab === "proposal" &&
 							(change.proposal ? (
 								<MarkdownView

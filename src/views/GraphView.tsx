@@ -6,8 +6,6 @@ export function GraphView() {
 		<Box
 			sx={{
 				p: 4,
-				maxWidth: "90%",
-				mx: "auto",
 				display: "flex",
 				flexDirection: "column",
 				alignItems: "center",

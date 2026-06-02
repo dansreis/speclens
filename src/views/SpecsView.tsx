@@ -127,7 +127,7 @@ export function SpecsView({
 	};
 
 	return (
-		<Box sx={{ p: 4, maxWidth: "90%", mx: "auto", width: "100%" }}>
+		<Box sx={{ p: 4, width: "100%" }}>
 			<Box sx={{ display: "flex", gap: 1.5, alignItems: "center", mb: 2 }}>
 				<TextField
 					placeholder="Filter specs..."
