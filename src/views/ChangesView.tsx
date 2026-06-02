@@ -157,12 +157,35 @@ export function ChangesView({
 								}}
 							>
 								<Box sx={{ flex: 1, minWidth: 0 }}>
-									<Typography
-										variant="body2"
-										sx={{ fontWeight: 600, mb: preview ? 0.25 : 0 }}
-									>
+									<Typography variant="body2" sx={{ fontWeight: 600 }}>
 										{change.name}
 									</Typography>
+									{Object.keys(change.specs).length > 0 && (
+										<Box
+											sx={{
+												display: "flex",
+												flexWrap: "wrap",
+												gap: 0.5,
+												mt: 0.5,
+											}}
+										>
+											{Object.keys(change.specs).map((spec) => (
+												<Chip
+													key={spec}
+													label={spec}
+													size="small"
+													variant="outlined"
+													sx={{
+														height: 18,
+														fontSize: "0.6875rem",
+														color: "text.secondary",
+														borderColor: "divider",
+														"& .MuiChip-label": { px: 0.75 },
+													}}
+												/>
+											))}
+										</Box>
+									)}
 									{preview && (
 										<Typography
 											variant="caption"
@@ -172,6 +195,7 @@ export function ChangesView({
 												WebkitLineClamp: 1,
 												WebkitBoxOrient: "vertical",
 												overflow: "hidden",
+												mt: 0.5,
 											}}
 										>
 											{preview}
@@ -195,8 +219,8 @@ export function ChangesView({
 										sx={{
 											height: 20,
 											fontSize: "0.6875rem",
-											color: change.archived ? "#ca8a04" : "success.main",
-											borderColor: change.archived ? "#ca8a04" : "success.main",
+											color: change.archived ? "#d97706" : "success.main",
+											borderColor: change.archived ? "#d97706" : "success.main",
 										}}
 									/>
 									{progress && (
