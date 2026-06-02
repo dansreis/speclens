@@ -15,13 +15,13 @@ import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
 
 const flashAnim = keyframes`
-  0%, 33.33%, 66.66%, 100% {
-    background-color: rgba(253, 224, 71, 0.45);
-    box-shadow: 0 0 0 0 rgba(253, 224, 71, 0);
+  0%, 100% {
+    background-color: rgba(253, 224, 71, 0.85);
+    box-shadow: inset 0 0 0 0 transparent;
   }
-  16.66%, 50%, 83.33% {
-    background-color: rgba(253, 224, 71, 1);
-    box-shadow: 0 0 0 4px rgba(253, 224, 71, 0.5);
+  50% {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 2px rgba(253, 189, 24, 1);
   }
 `;
 
@@ -73,7 +73,7 @@ export function MarkdownView({ source, documentId }: Props) {
 						window.setTimeout(() => {
 							mark.classList.remove("flash");
 							setScrollTarget(null);
-						}, 1500);
+						}, 550);
 						break;
 					}
 				}
@@ -205,7 +205,7 @@ export function MarkdownView({ source, documentId }: Props) {
 						color: "inherit",
 					},
 					"& mark.user-highlight.flash": {
-						animation: `${flashAnim} 1.5s ease-in-out`,
+						animation: `${flashAnim} 0.225s ease-in-out 2`,
 					},
 				}}
 			>
