@@ -43,3 +43,4 @@ Bigger work, build out in their own slices.
 - [ ] **Mark/unmark resolved from the UI** — `toggleResolved` exists in the store but no button wired
 - [ ] **Resize handles** on the TOC panel and Comments panel
 - [ ] **Cross-doc comment indicator** — when viewing doc X, show a hint that doc Y has comments
+- [ ] **Comments export** - I should be able to export the comments from a specific spec in order to feed LLMs
