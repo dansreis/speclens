@@ -1,3 +1,5 @@
+import { type ChangeSchema, DEFAULT_SCHEMA } from "./schema";
+
 export type RepoType = "private" | "organization" | "local";
 
 export interface RepoConfig {
@@ -11,9 +13,10 @@ export interface Change {
 	archived: boolean;
 	createdAt: Date | null;
 	archivedAt: Date | null;
+	documents: Record<string, string>;
+	specs: Record<string, string>;
 	proposal: string | null;
 	tasks: string | null;
-	specs: Record<string, string>;
 }
 
 interface MockTimestamps {
@@ -34,6 +37,7 @@ export interface Repo {
 	id: string;
 	name: string;
 	type: RepoType;
+	schema: ChangeSchema;
 	changes: Change[];
 }
 
@@ -48,11 +52,17 @@ const configFiles = import.meta.glob("/examples/*/config.json", {
 	import: "default",
 }) as Record<string, RepoConfig>;
 
+const schemaFiles = import.meta.glob("/examples/*/openspec/schema.json", {
+	eager: true,
+	import: "default",
+}) as Record<string, ChangeSchema>;
+
 interface ParsedPath {
 	repoId: string;
 	slug: string;
 	archived: boolean;
-	kind: "proposal" | "tasks" | "spec";
+	kind: "rootFile" | "spec";
+	fileName?: string;
 	capability?: string;
 }
 
@@ -66,9 +76,8 @@ function parsePath(path: string): ParsedPath | null {
 	const slug = parts[0];
 	if (!slug) return null;
 	const rest = parts.slice(1);
-	if (rest[0] === "proposal.md")
-		return { repoId, slug, archived, kind: "proposal" };
-	if (rest[0] === "tasks.md") return { repoId, slug, archived, kind: "tasks" };
+	if (rest.length === 1 && rest[0].endsWith(".md"))
+		return { repoId, slug, archived, kind: "rootFile", fileName: rest[0] };
 	if (rest[0] === "specs" && rest[1] && rest[2] === "spec.md")
 		return { repoId, slug, archived, kind: "spec", capability: rest[1] };
 	return null;
@@ -81,8 +90,39 @@ function slugToName(slug: string): string {
 		.join(" ");
 }
 
+interface ChangeBuilder {
+	slug: string;
+	name: string;
+	archived: boolean;
+	createdAt: Date | null;
+	archivedAt: Date | null;
+	rootFiles: Record<string, string>;
+	specs: Record<string, string>;
+}
+
+function resolveDocuments(
+	schema: ChangeSchema,
+	rootFiles: Record<string, string>,
+	specs: Record<string, string>,
+): Record<string, string> {
+	const documents: Record<string, string> = {};
+	for (const doc of schema.documents) {
+		if (doc.file) {
+			const content = rootFiles[doc.file];
+			if (content) documents[doc.id] = content;
+			continue;
+		}
+		if (doc.directory && doc.join) {
+			const keys = Object.keys(specs).sort();
+			if (keys.length === 0) continue;
+			documents[doc.id] = keys.map((k) => specs[k]).join("\n\n");
+		}
+	}
+	return documents;
+}
+
 function buildRepos(): Repo[] {
-	const changesByRepo = new Map<string, Map<string, Change>>();
+	const changesByRepo = new Map<string, Map<string, ChangeBuilder>>();
 
 	for (const [path, content] of Object.entries(mdFiles)) {
 		const parsed = parsePath(path);
@@ -93,25 +133,31 @@ function buildRepos(): Repo[] {
 			changesByRepo.set(parsed.repoId, changesMap);
 		}
 		const key = `${parsed.archived ? "archive/" : ""}${parsed.slug}`;
-		let change = changesMap.get(key);
-		if (!change) {
+		let builder = changesMap.get(key);
+		if (!builder) {
 			const ts = mockTimestamps[parsed.slug];
-			change = {
+			builder = {
 				slug: parsed.slug,
 				name: slugToName(parsed.slug),
 				archived: parsed.archived,
 				createdAt: ts ? new Date(ts.createdAt) : null,
 				archivedAt: ts?.archivedAt ? new Date(ts.archivedAt) : null,
-				proposal: null,
-				tasks: null,
+				rootFiles: {},
 				specs: {},
 			};
-			changesMap.set(key, change);
+			changesMap.set(key, builder);
 		}
-		if (parsed.kind === "proposal") change.proposal = content;
-		else if (parsed.kind === "tasks") change.tasks = content;
+		if (parsed.kind === "rootFile" && parsed.fileName)
+			builder.rootFiles[parsed.fileName] = content;
 		else if (parsed.kind === "spec" && parsed.capability)
-			change.specs[parsed.capability] = content;
+			builder.specs[parsed.capability] = content;
+	}
+
+	const schemaByRepo = new Map<string, ChangeSchema>();
+	for (const [path, schema] of Object.entries(schemaFiles)) {
+		const m = path.match(/^\/examples\/([^/]+)\/openspec\/schema\.json$/);
+		if (!m) continue;
+		schemaByRepo.set(m[1], schema);
 	}
 
 	const out: Repo[] = [];
@@ -119,13 +165,26 @@ function buildRepos(): Repo[] {
 		const m = path.match(/^\/examples\/([^/]+)\/config\.json$/);
 		if (!m) continue;
 		const repoId = m[1];
-		const changes = [...(changesByRepo.get(repoId)?.values() ?? [])].sort(
+		const schema = schemaByRepo.get(repoId) ?? DEFAULT_SCHEMA;
+		const builders = [...(changesByRepo.get(repoId)?.values() ?? [])].sort(
 			(a, b) => a.name.localeCompare(b.name),
 		);
+		const changes: Change[] = builders.map((b) => ({
+			slug: b.slug,
+			name: b.name,
+			archived: b.archived,
+			createdAt: b.createdAt,
+			archivedAt: b.archivedAt,
+			documents: resolveDocuments(schema, b.rootFiles, b.specs),
+			specs: b.specs,
+			proposal: b.rootFiles["proposal.md"] ?? null,
+			tasks: b.rootFiles["tasks.md"] ?? null,
+		}));
 		out.push({
 			id: repoId,
 			name: config.name,
 			type: config.type,
+			schema,
 			changes,
 		});
 	}

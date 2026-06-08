@@ -15,6 +15,7 @@ import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
+import { DEFAULT_SCHEMA } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
@@ -82,6 +83,7 @@ export function ChangesView({
 		return (
 			<ChangeViewer
 				change={change}
+				schema={repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
 				onOpenStats={onOpenStats}

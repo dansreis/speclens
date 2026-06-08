@@ -1,0 +1,18 @@
+{
+	"documents": [
+		{ "id": "proposal", "file": "proposal.md", "label": "Proposal" },
+		{ "id": "design", "file": "design.md", "label": "Design" },
+		{
+			"id": "tasks",
+			"file": "tasks.md",
+			"label": "Tasks",
+			"completion": "checklist"
+		},
+		{
+			"id": "specs",
+			"directory": "specs",
+			"label": "Specs",
+			"join": true
+		}
+	]
+}

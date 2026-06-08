@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { getCurrentSource } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
+import type { ChangeSchema, DocumentDef } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
 import { MarkdownView } from "./MarkdownView";
@@ -23,13 +24,27 @@ import { Minimap } from "./Minimap";
 
 interface Props {
 	change: Change;
+	schema: ChangeSchema;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
 	onOpenStats: () => void;
 }
 
+function tabLabel(doc: DocumentDef, source: string): string {
+	if (doc.completion === "checklist") {
+		const { done, total } = countTaskCompletion(source);
+		if (total > 0) return `${doc.label} (${done}/${total})`;
+	}
+	if (doc.directory && doc.join) {
+		const count = source.split(/\n\s*\n/).filter((s) => s.trim()).length;
+		if (count > 1) return `${doc.label} (${count})`;
+	}
+	return doc.label;
+}
+
 export function ChangeViewer({
 	change,
+	schema,
 	commentsOpen,
 	onToggleComments,
 	onOpenStats,
@@ -40,8 +55,12 @@ export function ChangeViewer({
 	const zoomIn = useAppStore((s) => s.zoomIn);
 	const zoomOut = useAppStore((s) => s.zoomOut);
 	const resetZoom = useAppStore((s) => s.resetZoom);
-	const capabilities = Object.keys(change.specs);
 	const contentRef = useRef<HTMLDivElement | null>(null);
+
+	const availableDocs = useMemo(
+		() => schema.documents.filter((d) => change.documents[d.id] !== undefined),
+		[schema, change.documents],
+	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: resets viewer when the selected change changes
 	useEffect(() => {
@@ -49,10 +68,12 @@ export function ChangeViewer({
 		contentRef.current?.scrollTo({ top: 0 });
 	}, [change]);
 
-	const specsSource = useMemo(
-		() => capabilities.map((cap) => change.specs[cap]).join("\n\n"),
-		[capabilities, change.specs],
-	);
+	useEffect(() => {
+		if (availableDocs.length === 0) return;
+		if (!availableDocs.some((d) => d.id === tab)) {
+			setTab(availableDocs[0].id);
+		}
+	}, [availableDocs, tab, setTab]);
 
 	const currentSource = useMemo(
 		() => getCurrentSource(change, tab),
@@ -68,11 +89,8 @@ export function ChangeViewer({
 		setTab(v);
 	};
 
-	const taskCount = change.tasks ? countTaskCompletion(change.tasks) : null;
-	const tasksLabel =
-		taskCount && taskCount.total > 0
-			? `Tasks (${taskCount.done}/${taskCount.total})`
-			: "Tasks";
+	const activeDoc = availableDocs.find((d) => d.id === tab) ?? availableDocs[0];
+	const tabValue = activeDoc?.id ?? false;
 
 	return (
 		<Box
@@ -187,48 +205,32 @@ export function ChangeViewer({
 				</Box>
 			</Box>
 			<Tabs
-				value={tab}
+				value={tabValue}
 				onChange={(_, v) => handleTabChange(v as TabKey)}
 				sx={{ px: 4, borderBottom: 1, borderColor: "divider" }}
 			>
-				<Tab value="proposal" label="Proposal" />
-				<Tab value="tasks" label={tasksLabel} />
-				<Tab
-					value="specs"
-					label={`Specs${capabilities.length ? ` (${capabilities.length})` : ""}`}
-				/>
+				{availableDocs.map((doc) => (
+					<Tab
+						key={doc.id}
+						value={doc.id}
+						label={tabLabel(doc, change.documents[doc.id])}
+					/>
+				))}
 			</Tabs>
 			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
 				<Minimap headings={headings} containerRef={contentRef} />
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
 					<Box>
-						{tab === "proposal" &&
-							(change.proposal ? (
-								<MarkdownView
-									source={change.proposal}
-									documentId={`${change.slug}/proposal`}
-								/>
-							) : (
-								<Typography color="text.secondary">No proposal.md</Typography>
-							))}
-						{tab === "tasks" &&
-							(change.tasks ? (
-								<MarkdownView
-									source={change.tasks}
-									documentId={`${change.slug}/tasks`}
-								/>
-							) : (
-								<Typography color="text.secondary">No tasks.md</Typography>
-							))}
-						{tab === "specs" &&
-							(capabilities.length === 0 ? (
-								<Typography color="text.secondary">No specs</Typography>
-							) : (
-								<MarkdownView
-									source={specsSource}
-									documentId={`${change.slug}/specs`}
-								/>
-							))}
+						{activeDoc && currentSource ? (
+							<MarkdownView
+								source={currentSource}
+								documentId={`${change.slug}/${activeDoc.id}`}
+							/>
+						) : (
+							<Typography color="text.secondary">
+								No content for this tab
+							</Typography>
+						)}
 					</Box>
 				</Box>
 			</Box>

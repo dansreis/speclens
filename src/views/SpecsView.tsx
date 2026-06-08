@@ -14,6 +14,7 @@ import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
+import { DEFAULT_SCHEMA } from "../lib/schema";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
 
@@ -114,6 +115,7 @@ export function SpecsView({
 		return (
 			<ChangeViewer
 				change={change}
+				schema={repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
 				onOpenStats={onOpenStats}

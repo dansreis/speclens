@@ -2,7 +2,7 @@ import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type TabKey = "proposal" | "tasks" | "specs";
+export type TabKey = string;
 
 export type AppView = "overview" | "specs" | "changes" | "graph" | "timeline";
 
