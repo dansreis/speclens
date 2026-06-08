@@ -5,6 +5,10 @@ export interface HighlightTarget {
 
 const MARK_CLASS = "user-highlight";
 
+export function highlightKey(target: HighlightTarget): string {
+	return `${target.text}|${target.occurrence}`;
+}
+
 export function clearHighlights(container: HTMLElement): void {
 	const marks = Array.from(
 		container.querySelectorAll<HTMLElement>(`mark.${MARK_CLASS}`),
@@ -26,36 +30,76 @@ export function applyHighlights(
 	for (const target of targets) applyOne(container, target);
 }
 
-function applyOne(container: HTMLElement, target: HighlightTarget): boolean {
-	if (!target.text) return false;
+interface Segment {
+	node: Text;
+	start: number;
+	end: number;
+	length: number;
+}
+
+function collectSegments(container: HTMLElement): {
+	segments: Segment[];
+	flat: string;
+} {
+	const segments: Segment[] = [];
+	const parts: string[] = [];
+	let offset = 0;
 	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-	let count = 0;
 	let node = walker.nextNode() as Text | null;
 	while (node) {
-		const nodeText = node.textContent ?? "";
-		let searchFrom = 0;
-		while (searchFrom <= nodeText.length - target.text.length) {
-			const idx = nodeText.indexOf(target.text, searchFrom);
-			if (idx === -1) break;
-			count++;
-			if (count === target.occurrence) {
-				const range = document.createRange();
-				range.setStart(node, idx);
-				range.setEnd(node, idx + target.text.length);
-				try {
-					const mark = document.createElement("mark");
-					mark.className = MARK_CLASS;
-					range.surroundContents(mark);
-				} catch {
-					return false;
-				}
-				return true;
-			}
-			searchFrom = idx + target.text.length;
-		}
+		const text = node.textContent ?? "";
+		segments.push({
+			node,
+			start: offset,
+			end: offset + text.length,
+			length: text.length,
+		});
+		parts.push(text);
+		offset += text.length;
 		node = walker.nextNode() as Text | null;
 	}
-	return false;
+	return { segments, flat: parts.join("") };
+}
+
+function applyOne(container: HTMLElement, target: HighlightTarget): boolean {
+	if (!target.text) return false;
+	const { segments, flat } = collectSegments(container);
+
+	let count = 0;
+	let matchStart = -1;
+	let idx = flat.indexOf(target.text);
+	while (idx !== -1) {
+		count++;
+		if (count === target.occurrence) {
+			matchStart = idx;
+			break;
+		}
+		idx = flat.indexOf(target.text, idx + target.text.length);
+	}
+	if (matchStart === -1) return false;
+
+	const matchEnd = matchStart + target.text.length;
+	const key = highlightKey(target);
+
+	for (const seg of segments) {
+		if (seg.end <= matchStart) continue;
+		if (seg.start >= matchEnd) break;
+		const localStart = Math.max(0, matchStart - seg.start);
+		const localEnd = Math.min(seg.length, matchEnd - seg.start);
+		if (localEnd <= localStart) continue;
+		try {
+			const range = document.createRange();
+			range.setStart(seg.node, localStart);
+			range.setEnd(seg.node, localEnd);
+			const mark = document.createElement("mark");
+			mark.className = MARK_CLASS;
+			mark.dataset.highlightKey = key;
+			range.surroundContents(mark);
+		} catch {
+			// Skip this segment if surroundContents rejects it; other segments still wrap.
+		}
+	}
+	return true;
 }
 
 export function countOccurrenceBefore(

@@ -12,6 +12,7 @@ import {
 	applyHighlights,
 	countOccurrenceBefore,
 	type HighlightTarget,
+	highlightKey,
 } from "../lib/highlight";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
@@ -72,23 +73,20 @@ export function MarkdownView({ source, documentId }: Props) {
 		applyHighlights(container, highlights);
 
 		if (scrollTarget && documentId && scrollTarget.documentId === documentId) {
+			const key = highlightKey({
+				text: scrollTarget.text,
+				occurrence: scrollTarget.occurrence,
+			});
 			const marks = container.querySelectorAll<HTMLElement>(
-				"mark.user-highlight",
+				`mark.user-highlight[data-highlight-key="${CSS.escape(key)}"]`,
 			);
-			let count = 0;
-			for (const mark of marks) {
-				if (mark.textContent === scrollTarget.text) {
-					count++;
-					if (count === scrollTarget.occurrence) {
-						mark.scrollIntoView({ behavior: "smooth", block: "center" });
-						mark.classList.add("flash");
-						window.setTimeout(() => {
-							mark.classList.remove("flash");
-							setScrollTarget(null);
-						}, 550);
-						break;
-					}
-				}
+			if (marks.length > 0) {
+				marks[0].scrollIntoView({ behavior: "smooth", block: "center" });
+				for (const mark of marks) mark.classList.add("flash");
+				window.setTimeout(() => {
+					for (const mark of marks) mark.classList.remove("flash");
+					setScrollTarget(null);
+				}, 550);
 			}
 		}
 	});
