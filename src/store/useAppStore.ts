@@ -42,6 +42,9 @@ interface AppState {
 	zoomIn: () => void;
 	zoomOut: () => void;
 	resetZoom: () => void;
+
+	highlightEars: boolean;
+	toggleHighlightEars: () => void;
 }
 
 const ZOOM_MIN = 0.7;
@@ -106,6 +109,10 @@ export const useAppStore = create<AppState>()(
 					markdownZoom: clampZoom(state.markdownZoom - ZOOM_STEP),
 				})),
 			resetZoom: () => set({ markdownZoom: 1 }),
+
+			highlightEars: true,
+			toggleHighlightEars: () =>
+				set((state) => ({ highlightEars: !state.highlightEars })),
 		}),
 		{
 			name: "speclens.app-state",
@@ -115,6 +122,7 @@ export const useAppStore = create<AppState>()(
 				selectedRepoId: state.selectedRepoId,
 				markdownZoom: state.markdownZoom,
 				view: state.view,
+				highlightEars: state.highlightEars,
 			}),
 		},
 	),

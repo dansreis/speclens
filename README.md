@@ -59,6 +59,28 @@ src-tauri/                # Rust shell + Tauri config
 
 Each `examples/exampleN/` is a mock repository with a `config.json` (name + type: `private` | `organization` | `local`) and an `openspec/` tree. The repository switcher (top of the sidebar) lets you flip between them; `⌘1`..`⌘5` (or `Ctrl+1`..`Ctrl+5`) work as shortcuts.
 
+## EARS keyword highlighting
+
+Spec markdown is rendered with inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin scenario steps. Toggle it in **Settings** (gear icon, bottom of the sidebar). The fixture repo `speclens/ears-showcase` (`examples/ears-markdown-showcase/`) exercises every keyword and includes negative cases.
+
+Colors are MUI palette tokens, not hex codes — they track light/dark mode and any future theme changes automatically. Keywords are grouped by their semantic role, not by uniqueness, so a few share a token (e.g. SHOULD and THEN both use `info`).
+
+| Keyword(s)  | Role                       | MUI token        |
+| ----------- | -------------------------- | ---------------- |
+| SHALL, MUST | Mandatory — the spine of a requirement | `primary.main`   |
+| SHOULD      | Recommended — weaker than SHALL        | `info.main`      |
+| MAY         | Permitted — explicitly optional         | `secondary.main` |
+| WHEN        | Discrete event trigger     | `success.main`   |
+| WHILE       | Ongoing state              | `warning.main`   |
+| WHERE       | Feature-flag conditional   | `secondary.main` |
+| IF          | Unwanted-behavior branch   | `error.main`     |
+| THEN        | Consequence (paired with IF or scenario) | `info.main`      |
+| GIVEN, AND  | Scenario scaffolding — muted on purpose  | `text.secondary` |
+
+All matches are uppercase + word-bounded, and skipped inside `code`, `pre`, and `kbd` so code samples and keyboard hints stay neutral.
+
+Implementation: rehype plugin `rehypeEarsKeywords` in [`src/lib/earsKeywords.ts`](./src/lib/earsKeywords.ts); styling lives next to the markdown reset in [`src/specs/MarkdownView.tsx`](./src/specs/MarkdownView.tsx). Each keyword emits its own class (`ears-shall`, `ears-when`, …), so splitting a shared token into a distinct color later is a styling-only change.
+
 ## Roadmap
 
 See [`TODO.md`](./TODO.md) for planned settings (max width, comments on/off, theme), foundations (i18n, tests, persistence), and features (GitHub PAT auth, real repo loading, comment threads, etc.).

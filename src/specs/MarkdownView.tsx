@@ -1,11 +1,13 @@
 import { keyframes } from "@emotion/react";
 import { Box } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { alpha } from "@mui/material/styles";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { SelectionPopover } from "../comments/SelectionPopover";
+import { rehypeEarsKeywords } from "../lib/earsKeywords";
 import {
 	applyHighlights,
 	countOccurrenceBefore,
@@ -45,6 +47,15 @@ export function MarkdownView({ source, documentId }: Props) {
 	const scrollTarget = useAppStore((s) => s.scrollTarget);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
 	const markdownZoom = useAppStore((s) => s.markdownZoom);
+	const highlightEars = useAppStore((s) => s.highlightEars);
+
+	const rehypePlugins = useMemo(
+		() =>
+			highlightEars
+				? [rehypeRaw, rehypeSlug, rehypeEarsKeywords]
+				: [rehypeRaw, rehypeSlug],
+		[highlightEars],
+	);
 
 	const highlights: HighlightTarget[] = documentId
 		? comments
@@ -234,11 +245,54 @@ export function MarkdownView({ source, documentId }: Props) {
 					"& mark.user-highlight.flash": {
 						animation: `${flashAnim} 0.225s ease-in-out 2`,
 					},
+					"& .ears-kw": {
+						fontWeight: 600,
+						borderRadius: "3px",
+						px: "3px",
+						py: "0.5px",
+						fontVariantLigatures: "none",
+					},
+					"& .ears-shall, & .ears-must": {
+						color: "primary.main",
+						bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
+					},
+					"& .ears-should": {
+						color: "info.main",
+						bgcolor: (t) => alpha(t.palette.info.main, 0.12),
+					},
+					"& .ears-may": {
+						color: "secondary.main",
+						bgcolor: (t) => alpha(t.palette.secondary.main, 0.12),
+					},
+					"& .ears-when": {
+						color: "success.main",
+						bgcolor: (t) => alpha(t.palette.success.main, 0.12),
+					},
+					"& .ears-while": {
+						color: "warning.main",
+						bgcolor: (t) => alpha(t.palette.warning.main, 0.14),
+					},
+					"& .ears-where": {
+						color: "secondary.main",
+						bgcolor: (t) => alpha(t.palette.secondary.main, 0.12),
+					},
+					"& .ears-if": {
+						color: "error.main",
+						bgcolor: (t) => alpha(t.palette.error.main, 0.12),
+					},
+					"& .ears-then": {
+						color: "info.main",
+						bgcolor: (t) => alpha(t.palette.info.main, 0.12),
+					},
+					"& .ears-given, & .ears-and": {
+						color: "text.secondary",
+						bgcolor: "action.hover",
+					},
 				}}
 			>
 				<ReactMarkdown
 					remarkPlugins={[remarkGfm]}
-					rehypePlugins={[rehypeRaw, rehypeSlug]}
+					rehypePlugins={rehypePlugins}
 				>
 					{source}
 				</ReactMarkdown>

@@ -6,7 +6,10 @@ import {
 	Dialog,
 	DialogContent,
 	DialogTitle,
+	FormControlLabel,
 	IconButton,
+	Stack,
+	Switch,
 	Tooltip,
 	Typography,
 } from "@mui/material";
@@ -20,6 +23,8 @@ interface Props {
 export function SidebarFooter({ collapsed = false }: Props) {
 	const themeMode = useAppStore((s) => s.themeMode);
 	const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
+	const highlightEars = useAppStore((s) => s.highlightEars);
+	const toggleHighlightEars = useAppStore((s) => s.toggleHighlightEars);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	const settingsBtn = (
@@ -79,11 +84,30 @@ export function SidebarFooter({ collapsed = false }: Props) {
 			>
 				<DialogTitle>Settings</DialogTitle>
 				<DialogContent dividers>
-					<Typography variant="body2" color="text.secondary">
-						Settings panel placeholder. See <code>TODO.md</code> for planned
-						options (max markdown width, comments on/off, highlight color,
-						etc.).
-					</Typography>
+					<Stack spacing={2}>
+						<FormControlLabel
+							control={
+								<Switch
+									checked={highlightEars}
+									onChange={toggleHighlightEars}
+								/>
+							}
+							label={
+								<Box>
+									<Typography variant="body2">
+										Highlight EARS keywords
+									</Typography>
+									<Typography variant="caption" color="text.secondary">
+										Colors SHALL, MUST, SHOULD, MAY, WHEN, WHILE, WHERE, IF,
+										THEN, GIVEN, AND in spec prose.
+									</Typography>
+								</Box>
+							}
+						/>
+						<Typography variant="caption" color="text.secondary">
+							More options planned — see <code>TODO.md</code>.
+						</Typography>
+					</Stack>
 				</DialogContent>
 			</Dialog>
 		</>
