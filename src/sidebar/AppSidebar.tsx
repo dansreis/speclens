@@ -15,12 +15,16 @@ import {
 	Tooltip,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { type ReactNode, useState } from "react";
-import { repos } from "../lib/exampleLoader";
+import { type ReactNode, useMemo, useState } from "react";
+import { type Change, repos } from "../lib/exampleLoader";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { RepositorySwitcher } from "../repos/RepositorySwitcher";
 import { type AppView, useAppStore } from "../store/useAppStore";
 import { SidebarFooter } from "./SidebarFooter";
+
+function changeKey(c: Change): string {
+	return `${c.archived ? "archive/" : ""}${c.slug}`;
+}
 
 interface NavItem {
 	id: AppView;
@@ -44,7 +48,32 @@ export function AppSidebar() {
 	const view = useAppStore((s) => s.view);
 	const setView = useAppStore((s) => s.setView);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
+	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
+	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+	const activeChange = useMemo(() => {
+		if (!activeRepo) return null;
+		if (view === "changes" && selectedChangeKey) {
+			return (
+				activeRepo.changes.find((c) => changeKey(c) === selectedChangeKey) ??
+				null
+			);
+		}
+		if (view === "specs" && selectedSpec) {
+			return (
+				activeRepo.changes.find((c) =>
+					Object.keys(c.specs).includes(selectedSpec),
+				) ?? null
+			);
+		}
+		return null;
+	}, [activeRepo, view, selectedChangeKey, selectedSpec]);
+	const displaySchema = activeChange?.schema ?? activeRepo?.schema;
+	const hasOverride = !!(
+		activeChange?.configYaml &&
+		activeRepo &&
+		activeChange.schema.name !== activeRepo.schema.name
+	);
 	const [configOpen, setConfigOpen] = useState(false);
 	const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
@@ -65,20 +94,26 @@ export function AppSidebar() {
 		>
 			<Box sx={{ p: 1 }}>
 				<RepositorySwitcher collapsed={collapsed} />
-				{!collapsed && activeRepo && (
+				{!collapsed && activeRepo && displaySchema && (
 					<Box sx={{ mt: 0.5, px: 0.5 }}>
 						<Tooltip
 							title={
-								activeRepo.configYaml
-									? "View openspec/config.yaml"
-									: "Using built-in schema (no config.yaml)"
+								hasOverride
+									? `Change overrides repo schema (${activeRepo.schema.name})`
+									: activeRepo.configYaml
+										? "View openspec/config.yaml"
+										: "Using built-in schema (no config.yaml)"
 							}
 							placement="right"
 							arrow
 						>
 							<Chip
 								icon={<SettingsApplicationsIcon sx={{ fontSize: 14 }} />}
-								label={activeRepo.schema.name}
+								label={
+									hasOverride
+										? `${displaySchema.name} · override`
+										: displaySchema.name
+								}
 								size="small"
 								variant="outlined"
 								onClick={() => setConfigOpen(true)}
@@ -86,9 +121,12 @@ export function AppSidebar() {
 									height: 22,
 									fontSize: "0.6875rem",
 									fontFamily: "ui-monospace, monospace",
-									color: "text.secondary",
-									borderColor: "divider",
-									"& .MuiChip-icon": { ml: 0.5, color: "text.secondary" },
+									color: hasOverride ? "warning.main" : "text.secondary",
+									borderColor: hasOverride ? "warning.main" : "divider",
+									"& .MuiChip-icon": {
+										ml: 0.5,
+										color: hasOverride ? "warning.main" : "text.secondary",
+									},
 									"&:hover": {
 										borderColor: "primary.main",
 										color: "primary.main",
@@ -178,6 +216,7 @@ export function AppSidebar() {
 			<RepoConfigModal
 				open={configOpen}
 				repo={activeRepo ?? null}
+				change={activeChange}
 				onClose={() => setConfigOpen(false)}
 			/>
 		</Box>

@@ -6,15 +6,18 @@ import {
 	Dialog,
 	DialogContent,
 	DialogTitle,
+	Divider,
 	IconButton,
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import type { Repo } from "../lib/exampleLoader";
+import type { Change, Repo } from "../lib/exampleLoader";
+import type { OpenSpecSchema } from "../lib/schema";
 
 interface Props {
 	open: boolean;
 	repo: Repo | null;
+	change?: Change | null;
 	onClose: () => void;
 }
 
@@ -72,16 +75,50 @@ function Section({
 	);
 }
 
-export function RepoConfigModal({ open, repo, onClose }: Props) {
+function SchemaHeader({ schema }: { schema: OpenSpecSchema }) {
+	return (
+		<>
+			<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+				<Chip
+					label={schema.name}
+					size="small"
+					color="primary"
+					variant="outlined"
+					sx={{ fontWeight: 600 }}
+				/>
+				{schema.version !== undefined && (
+					<Typography variant="caption" color="text.secondary">
+						v{schema.version}
+					</Typography>
+				)}
+			</Box>
+			{schema.description && (
+				<Typography variant="body2" color="text.secondary">
+					{schema.description}
+				</Typography>
+			)}
+		</>
+	);
+}
+
+export function RepoConfigModal({ open, repo, change, onClose }: Props) {
 	if (!repo) return null;
-	const { schema, configYaml, schemaYaml } = repo;
+	const hasChangeOverride = !!change?.configYaml;
+
+	const repoSchema = repo.schema;
+	const changeSchema = change?.schema ?? repoSchema;
+	const sameSchema = hasChangeOverride
+		? changeSchema.name === repoSchema.name
+		: true;
 
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
 			<DialogTitle sx={{ pr: 6 }}>
 				<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 					<SettingsApplicationsIcon />
-					Repository configuration
+					{hasChangeOverride
+						? "Change configuration"
+						: "Repository configuration"}
 				</Box>
 				<Tooltip title="Close (Esc)">
 					<IconButton
@@ -94,52 +131,97 @@ export function RepoConfigModal({ open, repo, onClose }: Props) {
 				</Tooltip>
 			</DialogTitle>
 			<DialogContent dividers>
-				<Section title="Active schema">
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-						<Chip
-							label={schema.name}
-							size="small"
-							color="primary"
-							variant="outlined"
-							sx={{ fontWeight: 600 }}
-						/>
-						{schema.version !== undefined && (
-							<Typography variant="caption" color="text.secondary">
-								v{schema.version}
+				{hasChangeOverride && change && (
+					<>
+						<Box sx={{ mb: 2 }}>
+							<Typography
+								variant="overline"
+								color="text.secondary"
+								sx={{ letterSpacing: 0.5 }}
+							>
+								Change · {change.name}
 							</Typography>
-						)}
-					</Box>
-					{schema.description && (
-						<Typography variant="body2" color="text.secondary">
-							{schema.description}
-						</Typography>
-					)}
+						</Box>
+						<Section title="Active schema (change-level)">
+							<SchemaHeader schema={changeSchema} />
+							{!sameSchema && (
+								<Typography
+									variant="caption"
+									color="warning.main"
+									sx={{ display: "block", mt: 0.75 }}
+								>
+									Overrides the repository default ({repoSchema.name}).
+								</Typography>
+							)}
+						</Section>
+
+						<Section
+							title={`openspec/changes/${change.archived ? "archive/" : ""}${change.slug}/.openspec.yaml`}
+						>
+							{change.configYaml ? (
+								<YamlBlock text={change.configYaml} />
+							) : (
+								<Typography variant="body2" color="text.secondary">
+									No per-change config file.
+								</Typography>
+							)}
+						</Section>
+
+						<Section
+							title={`openspec/schemas/${changeSchema.name}/schema.yaml`}
+							hint={change.schemaYaml ? undefined : "built-in default"}
+						>
+							{change.schemaYaml ? (
+								<YamlBlock text={change.schemaYaml} />
+							) : (
+								<Typography variant="body2" color="text.secondary">
+									No schema file shipped. SpecLens is using its bundled{" "}
+									<strong>{changeSchema.name}</strong> definition.
+								</Typography>
+							)}
+						</Section>
+
+						<Divider sx={{ my: 3 }} />
+						<Box sx={{ mb: 2 }}>
+							<Typography
+								variant="overline"
+								color="text.secondary"
+								sx={{ letterSpacing: 0.5 }}
+							>
+								Repository default
+							</Typography>
+						</Box>
+					</>
+				)}
+
+				<Section title="Active schema (repo-level)">
+					<SchemaHeader schema={repoSchema} />
 				</Section>
 
 				<Section
 					title="openspec/config.yaml"
-					hint={configYaml ? undefined : "not present"}
+					hint={repo.configYaml ? undefined : "not present"}
 				>
-					{configYaml ? (
-						<YamlBlock text={configYaml} />
+					{repo.configYaml ? (
+						<YamlBlock text={repo.configYaml} />
 					) : (
 						<Typography variant="body2" color="text.secondary">
 							This repository has no <code>openspec/config.yaml</code>. Falling
-							back to the built-in <strong>{schema.name}</strong> schema.
+							back to the built-in <strong>{repoSchema.name}</strong> schema.
 						</Typography>
 					)}
 				</Section>
 
 				<Section
-					title={`openspec/schemas/${schema.name}/schema.yaml`}
-					hint={schemaYaml ? undefined : "built-in default"}
+					title={`openspec/schemas/${repoSchema.name}/schema.yaml`}
+					hint={repo.schemaYaml ? undefined : "built-in default"}
 				>
-					{schemaYaml ? (
-						<YamlBlock text={schemaYaml} />
+					{repo.schemaYaml ? (
+						<YamlBlock text={repo.schemaYaml} />
 					) : (
 						<Typography variant="body2" color="text.secondary">
 							No schema file shipped with this repository. SpecLens is using its
-							bundled <strong>{schema.name}</strong> definition.
+							bundled <strong>{repoSchema.name}</strong> definition.
 						</Typography>
 					)}
 				</Section>

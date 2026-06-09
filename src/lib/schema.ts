@@ -99,7 +99,7 @@ export function globToRegex(glob: string): RegExp | null {
 			pattern += c;
 		}
 	}
-	return new RegExp(`^${pattern}$`);
+	return new RegExp(`^${pattern}$`, "i");
 }
 
 export function isChecklistArtifact(

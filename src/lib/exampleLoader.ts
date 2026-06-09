@@ -27,6 +27,8 @@ export interface Change {
 	createdAt: Date | null;
 	archivedAt: Date | null;
 	schema: OpenSpecSchema;
+	configYaml: string | null;
+	schemaYaml: string | null;
 	documents: Record<string, string>;
 	specs: Record<string, string>;
 	proposal: string | null;
@@ -84,8 +86,13 @@ const changeConfigFiles = import.meta.glob(
 	{ eager: true, query: "?raw", import: "default" },
 ) as Record<string, string>;
 
-function loadChangeConfigs(): Map<string, ChangeConfig> {
-	const out = new Map<string, ChangeConfig>();
+interface ChangeConfigEntry {
+	parsed: ChangeConfig;
+	raw: string;
+}
+
+function loadChangeConfigs(): Map<string, ChangeConfigEntry> {
+	const out = new Map<string, ChangeConfigEntry>();
 	for (const [path, text] of Object.entries(changeConfigFiles)) {
 		const m = path.match(
 			/^\/examples\/([^/]+)\/openspec\/changes\/(.+)\/\.openspec\.yaml$/,
@@ -93,7 +100,7 @@ function loadChangeConfigs(): Map<string, ChangeConfig> {
 		if (!m) continue;
 		const repoId = m[1];
 		const parts = m[2].split("/");
-		const archived = parts[0] === "archive";
+		const archived = parts[0].toLowerCase() === "archive";
 		if (archived) parts.shift();
 		const slug = parts[0];
 		if (!slug) continue;
@@ -101,7 +108,7 @@ function loadChangeConfigs(): Map<string, ChangeConfig> {
 			const parsed = yaml.load(text) as ChangeConfig | null;
 			if (!parsed || typeof parsed !== "object") continue;
 			const key = `${repoId}::${archived ? "archive/" : ""}${slug}`;
-			out.set(key, parsed);
+			out.set(key, { parsed, raw: text });
 		} catch {
 			// skip malformed YAML
 		}
@@ -121,7 +128,7 @@ function parsePath(path: string): ParsedPath | null {
 	if (!m) return null;
 	const repoId = m[1];
 	const parts = m[2].split("/");
-	const archived = parts[0] === "archive";
+	const archived = parts[0].toLowerCase() === "archive";
 	if (archived) parts.shift();
 	const slug = parts[0];
 	if (!slug) return null;
@@ -149,10 +156,21 @@ interface ChangeBuilder {
 function deriveSpecs(files: Map<string, string>): Record<string, string> {
 	const specs: Record<string, string> = {};
 	for (const [path, content] of files) {
-		const m = path.match(/^specs\/([^/]+)\/spec\.md$/);
+		const m = path.match(/^specs\/([^/]+)\/spec\.md$/i);
 		if (m) specs[m[1]] = content;
 	}
 	return specs;
+}
+
+function findFileIgnoreCase(
+	files: Map<string, string>,
+	name: string,
+): string | null {
+	const target = name.toLowerCase();
+	for (const [path, content] of files) {
+		if (path.toLowerCase() === target) return content;
+	}
+	return null;
 }
 
 interface RepoSchemaEntry {
@@ -245,12 +263,14 @@ function buildRepos(): Repo[] {
 		);
 		const changes: Change[] = builders.map((b) => {
 			const cfgKey = `${repoId}::${b.archived ? "archive/" : ""}${b.slug}`;
-			const cfg = changeConfigs.get(cfgKey);
+			const cfgEntry = changeConfigs.get(cfgKey);
+			const cfg = cfgEntry?.parsed;
 			const overrideName = cfg?.schema;
-			const overrideSchema = overrideName
-				? repoSchemas.get(repoId)?.get(overrideName)?.schema
+			const overrideEntry = overrideName
+				? repoSchemas.get(repoId)?.get(overrideName)
 				: undefined;
-			const changeSchema = overrideSchema ?? resolved.schema;
+			const changeSchema = overrideEntry?.schema ?? resolved.schema;
+			const changeSchemaYaml = overrideEntry?.yaml ?? resolved.schemaYaml;
 			const createdAt =
 				cfg?.created && !Number.isNaN(Date.parse(cfg.created))
 					? new Date(cfg.created)
@@ -262,10 +282,12 @@ function buildRepos(): Repo[] {
 				createdAt,
 				archivedAt: b.archivedAt,
 				schema: changeSchema,
+				configYaml: cfgEntry?.raw ?? null,
+				schemaYaml: changeSchemaYaml,
 				documents: resolveDocuments(changeSchema, b.files),
 				specs: deriveSpecs(b.files),
-				proposal: b.files.get("proposal.md") ?? null,
-				tasks: b.files.get("tasks.md") ?? null,
+				proposal: findFileIgnoreCase(b.files, "proposal.md"),
+				tasks: findFileIgnoreCase(b.files, "tasks.md"),
 			};
 		});
 		out.push({
