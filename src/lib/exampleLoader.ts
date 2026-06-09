@@ -60,7 +60,7 @@ export interface Repo {
 	changes: Change[];
 }
 
-const mdFiles = import.meta.glob("/examples/*/openspec/changes/**/*.md", {
+const mdFiles = import.meta.glob("/examples/*/**/*.md", {
 	eager: true,
 	query: "?raw",
 	import: "default",
@@ -116,25 +116,40 @@ function loadChangeConfigs(): Map<string, ChangeConfigEntry> {
 	return out;
 }
 
-interface ParsedPath {
+interface ParsedChangePath {
+	scope: "change";
 	repoId: string;
 	slug: string;
 	archived: boolean;
 	relPath: string;
 }
 
+interface ParsedRepoPath {
+	scope: "repo";
+	repoId: string;
+	relPath: string;
+}
+
+type ParsedPath = ParsedChangePath | ParsedRepoPath;
+
 function parsePath(path: string): ParsedPath | null {
-	const m = path.match(/^\/examples\/([^/]+)\/openspec\/changes\/(.+)$/);
-	if (!m) return null;
-	const repoId = m[1];
-	const parts = m[2].split("/");
-	const archived = parts[0].toLowerCase() === "archive";
-	if (archived) parts.shift();
-	const slug = parts[0];
-	if (!slug) return null;
-	const relPath = parts.slice(1).join("/");
-	if (!relPath) return null;
-	return { repoId, slug, archived, relPath };
+	const repoMatch = path.match(/^\/examples\/([^/]+)\/(.+)$/);
+	if (!repoMatch) return null;
+	const repoId = repoMatch[1];
+	const rest = repoMatch[2];
+	const changeMatch = rest.match(/^openspec\/changes\/(.+)$/);
+	if (changeMatch) {
+		const parts = changeMatch[1].split("/");
+		const archived = parts[0].toLowerCase() === "archive";
+		if (archived) parts.shift();
+		const slug = parts[0];
+		if (!slug) return null;
+		const relPath = parts.slice(1).join("/");
+		if (!relPath) return null;
+		return { scope: "change", repoId, slug, archived, relPath };
+	}
+	if (rest.startsWith("openspec/")) return null;
+	return { scope: "repo", repoId, relPath: rest };
 }
 
 function slugToName(slug: string): string {
@@ -223,10 +238,20 @@ function resolveSchemaFor(
 
 function buildRepos(): Repo[] {
 	const changesByRepo = new Map<string, Map<string, ChangeBuilder>>();
+	const rootFilesByRepo = new Map<string, Map<string, string>>();
 
 	for (const [path, content] of Object.entries(mdFiles)) {
 		const parsed = parsePath(path);
 		if (!parsed) continue;
+		if (parsed.scope === "repo") {
+			let map = rootFilesByRepo.get(parsed.repoId);
+			if (!map) {
+				map = new Map();
+				rootFilesByRepo.set(parsed.repoId, map);
+			}
+			map.set(parsed.relPath, content);
+			continue;
+		}
 		let changesMap = changesByRepo.get(parsed.repoId);
 		if (!changesMap) {
 			changesMap = new Map();
@@ -258,6 +283,7 @@ function buildRepos(): Repo[] {
 		if (!m) continue;
 		const repoId = m[1];
 		const resolved = resolveSchemaFor(repoId, repoSchemas);
+		const rootFiles = rootFilesByRepo.get(repoId) ?? new Map<string, string>();
 		const builders = [...(changesByRepo.get(repoId)?.values() ?? [])].sort(
 			(a, b) => a.name.localeCompare(b.name),
 		);
@@ -284,7 +310,7 @@ function buildRepos(): Repo[] {
 				schema: changeSchema,
 				configYaml: cfgEntry?.raw ?? null,
 				schemaYaml: changeSchemaYaml,
-				documents: resolveDocuments(changeSchema, b.files),
+				documents: resolveDocuments(changeSchema, b.files, rootFiles),
 				specs: deriveSpecs(b.files),
 				proposal: findFileIgnoreCase(b.files, "proposal.md"),
 				tasks: findFileIgnoreCase(b.files, "tasks.md"),

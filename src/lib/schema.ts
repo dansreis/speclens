@@ -84,7 +84,6 @@ export function parseConfigYaml(text: string): OpenSpecConfig | null {
 const REGEX_SPECIAL = /[.+?^${}()|[\]\\]/;
 
 export function globToRegex(glob: string): RegExp | null {
-	if (glob.includes("..")) return null;
 	let pattern = "";
 	for (let i = 0; i < glob.length; i++) {
 		const c = glob[i];
@@ -102,6 +101,27 @@ export function globToRegex(glob: string): RegExp | null {
 	return new RegExp(`^${pattern}$`, "i");
 }
 
+/**
+ * Splits an artifact's `generates` pattern into the file-map it should look in
+ * (change-local or repo-root) and the remaining glob to match.
+ *
+ * Anything starting with `../` is treated as repo-root-scoped: leading `../`
+ * segments are stripped (regardless of how many) and the rest matches against
+ * the repo-root file map. This matches OpenSpec's intent — `<repo>/adr/*.md`
+ * always means the repo's top-level `adr/`, regardless of how deep the change
+ * folder sits.
+ */
+export function classifyGenerates(generates: string): {
+	scope: "change" | "repo";
+	pattern: string;
+} {
+	const segments = generates.split("/");
+	let i = 0;
+	while (i < segments.length && segments[i] === "..") i++;
+	if (i === 0) return { scope: "change", pattern: generates };
+	return { scope: "repo", pattern: segments.slice(i).join("/") };
+}
+
 export function isChecklistArtifact(
 	artifact: Artifact,
 	schema: OpenSpecSchema,
@@ -114,17 +134,21 @@ export function isChecklistArtifact(
 export function resolveDocuments(
 	schema: OpenSpecSchema,
 	files: Map<string, string>,
+	rootFiles?: Map<string, string>,
 ): Record<string, string> {
 	const documents: Record<string, string> = {};
 	for (const artifact of schema.artifacts) {
-		const re = globToRegex(artifact.generates);
+		const { scope, pattern } = classifyGenerates(artifact.generates);
+		const re = globToRegex(pattern);
 		if (!re) continue;
+		const source = scope === "repo" ? rootFiles : files;
+		if (!source) continue;
 		const matches: string[] = [];
-		for (const path of files.keys()) if (re.test(path)) matches.push(path);
+		for (const path of source.keys()) if (re.test(path)) matches.push(path);
 		if (matches.length === 0) continue;
 		matches.sort();
 		documents[artifact.id] = matches
-			.map((p) => files.get(p) ?? "")
+			.map((p) => source.get(p) ?? "")
 			.join("\n\n");
 	}
 	return documents;
