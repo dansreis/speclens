@@ -1,8 +1,10 @@
+import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import {
+	Alert,
 	Box,
 	Button,
 	Chip,
@@ -16,7 +18,12 @@ import { useEffect, useMemo, useRef } from "react";
 import { getCurrentSource } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
-import type { ChangeSchema, DocumentDef } from "../lib/schema";
+import {
+	type Artifact,
+	artifactLabel,
+	isChecklistArtifact,
+	type OpenSpecSchema,
+} from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
 import { MarkdownView } from "./MarkdownView";
@@ -24,22 +31,23 @@ import { Minimap } from "./Minimap";
 
 interface Props {
 	change: Change;
-	schema: ChangeSchema;
+	schema: OpenSpecSchema;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
 	onOpenStats: () => void;
 }
 
-function tabLabel(doc: DocumentDef, source: string): string {
-	if (doc.completion === "checklist") {
+function tabLabel(
+	artifact: Artifact,
+	schema: OpenSpecSchema,
+	source: string,
+): string {
+	const base = artifactLabel(artifact.id);
+	if (isChecklistArtifact(artifact, schema)) {
 		const { done, total } = countTaskCompletion(source);
-		if (total > 0) return `${doc.label} (${done}/${total})`;
+		if (total > 0) return `${base} (${done}/${total})`;
 	}
-	if (doc.directory && doc.join) {
-		const count = source.split(/\n\s*\n/).filter((s) => s.trim()).length;
-		if (count > 1) return `${doc.label} (${count})`;
-	}
-	return doc.label;
+	return base;
 }
 
 export function ChangeViewer({
@@ -58,7 +66,7 @@ export function ChangeViewer({
 	const contentRef = useRef<HTMLDivElement | null>(null);
 
 	const availableDocs = useMemo(
-		() => schema.documents.filter((d) => change.documents[d.id] !== undefined),
+		() => schema.artifacts.filter((a) => change.documents[a.id] !== undefined),
 		[schema, change.documents],
 	);
 
@@ -91,6 +99,12 @@ export function ChangeViewer({
 
 	const activeDoc = availableDocs.find((d) => d.id === tab) ?? availableDocs[0];
 	const tabValue = activeDoc?.id ?? false;
+
+	const readyToArchive = useMemo(() => {
+		if (change.archived || !change.tasks) return false;
+		const { total, done } = countTaskCompletion(change.tasks);
+		return total > 0 && done === total;
+	}, [change.archived, change.tasks]);
 
 	return (
 		<Box
@@ -204,16 +218,32 @@ export function ChangeViewer({
 					</Tooltip>
 				</Box>
 			</Box>
+			{readyToArchive && (
+				<Alert
+					severity="warning"
+					variant="outlined"
+					icon={<ArchiveOutlinedIcon fontSize="small" />}
+					sx={{
+						mx: 4,
+						mt: 2,
+						py: 0.25,
+						alignItems: "center",
+						"& .MuiAlert-message": { py: 0.5 },
+					}}
+				>
+					All tasks are complete — this change is ready to archive.
+				</Alert>
+			)}
 			<Tabs
 				value={tabValue}
 				onChange={(_, v) => handleTabChange(v as TabKey)}
 				sx={{ px: 4, borderBottom: 1, borderColor: "divider" }}
 			>
-				{availableDocs.map((doc) => (
+				{availableDocs.map((artifact) => (
 					<Tab
-						key={doc.id}
-						value={doc.id}
-						label={tabLabel(doc, change.documents[doc.id])}
+						key={artifact.id}
+						value={artifact.id}
+						label={tabLabel(artifact, schema, change.documents[artifact.id])}
 					/>
 				))}
 			</Tabs>

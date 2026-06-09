@@ -1,10 +1,12 @@
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
+import SettingsApplicationsIcon from "@mui/icons-material/SettingsApplications";
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import {
 	Box,
+	Chip,
 	Divider,
 	List,
 	ListItemButton,
@@ -13,7 +15,9 @@ import {
 	Tooltip,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { repos } from "../lib/exampleLoader";
+import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { RepositorySwitcher } from "../repos/RepositorySwitcher";
 import { type AppView, useAppStore } from "../store/useAppStore";
 import { SidebarFooter } from "./SidebarFooter";
@@ -39,6 +43,9 @@ export function AppSidebar() {
 	const collapsed = useAppStore((s) => s.sidebarCollapsed);
 	const view = useAppStore((s) => s.view);
 	const setView = useAppStore((s) => s.setView);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
+	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+	const [configOpen, setConfigOpen] = useState(false);
 	const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
 	return (
@@ -58,6 +65,40 @@ export function AppSidebar() {
 		>
 			<Box sx={{ p: 1 }}>
 				<RepositorySwitcher collapsed={collapsed} />
+				{!collapsed && activeRepo && (
+					<Box sx={{ mt: 0.5, px: 0.5 }}>
+						<Tooltip
+							title={
+								activeRepo.configYaml
+									? "View openspec/config.yaml"
+									: "Using built-in schema (no config.yaml)"
+							}
+							placement="right"
+							arrow
+						>
+							<Chip
+								icon={<SettingsApplicationsIcon sx={{ fontSize: 14 }} />}
+								label={activeRepo.schema.name}
+								size="small"
+								variant="outlined"
+								onClick={() => setConfigOpen(true)}
+								sx={{
+									height: 22,
+									fontSize: "0.6875rem",
+									fontFamily: "ui-monospace, monospace",
+									color: "text.secondary",
+									borderColor: "divider",
+									"& .MuiChip-icon": { ml: 0.5, color: "text.secondary" },
+									"&:hover": {
+										borderColor: "primary.main",
+										color: "primary.main",
+										"& .MuiChip-icon": { color: "primary.main" },
+									},
+								}}
+							/>
+						</Tooltip>
+					</Box>
+				)}
 			</Box>
 			<Divider />
 			<Box sx={{ flex: 1, overflowY: "auto", p: collapsed ? 0.5 : 1 }}>
@@ -134,6 +175,11 @@ export function AppSidebar() {
 			<Box sx={{ p: 1 }}>
 				<SidebarFooter collapsed={collapsed} />
 			</Box>
+			<RepoConfigModal
+				open={configOpen}
+				repo={activeRepo ?? null}
+				onClose={() => setConfigOpen(false)}
+			/>
 		</Box>
 	);
 }

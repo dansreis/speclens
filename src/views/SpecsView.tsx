@@ -115,7 +115,7 @@ export function SpecsView({
 		return (
 			<ChangeViewer
 				change={change}
-				schema={repo?.schema ?? DEFAULT_SCHEMA}
+				schema={change.schema ?? repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
 				onOpenStats={onOpenStats}

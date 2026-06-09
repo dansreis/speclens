@@ -1,8 +1,11 @@
-import { Box, ButtonBase, Typography } from "@mui/material";
-import { type ReactNode, useMemo } from "react";
+import SettingsApplicationsIcon from "@mui/icons-material/SettingsApplications";
+import { Box, Button, ButtonBase, Chip, Typography } from "@mui/material";
+import { type ReactNode, useMemo, useState } from "react";
 import type { Change, Repo } from "../lib/exampleLoader";
 import { formatCompactDateTime, formatDuration } from "../lib/relativeTime";
+import { artifactLabel } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
+import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { useAppStore } from "../store/useAppStore";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -20,6 +23,7 @@ export function OverviewView({ repo }: Props) {
 	const setView = useAppStore((s) => s.setView);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const [configOpen, setConfigOpen] = useState(false);
 
 	const stats = useMemo(() => {
 		if (!repo) {
@@ -123,6 +127,11 @@ export function OverviewView({ repo }: Props) {
 				/>
 				<StatCard value={stats.stale} label="Stale active (>30d)" />
 			</Box>
+			{repo && (
+				<Section title="Repository config">
+					<RepoConfigCard repo={repo} onOpenRaw={() => setConfigOpen(true)} />
+				</Section>
+			)}
 			<Section title="Active Changes">
 				{activeChanges.length === 0 ? (
 					<Typography variant="body2" color="text.secondary">
@@ -132,6 +141,11 @@ export function OverviewView({ repo }: Props) {
 					<ChangeList changes={activeChanges} onSelect={handleSelect} />
 				)}
 			</Section>
+			<RepoConfigModal
+				open={configOpen}
+				repo={repo}
+				onClose={() => setConfigOpen(false)}
+			/>
 			<Section title="Recently Archived">
 				{recentArchived.length === 0 ? (
 					<Typography variant="body2" color="text.secondary">
@@ -170,6 +184,123 @@ function StatCard({ value, label }: { value: number | string; label: string }) {
 			<Typography variant="caption" color="text.secondary">
 				{label}
 			</Typography>
+		</Box>
+	);
+}
+
+function RepoConfigCard({
+	repo,
+	onOpenRaw,
+}: {
+	repo: Repo;
+	onOpenRaw: () => void;
+}) {
+	const { schema } = repo;
+	return (
+		<Box
+			sx={{
+				border: 1,
+				borderColor: "divider",
+				borderRadius: 1,
+				p: 2,
+				bgcolor: "background.paper",
+			}}
+		>
+			<Box
+				sx={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					gap: 2,
+					mb: 1.5,
+					flexWrap: "wrap",
+				}}
+			>
+				<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+					<Chip
+						label={schema.name}
+						size="small"
+						color="primary"
+						variant="outlined"
+						sx={{ fontWeight: 600, fontFamily: "ui-monospace, monospace" }}
+					/>
+					{schema.version !== undefined && (
+						<Typography variant="caption" color="text.secondary">
+							v{schema.version}
+						</Typography>
+					)}
+					{!repo.configYaml && (
+						<Typography variant="caption" color="text.secondary">
+							· built-in default
+						</Typography>
+					)}
+				</Box>
+				<Button
+					size="small"
+					variant="text"
+					startIcon={<SettingsApplicationsIcon fontSize="small" />}
+					onClick={onOpenRaw}
+					sx={{ textTransform: "none" }}
+				>
+					View raw YAML
+				</Button>
+			</Box>
+			{schema.description && (
+				<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+					{schema.description}
+				</Typography>
+			)}
+			<Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+				{schema.artifacts.map((artifact) => (
+					<Box
+						key={artifact.id}
+						sx={{
+							display: "flex",
+							alignItems: "baseline",
+							gap: 1.5,
+							py: 0.5,
+							borderBottom: 1,
+							borderColor: "divider",
+							"&:last-of-type": { borderBottom: 0 },
+						}}
+					>
+						<Typography
+							variant="body2"
+							sx={{
+								fontWeight: 600,
+								minWidth: 100,
+								flexShrink: 0,
+							}}
+						>
+							{artifactLabel(artifact.id)}
+						</Typography>
+						<Typography
+							variant="caption"
+							sx={{
+								fontFamily: "ui-monospace, monospace",
+								color: "text.secondary",
+								flexShrink: 0,
+							}}
+						>
+							{artifact.generates}
+						</Typography>
+						{artifact.description && (
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								sx={{
+									flex: 1,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
+								}}
+							>
+								— {artifact.description}
+							</Typography>
+						)}
+					</Box>
+				))}
+			</Box>
 		</Box>
 	);
 }

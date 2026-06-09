@@ -1,4 +1,17 @@
-import { type ChangeSchema, DEFAULT_SCHEMA } from "./schema";
+import yaml from "js-yaml";
+import {
+	DEFAULT_SCHEMA,
+	type OpenSpecConfig,
+	type OpenSpecSchema,
+	parseConfigYaml,
+	parseSchemaYaml,
+	resolveDocuments,
+} from "./schema";
+
+interface ChangeConfig {
+	schema?: string;
+	created?: string;
+}
 
 export type RepoType = "private" | "organization" | "local";
 
@@ -13,6 +26,7 @@ export interface Change {
 	archived: boolean;
 	createdAt: Date | null;
 	archivedAt: Date | null;
+	schema: OpenSpecSchema;
 	documents: Record<string, string>;
 	specs: Record<string, string>;
 	proposal: string | null;
@@ -37,7 +51,10 @@ export interface Repo {
 	id: string;
 	name: string;
 	type: RepoType;
-	schema: ChangeSchema;
+	schema: OpenSpecSchema;
+	config: OpenSpecConfig | null;
+	configYaml: string | null;
+	schemaYaml: string | null;
 	changes: Change[];
 }
 
@@ -52,18 +69,51 @@ const configFiles = import.meta.glob("/examples/*/config.json", {
 	import: "default",
 }) as Record<string, RepoConfig>;
 
-const schemaFiles = import.meta.glob("/examples/*/openspec/schema.json", {
-	eager: true,
-	import: "default",
-}) as Record<string, ChangeSchema>;
+const openspecConfigFiles = import.meta.glob(
+	"/examples/*/openspec/config.yaml",
+	{ eager: true, query: "?raw", import: "default" },
+) as Record<string, string>;
+
+const schemaYamlFiles = import.meta.glob(
+	"/examples/*/openspec/schemas/*/schema.yaml",
+	{ eager: true, query: "?raw", import: "default" },
+) as Record<string, string>;
+
+const changeConfigFiles = import.meta.glob(
+	"/examples/*/openspec/changes/**/.openspec.yaml",
+	{ eager: true, query: "?raw", import: "default" },
+) as Record<string, string>;
+
+function loadChangeConfigs(): Map<string, ChangeConfig> {
+	const out = new Map<string, ChangeConfig>();
+	for (const [path, text] of Object.entries(changeConfigFiles)) {
+		const m = path.match(
+			/^\/examples\/([^/]+)\/openspec\/changes\/(.+)\/\.openspec\.yaml$/,
+		);
+		if (!m) continue;
+		const repoId = m[1];
+		const parts = m[2].split("/");
+		const archived = parts[0] === "archive";
+		if (archived) parts.shift();
+		const slug = parts[0];
+		if (!slug) continue;
+		try {
+			const parsed = yaml.load(text) as ChangeConfig | null;
+			if (!parsed || typeof parsed !== "object") continue;
+			const key = `${repoId}::${archived ? "archive/" : ""}${slug}`;
+			out.set(key, parsed);
+		} catch {
+			// skip malformed YAML
+		}
+	}
+	return out;
+}
 
 interface ParsedPath {
 	repoId: string;
 	slug: string;
 	archived: boolean;
-	kind: "rootFile" | "spec";
-	fileName?: string;
-	capability?: string;
+	relPath: string;
 }
 
 function parsePath(path: string): ParsedPath | null {
@@ -75,12 +125,9 @@ function parsePath(path: string): ParsedPath | null {
 	if (archived) parts.shift();
 	const slug = parts[0];
 	if (!slug) return null;
-	const rest = parts.slice(1);
-	if (rest.length === 1 && rest[0].endsWith(".md"))
-		return { repoId, slug, archived, kind: "rootFile", fileName: rest[0] };
-	if (rest[0] === "specs" && rest[1] && rest[2] === "spec.md")
-		return { repoId, slug, archived, kind: "spec", capability: rest[1] };
-	return null;
+	const relPath = parts.slice(1).join("/");
+	if (!relPath) return null;
+	return { repoId, slug, archived, relPath };
 }
 
 function slugToName(slug: string): string {
@@ -96,29 +143,64 @@ interface ChangeBuilder {
 	archived: boolean;
 	createdAt: Date | null;
 	archivedAt: Date | null;
-	rootFiles: Record<string, string>;
-	specs: Record<string, string>;
+	files: Map<string, string>;
 }
 
-function resolveDocuments(
-	schema: ChangeSchema,
-	rootFiles: Record<string, string>,
-	specs: Record<string, string>,
-): Record<string, string> {
-	const documents: Record<string, string> = {};
-	for (const doc of schema.documents) {
-		if (doc.file) {
-			const content = rootFiles[doc.file];
-			if (content) documents[doc.id] = content;
-			continue;
-		}
-		if (doc.directory && doc.join) {
-			const keys = Object.keys(specs).sort();
-			if (keys.length === 0) continue;
-			documents[doc.id] = keys.map((k) => specs[k]).join("\n\n");
-		}
+function deriveSpecs(files: Map<string, string>): Record<string, string> {
+	const specs: Record<string, string> = {};
+	for (const [path, content] of files) {
+		const m = path.match(/^specs\/([^/]+)\/spec\.md$/);
+		if (m) specs[m[1]] = content;
 	}
-	return documents;
+	return specs;
+}
+
+interface RepoSchemaEntry {
+	schema: OpenSpecSchema;
+	yaml: string;
+}
+
+function loadRepoSchemas(): Map<string, Map<string, RepoSchemaEntry>> {
+	const byRepo = new Map<string, Map<string, RepoSchemaEntry>>();
+	for (const [path, text] of Object.entries(schemaYamlFiles)) {
+		const m = path.match(
+			/^\/examples\/([^/]+)\/openspec\/schemas\/([^/]+)\/schema\.yaml$/,
+		);
+		if (!m) continue;
+		const schema = parseSchemaYaml(text);
+		if (!schema) continue;
+		let map = byRepo.get(m[1]);
+		if (!map) {
+			map = new Map();
+			byRepo.set(m[1], map);
+		}
+		map.set(m[2], { schema, yaml: text });
+	}
+	return byRepo;
+}
+
+interface ResolvedSchema {
+	schema: OpenSpecSchema;
+	config: OpenSpecConfig | null;
+	configYaml: string | null;
+	schemaYaml: string | null;
+}
+
+function resolveSchemaFor(
+	repoId: string,
+	repoSchemas: Map<string, Map<string, RepoSchemaEntry>>,
+): ResolvedSchema {
+	const configPath = `/examples/${repoId}/openspec/config.yaml`;
+	const configYaml = openspecConfigFiles[configPath] ?? null;
+	const config = configYaml ? parseConfigYaml(configYaml) : null;
+	const name = config?.schema;
+	const entry = name ? repoSchemas.get(repoId)?.get(name) : undefined;
+	return {
+		schema: entry?.schema ?? DEFAULT_SCHEMA,
+		config,
+		configYaml,
+		schemaYaml: entry?.yaml ?? null,
+	};
 }
 
 function buildRepos(): Repo[] {
@@ -142,49 +224,58 @@ function buildRepos(): Repo[] {
 				archived: parsed.archived,
 				createdAt: ts ? new Date(ts.createdAt) : null,
 				archivedAt: ts?.archivedAt ? new Date(ts.archivedAt) : null,
-				rootFiles: {},
-				specs: {},
+				files: new Map(),
 			};
 			changesMap.set(key, builder);
 		}
-		if (parsed.kind === "rootFile" && parsed.fileName)
-			builder.rootFiles[parsed.fileName] = content;
-		else if (parsed.kind === "spec" && parsed.capability)
-			builder.specs[parsed.capability] = content;
+		builder.files.set(parsed.relPath, content);
 	}
 
-	const schemaByRepo = new Map<string, ChangeSchema>();
-	for (const [path, schema] of Object.entries(schemaFiles)) {
-		const m = path.match(/^\/examples\/([^/]+)\/openspec\/schema\.json$/);
-		if (!m) continue;
-		schemaByRepo.set(m[1], schema);
-	}
+	const repoSchemas = loadRepoSchemas();
+	const changeConfigs = loadChangeConfigs();
 
 	const out: Repo[] = [];
 	for (const [path, config] of Object.entries(configFiles)) {
 		const m = path.match(/^\/examples\/([^/]+)\/config\.json$/);
 		if (!m) continue;
 		const repoId = m[1];
-		const schema = schemaByRepo.get(repoId) ?? DEFAULT_SCHEMA;
+		const resolved = resolveSchemaFor(repoId, repoSchemas);
 		const builders = [...(changesByRepo.get(repoId)?.values() ?? [])].sort(
 			(a, b) => a.name.localeCompare(b.name),
 		);
-		const changes: Change[] = builders.map((b) => ({
-			slug: b.slug,
-			name: b.name,
-			archived: b.archived,
-			createdAt: b.createdAt,
-			archivedAt: b.archivedAt,
-			documents: resolveDocuments(schema, b.rootFiles, b.specs),
-			specs: b.specs,
-			proposal: b.rootFiles["proposal.md"] ?? null,
-			tasks: b.rootFiles["tasks.md"] ?? null,
-		}));
+		const changes: Change[] = builders.map((b) => {
+			const cfgKey = `${repoId}::${b.archived ? "archive/" : ""}${b.slug}`;
+			const cfg = changeConfigs.get(cfgKey);
+			const overrideName = cfg?.schema;
+			const overrideSchema = overrideName
+				? repoSchemas.get(repoId)?.get(overrideName)?.schema
+				: undefined;
+			const changeSchema = overrideSchema ?? resolved.schema;
+			const createdAt =
+				cfg?.created && !Number.isNaN(Date.parse(cfg.created))
+					? new Date(cfg.created)
+					: b.createdAt;
+			return {
+				slug: b.slug,
+				name: b.name,
+				archived: b.archived,
+				createdAt,
+				archivedAt: b.archivedAt,
+				schema: changeSchema,
+				documents: resolveDocuments(changeSchema, b.files),
+				specs: deriveSpecs(b.files),
+				proposal: b.files.get("proposal.md") ?? null,
+				tasks: b.files.get("tasks.md") ?? null,
+			};
+		});
 		out.push({
 			id: repoId,
 			name: config.name,
 			type: config.type,
-			schema,
+			schema: resolved.schema,
+			config: resolved.config,
+			configYaml: resolved.configYaml,
+			schemaYaml: resolved.schemaYaml,
 			changes,
 		});
 	}
