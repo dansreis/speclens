@@ -47,6 +47,76 @@ const mockTimestamps: Record<string, MockTimestamps> = {
 		createdAt: "2026-04-02T09:15:00Z",
 		archivedAt: "2026-05-01T16:42:00Z",
 	},
+	// AdMedia (example6) — active changes
+	"add-multi-touch-attribution": { createdAt: "2026-05-22T11:00:00Z" },
+	"migrate-tenant-isolation-to-schema-per-tenant": {
+		createdAt: "2026-05-18T09:30:00Z",
+	},
+	"deprecate-legacy-impression-pixel": {
+		createdAt: "2026-04-22T15:40:00Z",
+	},
+	"rename-stop-overspend-requirement": {
+		createdAt: "2026-05-30T13:10:00Z",
+	},
+	"add-budget-pacing-v2-smoothing": { createdAt: "2026-04-30T10:00:00Z" },
+	"add-fraud-shadow-mode": { createdAt: "2026-05-08T14:20:00Z" },
+	"introduce-roas-forecasting": { createdAt: "2026-06-08T09:00:00Z" },
+	"add-self-service-creative-upload": {
+		createdAt: "2026-05-05T11:45:00Z",
+	},
+	// AdMedia (example6) — archived changes
+	"2025-08-12-init-platform-skeleton": {
+		createdAt: "2025-08-12T09:00:00Z",
+		archivedAt: "2025-08-30T17:00:00Z",
+	},
+	"2025-09-04-add-campaign-management": {
+		createdAt: "2025-09-04T10:30:00Z",
+		archivedAt: "2025-09-20T15:00:00Z",
+	},
+	"2025-09-22-add-bid-engine-mvp": {
+		createdAt: "2025-09-22T08:45:00Z",
+		archivedAt: "2025-10-08T18:20:00Z",
+	},
+	"2025-10-10-add-ad-decisioning-pipeline": {
+		createdAt: "2025-10-10T11:00:00Z",
+		archivedAt: "2025-10-26T16:30:00Z",
+	},
+	"2025-10-28-add-impression-pixel": {
+		createdAt: "2025-10-28T09:15:00Z",
+		archivedAt: "2025-11-12T14:00:00Z",
+	},
+	"2025-11-14-add-budget-pacing-v1": {
+		createdAt: "2025-11-14T10:00:00Z",
+		archivedAt: "2025-12-01T13:45:00Z",
+	},
+	"2025-12-02-add-audience-segments": {
+		createdAt: "2025-12-02T11:30:00Z",
+		archivedAt: "2025-12-18T17:15:00Z",
+	},
+	"2026-01-09-introduce-brand-safety": {
+		createdAt: "2026-01-09T09:00:00Z",
+		archivedAt: "2026-01-28T16:00:00Z",
+	},
+	"2026-01-30-add-rls-tenant-isolation": {
+		createdAt: "2026-01-30T08:30:00Z",
+		archivedAt: "2026-02-14T15:30:00Z",
+	},
+	"2026-02-18-add-last-click-attribution": {
+		createdAt: "2026-02-18T10:15:00Z",
+		archivedAt: "2026-03-04T14:50:00Z",
+	},
+	"2026-03-05-add-billing-and-payouts": {
+		createdAt: "2026-03-05T09:45:00Z",
+		archivedAt: "2026-03-26T17:00:00Z",
+	},
+	"2026-03-28-migrate-bid-state-to-scylladb": {
+		createdAt: "2026-03-28T08:00:00Z",
+		archivedAt: "2026-04-30T18:00:00Z",
+	},
+	"2026-04-15-add-creative-approval-workflow": {
+		createdAt: "2026-04-15T10:30:00Z",
+		archivedAt: "2026-05-02T16:00:00Z",
+	},
 };
 
 export interface Repo {

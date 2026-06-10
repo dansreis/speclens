@@ -49,4 +49,42 @@ export const mockComments: AppComment[] = [
 		body: "Tagging this as v0 scope. Fuzzy matching + body-search can land later when we know whether users actually need them.",
 		resolved: false,
 	},
+	// AdMedia (example6) comments — anchored into active changes.
+	{
+		id: "c6",
+		author: "Mariana Tavares",
+		initials: "MT",
+		timestamp: new Date("2026-06-05T09:20:00Z"),
+		quote:
+			"rollups under multi-touch are not arithmetically comparable to historical last-click numbers",
+		body: "Finance is going to push back hard on this — we publish quarterly ROAS comparisons externally. Can we keep last-click as a parallel rollup for at least two quarters, not one?",
+		resolved: false,
+		highlight: {
+			text: "rollups under multi-touch are not arithmetically comparable to historical last-click numbers",
+			occurrence: 1,
+			documentId: "add-multi-touch-attribution/proposal",
+		},
+	},
+	{
+		id: "c7",
+		author: "João Pereira",
+		initials: "JP",
+		timestamp: new Date("2026-06-03T14:45:00Z"),
+		quote: "sixty-three active retailer tenants",
+		body: "Worth flagging that the two enterprise pilots add ~40 more tenants by themselves. The per-tenant Flyway runner needs to handle 100+ schemas comfortably, not just 65.",
+		resolved: false,
+		highlight: {
+			text: "sixty-three active retailer tenants",
+			occurrence: 1,
+			documentId: "migrate-tenant-isolation-to-schema-per-tenant/proposal",
+		},
+	},
+	{
+		id: "c8",
+		author: "Sofia Mendes",
+		initials: "SM",
+		timestamp: new Date("2026-05-29T10:10:00Z"),
+		body: "Great call on the HTML5 sandbox open question. Whatever we do here, it has to be done before we let any retailer flip auto-approval to default-on for HTML5.",
+		resolved: false,
+	},
 ];
