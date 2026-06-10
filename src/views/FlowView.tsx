@@ -11,7 +11,19 @@ import {
 	ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Box, Paper, Popper, Typography, useTheme } from "@mui/material";
+import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
+import AutorenewOutlinedIcon from "@mui/icons-material/AutorenewOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import {
+	Box,
+	Paper,
+	Popper,
+	Tooltip,
+	Typography,
+	useTheme,
+} from "@mui/material";
 import { alpha, type Theme } from "@mui/material/styles";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
@@ -37,6 +49,13 @@ const DOT_R = 6;
 const TIME_AXIS_GAP = 40;
 const LABEL_OVERHANG_RIGHT = 120;
 const LABEL_OVERHANG_TOP = 110;
+
+// Tune to control how aggressively the chart fills the canvas.
+// `padding` is the breathing room around content (0 = edge-to-edge, 0.1 = 10% margin).
+// `maxZoom` caps how far fit can zoom in (small repos hit this cap and stop filling).
+const FIT_VIEW_PADDING = 0.1;
+const FIT_VIEW_MAX_ZOOM = 2;
+const FIT_VIEW_BUTTON_DURATION = 300;
 
 const OP_PALETTE: Record<
 	DeltaOp,
@@ -678,22 +697,47 @@ export function FlowView() {
 					pb: 2,
 					flexShrink: 0,
 					display: "flex",
-					alignItems: "flex-start",
+					alignItems: "center",
 					justifyContent: "space-between",
 					gap: 2,
 					flexWrap: "wrap",
 				}}
 			>
-				<Box sx={{ minWidth: 0, flex: 1 }}>
-					<Typography variant="body2" color="text.secondary">
-						{totalLanes} {totalLanes === 1 ? "capability" : "capabilities"} ·{" "}
-						{totalChanges} {totalChanges === 1 ? "change" : "changes"}
-						{` (${lifecycleCounts.archived} archived`}
-						{lifecycleCounts.inProgress > 0 &&
-							` · ${lifecycleCounts.inProgress} in progress`}
-						{lifecycleCounts.draft > 0 && ` · ${lifecycleCounts.draft} draft`}
-						{")"}
-					</Typography>
+				<Box
+					sx={{
+						minWidth: 0,
+						flex: 1,
+						display: "flex",
+						alignItems: "center",
+						gap: 2,
+						flexWrap: "wrap",
+					}}
+				>
+					<StatChip
+						icon={<LayersOutlinedIcon sx={{ fontSize: 20 }} />}
+						value={totalLanes}
+						label="Capabilities"
+					/>
+					<StatChip
+						icon={<TrendingUpIcon sx={{ fontSize: 20 }} />}
+						value={totalChanges}
+						label="Changes"
+					/>
+					<StatChip
+						icon={<ArchiveOutlinedIcon sx={{ fontSize: 20 }} />}
+						value={lifecycleCounts.archived}
+						label="Archived"
+					/>
+					<StatChip
+						icon={<AutorenewOutlinedIcon sx={{ fontSize: 20 }} />}
+						value={lifecycleCounts.inProgress}
+						label="In progress"
+					/>
+					<StatChip
+						icon={<EditOutlinedIcon sx={{ fontSize: 20 }} />}
+						value={lifecycleCounts.draft}
+						label="Draft"
+					/>
 				</Box>
 				<LegendPanel theme={theme} />
 			</Box>
@@ -738,7 +782,10 @@ export function FlowView() {
 					edges={graph.edges}
 					nodeTypes={nodeTypes}
 					fitView
-					fitViewOptions={{ padding: 0.1, maxZoom: 2 }}
+					fitViewOptions={{
+						padding: FIT_VIEW_PADDING,
+						maxZoom: FIT_VIEW_MAX_ZOOM,
+					}}
 					minZoom={0.05}
 					maxZoom={3}
 					nodesDraggable={false}
@@ -761,7 +808,11 @@ export function FlowView() {
 					/>
 					<Controls
 						showInteractive={false}
-						fitViewOptions={{ padding: 0.1, maxZoom: 2, duration: 300 }}
+						fitViewOptions={{
+							padding: FIT_VIEW_PADDING,
+							maxZoom: FIT_VIEW_MAX_ZOOM,
+							duration: FIT_VIEW_BUTTON_DURATION,
+						}}
 					/>
 					<MiniMap
 						pannable
@@ -960,6 +1011,38 @@ function DotTooltip({ change, dot }: { change: FlowChange; dot: FlowDot }) {
 				Click to open change
 			</Box>
 		</Box>
+	);
+}
+
+function StatChip({
+	icon,
+	value,
+	label,
+}: {
+	icon: React.ReactNode;
+	value: number;
+	label: string;
+}) {
+	return (
+		<Tooltip title={label} arrow placement="bottom">
+			<Box
+				sx={{
+					display: "flex",
+					alignItems: "center",
+					gap: 0.5,
+					color: "text.secondary",
+					cursor: "default",
+				}}
+			>
+				{icon}
+				<Typography
+					variant="body2"
+					sx={{ fontWeight: 500, fontVariantNumeric: "tabular-nums" }}
+				>
+					{value}
+				</Typography>
+			</Box>
+		</Tooltip>
 	);
 }
 
