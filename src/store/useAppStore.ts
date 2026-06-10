@@ -4,7 +4,13 @@ import { persist } from "zustand/middleware";
 
 export type TabKey = string;
 
-export type AppView = "overview" | "specs" | "changes" | "graph" | "timeline";
+export type AppView =
+	| "overview"
+	| "specs"
+	| "changes"
+	| "flow"
+	| "graph"
+	| "timeline";
 
 export interface ScrollTarget {
 	documentId: string;
@@ -75,7 +81,7 @@ export const useAppStore = create<AppState>()(
 					activeTab: "proposal",
 				}),
 
-			view: "specs",
+			view: "overview",
 			setView: (v) =>
 				set((state) => ({
 					view: v,

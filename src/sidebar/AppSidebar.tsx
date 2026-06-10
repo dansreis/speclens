@@ -4,6 +4,7 @@ import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import SettingsApplicationsIcon from "@mui/icons-material/SettingsApplications";
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import WaterfallChartOutlinedIcon from "@mui/icons-material/WaterfallChartOutlined";
 import {
 	Box,
 	Chip,
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
 	{ id: "overview", label: "Overview", icon: <GridViewOutlinedIcon /> },
 	{ id: "specs", label: "Specs", icon: <DescriptionOutlinedIcon /> },
 	{ id: "changes", label: "Changes", icon: <TrendingUpIcon /> },
+	{ id: "flow", label: "Flow", icon: <WaterfallChartOutlinedIcon /> },
 	{ id: "graph", label: "Graph", icon: <HubOutlinedIcon /> },
 	{ id: "timeline", label: "Timeline", icon: <TimelineOutlinedIcon /> },
 ];
