@@ -50,11 +50,11 @@ const TIME_AXIS_GAP = 40;
 const LABEL_OVERHANG_RIGHT = 120;
 const LABEL_OVERHANG_TOP = 110;
 
-// Tune to control how aggressively the chart fills the canvas.
-// `padding` is the breathing room around content (0 = edge-to-edge, 0.1 = 10% margin).
-// `maxZoom` caps how far fit can zoom in (small repos hit this cap and stop filling).
-const FIT_VIEW_PADDING = 0.1;
-const FIT_VIEW_MAX_ZOOM = 2;
+// Marginal uniform padding, high maxZoom — the chart fills the canvas as much
+// as possible, centered. Lower padding → tighter fit. Raise maxZoom → small
+// repos can grow further.
+const FIT_VIEW_PADDING = 0.02;
+const FIT_VIEW_MAX_ZOOM = 10;
 const FIT_VIEW_BUTTON_DURATION = 300;
 
 const OP_PALETTE: Record<
