@@ -18,6 +18,12 @@ export interface ScrollTarget {
 	occurrence: number;
 }
 
+export interface FlowViewport {
+	x: number;
+	y: number;
+	zoom: number;
+}
+
 interface AppState {
 	themeMode: PaletteMode;
 	setThemeMode: (mode: PaletteMode) => void;
@@ -40,6 +46,9 @@ interface AppState {
 
 	scrollTarget: ScrollTarget | null;
 	setScrollTarget: (target: ScrollTarget | null) => void;
+
+	flowViewport: FlowViewport | null;
+	setFlowViewport: (v: FlowViewport | null) => void;
 
 	sidebarCollapsed: boolean;
 	toggleSidebarCollapsed: () => void;
@@ -79,6 +88,7 @@ export const useAppStore = create<AppState>()(
 					selectedChangeKey: null,
 					selectedSpec: null,
 					activeTab: "proposal",
+					flowViewport: null,
 				}),
 
 			view: "overview",
@@ -100,6 +110,9 @@ export const useAppStore = create<AppState>()(
 
 			scrollTarget: null,
 			setScrollTarget: (target) => set({ scrollTarget: target }),
+
+			flowViewport: null,
+			setFlowViewport: (v) => set({ flowViewport: v }),
 
 			sidebarCollapsed: false,
 			toggleSidebarCollapsed: () =>

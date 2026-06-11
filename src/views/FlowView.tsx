@@ -602,8 +602,14 @@ function minimapNodeColor(node: Node, theme: Theme): string {
 export function FlowView() {
 	const theme = useTheme();
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
+	const setFlowViewport = useAppStore((s) => s.setFlowViewport);
 	const repo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 	const flow = useMemo(() => (repo ? buildFlow(repo) : null), [repo]);
+
+	// Read the stored viewport via getState (not the hook) so pan/zoom updates
+	// don't re-render this whole view. ReactFlow only consumes defaultViewport
+	// on mount, and ReactFlow remounts (key={repo.id}) whenever the repo changes.
+	const initialViewport = useAppStore.getState().flowViewport;
 
 	const graph = useMemo(() => {
 		if (!flow) return { nodes: [], edges: [] };
@@ -781,11 +787,16 @@ export function FlowView() {
 					nodes={graph.nodes}
 					edges={graph.edges}
 					nodeTypes={nodeTypes}
-					fitView
-					fitViewOptions={{
-						padding: FIT_VIEW_PADDING,
-						maxZoom: FIT_VIEW_MAX_ZOOM,
-					}}
+					{...(initialViewport
+						? { defaultViewport: initialViewport }
+						: {
+								fitView: true,
+								fitViewOptions: {
+									padding: FIT_VIEW_PADDING,
+									maxZoom: FIT_VIEW_MAX_ZOOM,
+								},
+							})}
+					onViewportChange={setFlowViewport}
 					minZoom={0.05}
 					maxZoom={3}
 					nodesDraggable={false}
