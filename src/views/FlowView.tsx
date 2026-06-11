@@ -36,6 +36,7 @@ import {
 	type LifecycleState,
 } from "../lib/changeFlow";
 import { repos } from "../lib/exampleLoader";
+import { formatRelativeTime } from "../lib/relativeTime";
 import { useAppStore } from "../store/useAppStore";
 
 const LABEL_W = 200;
@@ -946,44 +947,286 @@ function LegendPanel({ theme }: { theme: Theme }) {
 	);
 }
 
-function PillTooltip({ change }: { change: FlowChange }) {
-	const dateLine =
-		change.archivedAt && DATE_FMT.format(change.archivedAt)
-			? `Archived ${DATE_FMT.format(change.archivedAt)}`
-			: change.createdAt
-				? `Created ${DATE_FMT.format(change.createdAt)}`
-				: null;
+const ORDINAL_SUFFIXES = ["th", "st", "nd", "rd"];
+function ordinal(n: number): string {
+	const v = n % 100;
+	return `${n}${ORDINAL_SUFFIXES[(v - 20) % 10] ?? ORDINAL_SUFFIXES[v] ?? ORDINAL_SUFFIXES[0]}`;
+}
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
 	return (
-		<Box sx={{ py: 0.25, minWidth: 180 }}>
+		<Box
+			sx={{
+				fontSize: "0.6rem",
+				fontWeight: 700,
+				letterSpacing: "0.06em",
+				textTransform: "uppercase",
+				color: "text.secondary",
+				opacity: 0.75,
+				mb: 0.5,
+			}}
+		>
+			{children}
+		</Box>
+	);
+}
+
+function SectionDivider() {
+	return (
+		<Box
+			sx={{
+				borderTop: 1,
+				borderColor: "divider",
+				mt: 1,
+				pt: 1,
+			}}
+		/>
+	);
+}
+
+function StateBadge({ state, theme }: { state: LifecycleState; theme: Theme }) {
+	const col = pillColor(state, theme);
+	return (
+		<Box
+			sx={{
+				display: "inline-flex",
+				alignItems: "center",
+				gap: 0.5,
+				px: 0.75,
+				py: 0.25,
+				borderRadius: "3px",
+				bgcolor: col.fill,
+				border: `1px ${col.dash ? "dashed" : "solid"} ${col.stroke}`,
+				fontSize: "0.65rem",
+				fontWeight: 600,
+				lineHeight: 1.2,
+				color: "text.primary",
+			}}
+		>
+			{STATE_LABEL[state]}
+		</Box>
+	);
+}
+
+function ProgressBar({ value, theme }: { value: number; theme: Theme }) {
+	const pct = Math.max(0, Math.min(1, value)) * 100;
+	return (
+		<Box
+			sx={{
+				width: "100%",
+				height: 3,
+				borderRadius: 2,
+				bgcolor: alpha(theme.palette.text.primary, 0.08),
+				overflow: "hidden",
+			}}
+		>
+			<Box
+				sx={{
+					width: `${pct}%`,
+					height: "100%",
+					bgcolor: "primary.main",
+					opacity: 0.85,
+				}}
+			/>
+		</Box>
+	);
+}
+
+function OpChip({ op, theme }: { op: DeltaOp; theme: Theme }) {
+	const col = opColor(op, theme);
+	return (
+		<Box
+			sx={{
+				display: "inline-flex",
+				alignItems: "center",
+				gap: 0.5,
+				fontSize: "0.65rem",
+				lineHeight: 1,
+			}}
+		>
+			<Box
+				sx={{
+					width: 8,
+					height: 8,
+					borderRadius: "50%",
+					bgcolor: col.fill,
+					border: `1px solid ${col.stroke}`,
+				}}
+			/>
+			<Box component="span" sx={{ opacity: 0.85 }}>
+				{OP_LABEL[op]}
+			</Box>
+		</Box>
+	);
+}
+
+function CapabilityRow({
+	capability,
+	primaryOp,
+	theme,
+}: {
+	capability: string;
+	primaryOp: DeltaOp;
+	theme: Theme;
+}) {
+	const col = opColor(primaryOp, theme);
+	return (
+		<Box
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				gap: 0.75,
+				fontSize: "0.7rem",
+				minWidth: 0,
+			}}
+		>
+			<Box
+				sx={{
+					width: 8,
+					height: 8,
+					borderRadius: "50%",
+					bgcolor: col.fill,
+					border: `1px solid ${col.stroke}`,
+					flexShrink: 0,
+				}}
+			/>
+			<Box
+				component="span"
+				sx={{
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap",
+					opacity: 0.9,
+				}}
+			>
+				{capability}
+			</Box>
+		</Box>
+	);
+}
+
+const MAX_CAP_ROWS = 5;
+
+function PillTooltip({ change }: { change: FlowChange }) {
+	const theme = useTheme();
+
+	const timeDate = change.archivedAt ?? change.createdAt;
+	const timeVerb = change.archivedAt ? "Archived" : "Created";
+
+	const shownDots = change.dots.slice(0, MAX_CAP_ROWS);
+	const hiddenCount = change.dots.length - shownDots.length;
+
+	const hasTasks = change.tasksTotal > 0;
+	const isInProgress = change.state === "in-progress";
+
+	return (
+		<Box sx={{ py: 0.25, minWidth: 220, maxWidth: 260 }}>
+			{/* Header */}
+			<Box sx={{ fontWeight: 600, fontSize: "0.8rem", lineHeight: 1.3 }}>
+				{change.name}
+			</Box>
 			<Box
 				sx={{
 					fontFamily: "ui-monospace, monospace",
-					fontWeight: 600,
-					fontSize: "0.75rem",
+					fontSize: "0.65rem",
+					color: "text.secondary",
+					opacity: 0.7,
+					mt: 0.25,
 				}}
 			>
 				{change.slug}
 			</Box>
-			<Box sx={{ fontSize: "0.7rem", opacity: 0.9, mt: 0.25 }}>
-				{STATE_LABEL[change.state]}
-				{change.state === "in-progress" &&
-					` · ${Math.round(change.progress * 100)}% complete`}
-			</Box>
-			<Box sx={{ fontSize: "0.7rem", opacity: 0.9, mt: 0.5 }}>
-				Touches {change.dots.length}{" "}
-				{change.dots.length === 1 ? "capability" : "capabilities"}
-			</Box>
-			{dateLine && (
-				<Box sx={{ fontSize: "0.65rem", opacity: 0.7, mt: 0.5 }}>
-					{dateLine}
-				</Box>
-			)}
+
+			{/* Status */}
+			<SectionDivider />
+			<SectionEyebrow>Status</SectionEyebrow>
 			<Box
 				sx={{
-					fontSize: "0.65rem",
-					opacity: 0.6,
-					mt: 0.75,
+					display: "flex",
+					alignItems: "center",
+					gap: 0.75,
+					flexWrap: "wrap",
+				}}
+			>
+				<StateBadge state={change.state} theme={theme} />
+				{hasTasks && (
+					<Box
+						sx={{
+							fontSize: "0.7rem",
+							color: "text.primary",
+							fontVariantNumeric: "tabular-nums",
+						}}
+					>
+						{change.tasksDone}/{change.tasksTotal} tasks
+						{isInProgress && ` · ${Math.round(change.progress * 100)}%`}
+					</Box>
+				)}
+			</Box>
+			{isInProgress && hasTasks && (
+				<Box sx={{ mt: 0.75 }}>
+					<ProgressBar value={change.progress} theme={theme} />
+				</Box>
+			)}
+
+			{/* Capabilities */}
+			{change.dots.length > 0 && (
+				<>
+					<SectionDivider />
+					<SectionEyebrow>Capabilities · {change.dots.length}</SectionEyebrow>
+					<Box sx={{ display: "flex", flexDirection: "column", gap: 0.4 }}>
+						{shownDots.map((d) => (
+							<CapabilityRow
+								key={d.capability}
+								capability={d.capability}
+								primaryOp={d.primaryOp}
+								theme={theme}
+							/>
+						))}
+						{hiddenCount > 0 && (
+							<Box
+								sx={{
+									fontSize: "0.65rem",
+									color: "text.secondary",
+									opacity: 0.7,
+									pl: 1.75,
+								}}
+							>
+								+{hiddenCount} more
+							</Box>
+						)}
+					</Box>
+				</>
+			)}
+
+			{/* Timeline */}
+			{timeDate && (
+				<>
+					<SectionDivider />
+					<SectionEyebrow>Timeline</SectionEyebrow>
+					<Box sx={{ fontSize: "0.7rem", color: "text.primary" }}>
+						{timeVerb} {formatRelativeTime(timeDate)}
+					</Box>
+					<Box
+						sx={{
+							fontSize: "0.65rem",
+							color: "text.secondary",
+							opacity: 0.7,
+							mt: 0.25,
+						}}
+					>
+						{DATE_FMT.format(timeDate)}
+					</Box>
+				</>
+			)}
+
+			<Box
+				sx={{
+					fontSize: "0.6rem",
+					color: "text.secondary",
+					opacity: 0.55,
+					mt: 1,
 					fontStyle: "italic",
+					textAlign: "right",
 				}}
 			>
 				Click to open
@@ -993,30 +1236,120 @@ function PillTooltip({ change }: { change: FlowChange }) {
 }
 
 function DotTooltip({ change, dot }: { change: FlowChange; dot: FlowDot }) {
+	const theme = useTheme();
 	const ops = [...dot.ops].sort();
+
+	const timeDate = change.archivedAt ?? change.createdAt;
+	const timeVerb = change.archivedAt ? "archived" : "created";
+
+	const hasTasks = change.tasksTotal > 0;
+	const isInProgress = change.state === "in-progress";
+
 	return (
-		<Box sx={{ py: 0.25, minWidth: 180 }}>
+		<Box sx={{ py: 0.25, minWidth: 220, maxWidth: 260 }}>
+			{/* Header */}
+			<Box sx={{ fontWeight: 600, fontSize: "0.8rem", lineHeight: 1.3 }}>
+				{dot.capability}
+			</Box>
+			<Box
+				sx={{
+					display: "flex",
+					flexWrap: "wrap",
+					gap: 0.75,
+					mt: 0.5,
+				}}
+			>
+				{ops.map((o) => (
+					<OpChip key={o} op={o} theme={theme} />
+				))}
+			</Box>
+
+			{/* In change */}
+			<SectionDivider />
+			<SectionEyebrow>In change</SectionEyebrow>
+			<Box sx={{ fontSize: "0.75rem", fontWeight: 500 }}>{change.name}</Box>
 			<Box
 				sx={{
 					fontFamily: "ui-monospace, monospace",
-					fontWeight: 600,
-					fontSize: "0.75rem",
+					fontSize: "0.65rem",
+					color: "text.secondary",
+					opacity: 0.7,
+					mt: 0.25,
 				}}
 			>
-				{dot.capability}
-			</Box>
-			<Box sx={{ fontSize: "0.7rem", opacity: 0.9, mt: 0.25 }}>
-				{ops.map((o) => OP_LABEL[o]).join(" · ")}
-			</Box>
-			<Box sx={{ fontSize: "0.7rem", opacity: 0.75, mt: 0.5 }}>
-				in <strong>{change.slug}</strong>
+				{change.slug}
 			</Box>
 			<Box
 				sx={{
-					fontSize: "0.65rem",
-					opacity: 0.6,
-					mt: 0.75,
+					display: "flex",
+					alignItems: "center",
+					gap: 0.75,
+					mt: 0.5,
+					flexWrap: "wrap",
+				}}
+			>
+				<StateBadge state={change.state} theme={theme} />
+				{hasTasks && (
+					<Box
+						sx={{
+							fontSize: "0.7rem",
+							color: "text.primary",
+							fontVariantNumeric: "tabular-nums",
+						}}
+					>
+						{change.tasksDone}/{change.tasksTotal} tasks
+					</Box>
+				)}
+			</Box>
+			{isInProgress && hasTasks && (
+				<Box sx={{ mt: 0.75 }}>
+					<ProgressBar value={change.progress} theme={theme} />
+				</Box>
+			)}
+
+			{/* Lineage */}
+			<SectionDivider />
+			<SectionEyebrow>Lineage</SectionEyebrow>
+			<Box sx={{ fontSize: "0.7rem", color: "text.primary" }}>
+				{dot.laneTotal <= 1
+					? "First touch in this capability"
+					: `${ordinal(dot.lanePosition)} of ${dot.laneTotal} touches`}
+			</Box>
+			{dot.previousChangeSlug && (
+				<Box
+					sx={{
+						fontSize: "0.65rem",
+						color: "text.secondary",
+						opacity: 0.7,
+						mt: 0.25,
+					}}
+				>
+					prev:{" "}
+					<Box component="span" sx={{ fontFamily: "ui-monospace, monospace" }}>
+						{dot.previousChangeSlug}
+					</Box>
+				</Box>
+			)}
+
+			{/* Timeline */}
+			{timeDate && (
+				<>
+					<SectionDivider />
+					<SectionEyebrow>Timeline</SectionEyebrow>
+					<Box sx={{ fontSize: "0.7rem", color: "text.primary" }}>
+						Change {timeVerb} {formatRelativeTime(timeDate)}
+					</Box>
+				</>
+			)}
+
+			<Box
+				sx={{
+					fontSize: "0.6rem",
+					color: "text.secondary",
+					opacity: 0.55,
+					mt: 1,
 					fontStyle: "italic",
+					textAlign: "right",
 				}}
 			>
 				Click to open change
