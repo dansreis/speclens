@@ -37,15 +37,9 @@ interface Props {
 	repo: Repo | null;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
-	onOpenStats: () => void;
 }
 
-export function ChangesView({
-	repo,
-	commentsOpen,
-	onToggleComments,
-	onOpenStats,
-}: Props) {
+export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -86,7 +80,6 @@ export function ChangesView({
 				schema={change.schema ?? repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
-				onOpenStats={onOpenStats}
 			/>
 		);
 	}

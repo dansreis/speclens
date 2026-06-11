@@ -19,6 +19,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useRef } from "react";
+import { getStatsSections } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
 import {
@@ -29,6 +30,7 @@ import {
 } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
+import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
 import { Minimap } from "./Minimap";
 
@@ -37,7 +39,6 @@ interface Props {
 	schema: OpenSpecSchema;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
-	onOpenStats: () => void;
 }
 
 function tabLabel(
@@ -58,7 +59,6 @@ export function ChangeViewer({
 	schema,
 	commentsOpen,
 	onToggleComments,
-	onOpenStats,
 }: Props) {
 	const tab = useAppStore((s) => s.activeTab);
 	const setTab = useAppStore((s) => s.setActiveTab);
@@ -105,6 +105,11 @@ export function ChangeViewer({
 	}, [tabFiles, storedFile]);
 
 	const currentSource = activeFile?.content ?? change.documents[tab] ?? null;
+
+	const statsSections = useMemo(
+		() => getStatsSections(change, tab, selectedFiles),
+		[change, tab, selectedFiles],
+	);
 
 	const headings = useMemo(
 		() => (currentSource ? extractHeadings(currentSource) : []),
@@ -222,9 +227,25 @@ export function ChangeViewer({
 							<ZoomInIcon fontSize="small" />
 						</IconButton>
 					</Tooltip>
-					<Tooltip title="Document statistics">
+					<Tooltip
+						title={<DocumentStatsTooltipContent sections={statsSections} />}
+						placement="bottom-end"
+						slotProps={{
+							tooltip: {
+								sx: {
+									maxWidth: "none",
+									bgcolor: "background.paper",
+									color: "text.primary",
+									p: 1.5,
+									border: 1,
+									borderColor: "divider",
+									boxShadow: 4,
+									marginTop: "6px !important",
+								},
+							},
+						}}
+					>
 						<IconButton
-							onClick={onOpenStats}
 							aria-label="Document statistics"
 							sx={{ color: "text.secondary" }}
 						>

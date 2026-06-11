@@ -59,15 +59,9 @@ interface Props {
 	repo: Repo | null;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
-	onOpenStats: () => void;
 }
 
-export function SpecsView({
-	repo,
-	commentsOpen,
-	onToggleComments,
-	onOpenStats,
-}: Props) {
+export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -118,7 +112,6 @@ export function SpecsView({
 				schema={change.schema ?? repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
-				onOpenStats={onOpenStats}
 			/>
 		);
 	}

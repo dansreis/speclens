@@ -11,11 +11,9 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
-import { getCurrentSource } from "./lib/documentSource";
 import { repos } from "./lib/exampleLoader";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
-import { DocumentStatsModal } from "./specs/DocumentStatsModal";
 import { useAppStore } from "./store/useAppStore";
 import { createAppTheme } from "./theme/theme";
 import { Breadcrumbs } from "./views/Breadcrumbs";
@@ -94,22 +92,15 @@ function App() {
 
 	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [commentsPinned, setCommentsPinned] = useState(false);
-	const [statsOpen, setStatsOpen] = useState(false);
 	const [searchOpen, setSearchOpen] = useState(false);
 
 	useEffect(() => {
 		if (!activeChange) setCommentsOpen(false);
 	}, [activeChange]);
-	const activeTab = useAppStore((s) => s.activeTab);
-	const statsSource = useMemo(
-		() => (statsOpen ? getCurrentSource(activeChange, activeTab) : null),
-		[statsOpen, activeChange, activeTab],
-	);
 
 	const sharedDetailProps = {
 		commentsOpen,
 		onToggleComments: () => setCommentsOpen((o) => !o),
-		onOpenStats: () => setStatsOpen(true),
 	};
 
 	return (
@@ -258,11 +249,6 @@ function App() {
 					</Box>
 				</Box>
 			</Box>
-			<DocumentStatsModal
-				open={statsOpen}
-				source={statsSource}
-				onClose={() => setStatsOpen(false)}
-			/>
 			<SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
 		</ThemeProvider>
 	);
