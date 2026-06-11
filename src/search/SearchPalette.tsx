@@ -148,6 +148,7 @@ export function SearchPalette({ open, onClose }: Props) {
 	const [filter, setFilter] = useState<FilterKind>("all");
 	const [activeIndex, setActiveIndex] = useState(0);
 	const listRef = useRef<HTMLDivElement | null>(null);
+	const inputRef = useRef<HTMLInputElement | null>(null);
 
 	useEffect(() => {
 		if (open) {
@@ -313,7 +314,10 @@ export function SearchPalette({ open, onClose }: Props) {
 			onClose={onClose}
 			maxWidth="sm"
 			fullWidth
-			slotProps={{ paper: { sx: { borderRadius: 1.5 } } }}
+			slotProps={{
+				paper: { sx: { borderRadius: 1.5 } },
+				transition: { onEntered: () => inputRef.current?.focus() },
+			}}
 		>
 			<Box
 				sx={{
@@ -329,6 +333,7 @@ export function SearchPalette({ open, onClose }: Props) {
 				<InputBase
 					autoFocus
 					fullWidth
+					inputRef={inputRef}
 					placeholder="Search specs and changes..."
 					value={query}
 					onChange={(e) => {
