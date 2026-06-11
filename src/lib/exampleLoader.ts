@@ -65,12 +65,6 @@ interface MockTimestamps {
 }
 
 const mockTimestamps: Record<string, MockTimestamps> = {
-	"add-search-bar": { createdAt: "2026-05-22T10:00:00Z" },
-	"add-keyboard-shortcuts": { createdAt: "2026-05-10T14:30:00Z" },
-	"init-spec-viewer": {
-		createdAt: "2026-04-02T09:15:00Z",
-		archivedAt: "2026-05-01T16:42:00Z",
-	},
 	// AdMedia (example6) — active changes
 	"add-multi-touch-attribution": { createdAt: "2026-05-22T11:00:00Z" },
 	"migrate-tenant-isolation-to-schema-per-tenant": {
@@ -138,6 +132,73 @@ const mockTimestamps: Record<string, MockTimestamps> = {
 		archivedAt: "2026-04-30T18:00:00Z",
 	},
 	"2026-04-15-add-creative-approval-workflow": {
+		createdAt: "2026-04-15T10:30:00Z",
+		archivedAt: "2026-05-02T16:00:00Z",
+	},
+	// Evergreen Health EHR (example7) — active changes
+	"add-medication-safety-keyword-blocklist": {
+		createdAt: "2026-05-12T14:22:00Z",
+	},
+	"add-prescription-pacing-v2-smoothing": {
+		createdAt: "2026-04-30T10:00:00Z",
+	},
+	"add-duplicate-order-shadow-mode": { createdAt: "2026-05-08T14:20:00Z" },
+	"add-multi-provider-attribution": { createdAt: "2026-05-22T11:00:00Z" },
+	"add-self-service-document-upload": {
+		createdAt: "2026-05-05T11:45:00Z",
+	},
+	"add-webhook-signing-rotation": { createdAt: "2026-05-20T09:10:00Z" },
+	"introduce-readmission-risk-forecasting": {
+		createdAt: "2026-06-08T09:00:00Z",
+	},
+	"deprecate-legacy-encounter-pixel": {
+		createdAt: "2026-04-22T15:40:00Z",
+	},
+	"rename-stop-overdispense-requirement": {
+		createdAt: "2026-05-30T13:10:00Z",
+	},
+	// Evergreen Health EHR (example7) — archived changes
+	"2025-09-04-add-patient-records": {
+		createdAt: "2025-09-04T10:30:00Z",
+		archivedAt: "2025-09-20T15:00:00Z",
+	},
+	"2025-09-22-add-clinical-orders-mvp": {
+		createdAt: "2025-09-22T08:45:00Z",
+		archivedAt: "2025-10-08T18:20:00Z",
+	},
+	"2025-10-10-add-clinical-decisioning-pipeline": {
+		createdAt: "2025-10-10T11:00:00Z",
+		archivedAt: "2025-10-26T16:30:00Z",
+	},
+	"2025-10-28-add-encounter-pixel": {
+		createdAt: "2025-10-28T09:15:00Z",
+		archivedAt: "2025-11-12T14:00:00Z",
+	},
+	"2025-11-14-add-prescription-pacing-v1": {
+		createdAt: "2025-11-14T10:00:00Z",
+		archivedAt: "2025-12-01T13:45:00Z",
+	},
+	"2025-12-02-add-cohort-targeting": {
+		createdAt: "2025-12-02T11:30:00Z",
+		archivedAt: "2025-12-18T17:15:00Z",
+	},
+	"2026-01-09-introduce-medication-safety": {
+		createdAt: "2026-01-09T09:00:00Z",
+		archivedAt: "2026-01-28T16:00:00Z",
+	},
+	"2026-02-18-add-last-touch-attribution": {
+		createdAt: "2026-02-18T10:15:00Z",
+		archivedAt: "2026-03-04T14:50:00Z",
+	},
+	"2026-03-05-add-billing-and-claims": {
+		createdAt: "2026-03-05T09:45:00Z",
+		archivedAt: "2026-03-26T17:00:00Z",
+	},
+	"2026-03-28-migrate-encounter-state-to-cassandra": {
+		createdAt: "2026-03-28T08:00:00Z",
+		archivedAt: "2026-04-30T18:00:00Z",
+	},
+	"2026-04-15-add-eprescribing-approval-workflow": {
 		createdAt: "2026-04-15T10:30:00Z",
 		archivedAt: "2026-05-02T16:00:00Z",
 	},
