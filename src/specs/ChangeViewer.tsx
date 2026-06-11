@@ -9,6 +9,7 @@ import {
 	Button,
 	Chip,
 	IconButton,
+	LinearProgress,
 	Tab,
 	Tabs,
 	Tooltip,
@@ -99,6 +100,14 @@ export function ChangeViewer({
 
 	const activeDoc = availableDocs.find((d) => d.id === tab) ?? availableDocs[0];
 	const tabValue = activeDoc?.id ?? false;
+
+	const taskProgress = useMemo(() => {
+		if (!activeDoc || !currentSource) return null;
+		if (!isChecklistArtifact(activeDoc, schema)) return null;
+		const { done, total } = countTaskCompletion(currentSource);
+		if (total === 0) return null;
+		return { done, total, percent: Math.round((done / total) * 100) };
+	}, [activeDoc, currentSource, schema]);
 
 	const readyToArchive = useMemo(() => {
 		if (change.archived || !change.tasks) return false;
@@ -250,6 +259,49 @@ export function ChangeViewer({
 			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
 				<Minimap headings={headings} containerRef={contentRef} />
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
+					{taskProgress && (
+						<Box sx={{ mb: 2 }}>
+							<Box
+								sx={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									mb: 0.75,
+								}}
+							>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{ fontWeight: 500 }}
+								>
+									{taskProgress.done} of {taskProgress.total} tasks complete
+								</Typography>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{ fontFamily: "ui-monospace, monospace" }}
+								>
+									{taskProgress.percent}%
+								</Typography>
+							</Box>
+							<LinearProgress
+								variant="determinate"
+								value={taskProgress.percent}
+								sx={{
+									height: 6,
+									borderRadius: 3,
+									bgcolor: "action.hover",
+									"& .MuiLinearProgress-bar": {
+										borderRadius: 3,
+										bgcolor:
+											taskProgress.percent === 100
+												? "success.main"
+												: "primary.main",
+									},
+								}}
+							/>
+						</Box>
+					)}
 					<Box>
 						{activeDoc && currentSource ? (
 							<MarkdownView
