@@ -1,10 +1,12 @@
 import yaml from "js-yaml";
 import {
 	DEFAULT_SCHEMA,
+	type DocumentFile,
 	type OpenSpecConfig,
 	type OpenSpecSchema,
 	parseConfigYaml,
 	parseSchemaYaml,
+	resolveDocumentFiles,
 	resolveDocuments,
 } from "./schema";
 
@@ -30,6 +32,7 @@ export interface Change {
 	configYaml: string | null;
 	schemaYaml: string | null;
 	documents: Record<string, string>;
+	documentFiles: Record<string, DocumentFile[]>;
 	specs: Record<string, string>;
 	proposal: string | null;
 	tasks: string | null;
@@ -381,6 +384,7 @@ function buildRepos(): Repo[] {
 				configYaml: cfgEntry?.raw ?? null,
 				schemaYaml: changeSchemaYaml,
 				documents: resolveDocuments(changeSchema, b.files, rootFiles),
+				documentFiles: resolveDocumentFiles(changeSchema, b.files, rootFiles),
 				specs: deriveSpecs(b.files),
 				proposal: findFileIgnoreCase(b.files, "proposal.md"),
 				tasks: findFileIgnoreCase(b.files, "tasks.md"),

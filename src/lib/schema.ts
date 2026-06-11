@@ -153,3 +153,49 @@ export function resolveDocuments(
 	}
 	return documents;
 }
+
+export interface DocumentFile {
+	name: string;
+	path: string;
+	content: string;
+}
+
+function staticPrefix(glob: string): string {
+	const star = glob.indexOf("*");
+	if (star === -1) return glob;
+	const slash = glob.lastIndexOf("/", star);
+	return slash === -1 ? "" : glob.slice(0, slash + 1);
+}
+
+function deriveFileName(path: string, prefix: string): string {
+	let rest = path.startsWith(prefix) ? path.slice(prefix.length) : path;
+	rest = rest.replace(/\.md$/i, "");
+	rest = rest.replace(/\/spec$/i, "");
+	return rest || path;
+}
+
+export function resolveDocumentFiles(
+	schema: OpenSpecSchema,
+	files: Map<string, string>,
+	rootFiles?: Map<string, string>,
+): Record<string, DocumentFile[]> {
+	const out: Record<string, DocumentFile[]> = {};
+	for (const artifact of schema.artifacts) {
+		const { scope, pattern } = classifyGenerates(artifact.generates);
+		const re = globToRegex(pattern);
+		if (!re) continue;
+		const source = scope === "repo" ? rootFiles : files;
+		if (!source) continue;
+		const prefix = staticPrefix(pattern);
+		const matches: string[] = [];
+		for (const path of source.keys()) if (re.test(path)) matches.push(path);
+		if (matches.length === 0) continue;
+		matches.sort();
+		out[artifact.id] = matches.map((p) => ({
+			name: deriveFileName(p, prefix),
+			path: p,
+			content: source.get(p) ?? "",
+		}));
+	}
+	return out;
+}

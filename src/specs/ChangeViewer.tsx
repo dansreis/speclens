@@ -8,15 +8,17 @@ import {
 	Box,
 	Button,
 	Chip,
+	FormControl,
 	IconButton,
 	LinearProgress,
+	MenuItem,
+	Select,
 	Tab,
 	Tabs,
 	Tooltip,
 	Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useRef } from "react";
-import { getCurrentSource } from "../lib/documentSource";
 import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
 import {
@@ -60,6 +62,8 @@ export function ChangeViewer({
 }: Props) {
 	const tab = useAppStore((s) => s.activeTab);
 	const setTab = useAppStore((s) => s.setActiveTab);
+	const selectedFiles = useAppStore((s) => s.selectedFiles);
+	const setSelectedFile = useAppStore((s) => s.setSelectedFile);
 	const markdownZoom = useAppStore((s) => s.markdownZoom);
 	const zoomIn = useAppStore((s) => s.zoomIn);
 	const zoomOut = useAppStore((s) => s.zoomOut);
@@ -84,10 +88,23 @@ export function ChangeViewer({
 		}
 	}, [availableDocs, tab, setTab]);
 
-	const currentSource = useMemo(
-		() => getCurrentSource(change, tab),
-		[change, tab],
+	const tabFiles = useMemo(
+		() => change.documentFiles[tab] ?? [],
+		[change.documentFiles, tab],
 	);
+
+	const selectionKey = `${change.slug}::${tab}`;
+	const storedFile = selectedFiles[selectionKey];
+	const activeFile = useMemo(() => {
+		if (tabFiles.length === 0) return null;
+		if (storedFile) {
+			const match = tabFiles.find((f) => f.name === storedFile);
+			if (match) return match;
+		}
+		return tabFiles[0];
+	}, [tabFiles, storedFile]);
+
+	const currentSource = activeFile?.content ?? change.documents[tab] ?? null;
 
 	const headings = useMemo(
 		() => (currentSource ? extractHeadings(currentSource) : []),
@@ -243,19 +260,70 @@ export function ChangeViewer({
 					All tasks are complete — this change is ready to archive.
 				</Alert>
 			)}
-			<Tabs
-				value={tabValue}
-				onChange={(_, v) => handleTabChange(v as TabKey)}
-				sx={{ px: 4, borderBottom: 1, borderColor: "divider" }}
+			<Box
+				sx={{
+					px: 4,
+					borderBottom: 1,
+					borderColor: "divider",
+					display: "flex",
+					alignItems: "center",
+					gap: 2,
+				}}
 			>
-				{availableDocs.map((artifact) => (
-					<Tab
-						key={artifact.id}
-						value={artifact.id}
-						label={tabLabel(artifact, schema, change.documents[artifact.id])}
-					/>
-				))}
-			</Tabs>
+				<Tabs
+					value={tabValue}
+					onChange={(_, v) => handleTabChange(v as TabKey)}
+					sx={{ flex: 1, minHeight: 48 }}
+				>
+					{availableDocs.map((artifact) => (
+						<Tab
+							key={artifact.id}
+							value={artifact.id}
+							label={tabLabel(artifact, schema, change.documents[artifact.id])}
+						/>
+					))}
+				</Tabs>
+				{activeDoc && tabFiles.length > 1 && activeFile && (
+					<Box
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+							flexShrink: 0,
+						}}
+					>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ fontWeight: 500 }}
+						>
+							{artifactLabel(activeDoc.id)}:
+						</Typography>
+						<FormControl size="small" sx={{ minWidth: 180 }}>
+							<Select
+								value={activeFile.name}
+								onChange={(e) =>
+									setSelectedFile(change.slug, activeDoc.id, e.target.value)
+								}
+								sx={{
+									fontSize: "0.8125rem",
+									"& .MuiSelect-select": { py: 0.5 },
+								}}
+							>
+								{tabFiles.map((f) => (
+									<MenuItem
+										key={f.name}
+										value={f.name}
+										sx={{ fontSize: "0.8125rem" }}
+									>
+										{f.name}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+					</Box>
+				)}
+			</Box>
 			<Box sx={{ flex: 1, display: "flex", minHeight: 0 }}>
 				<Minimap headings={headings} containerRef={contentRef} />
 				<Box ref={contentRef} sx={{ flex: 1, overflowY: "auto", px: 4, py: 2 }}>
@@ -306,7 +374,11 @@ export function ChangeViewer({
 						{activeDoc && currentSource ? (
 							<MarkdownView
 								source={currentSource}
-								documentId={`${change.slug}/${activeDoc.id}`}
+								documentId={
+									tabFiles.length > 1 && activeFile
+										? `${change.slug}/${activeDoc.id}/${activeFile.name}`
+										: `${change.slug}/${activeDoc.id}`
+								}
 							/>
 						) : (
 							<Typography color="text.secondary">

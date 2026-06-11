@@ -44,6 +44,13 @@ interface AppState {
 	activeTab: TabKey;
 	setActiveTab: (tab: TabKey) => void;
 
+	selectedFiles: Record<string, string>;
+	setSelectedFile: (
+		changeSlug: string,
+		artifactId: string,
+		name: string,
+	) => void;
+
 	scrollTarget: ScrollTarget | null;
 	setScrollTarget: (target: ScrollTarget | null) => void;
 
@@ -107,6 +114,15 @@ export const useAppStore = create<AppState>()(
 
 			activeTab: "proposal",
 			setActiveTab: (tab) => set({ activeTab: tab }),
+
+			selectedFiles: {},
+			setSelectedFile: (changeSlug, artifactId, name) =>
+				set((state) => ({
+					selectedFiles: {
+						...state.selectedFiles,
+						[`${changeSlug}::${artifactId}`]: name,
+					},
+				})),
 
 			scrollTarget: null,
 			setScrollTarget: (target) => set({ scrollTarget: target }),
