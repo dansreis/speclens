@@ -30,6 +30,7 @@ import {
 } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
+import { AttributionLine } from "./AttributionLine";
 import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
 import { Minimap } from "./Minimap";
@@ -137,6 +138,12 @@ export function ChangeViewer({
 		return total > 0 && done === total;
 	}, [change.archived, change.tasks]);
 
+	const fileAuthorship = useMemo(() => {
+		if (!change.authorship) return null;
+		if (!activeFile) return null;
+		return change.authorship.files[activeFile.path] ?? null;
+	}, [change.authorship, activeFile]);
+
 	return (
 		<Box
 			sx={{
@@ -162,26 +169,38 @@ export function ChangeViewer({
 						flex: 1,
 						minWidth: 0,
 						display: "flex",
-						alignItems: "center",
-						gap: 1.5,
+						flexDirection: "column",
+						gap: 0.5,
 					}}
 				>
-					<Typography variant="h4" component="h2">
-						{change.name}
-					</Typography>
-					<Chip
-						label={change.archived ? "Archived" : "Active"}
-						size="small"
-						variant="outlined"
+					<Box
 						sx={{
-							height: 22,
-							fontSize: "0.75rem",
-							fontWeight: 500,
-							borderWidth: 1.5,
-							color: change.archived ? "#d97706" : "success.main",
-							borderColor: change.archived ? "#d97706" : "success.main",
+							display: "flex",
+							alignItems: "center",
+							gap: 1.5,
+							minWidth: 0,
 						}}
-					/>
+					>
+						<Typography variant="h4" component="h2">
+							{change.name}
+						</Typography>
+						<Chip
+							label={change.archived ? "Archived" : "Active"}
+							size="small"
+							variant="outlined"
+							sx={{
+								height: 22,
+								fontSize: "0.75rem",
+								fontWeight: 500,
+								borderWidth: 1.5,
+								color: change.archived ? "#d97706" : "success.main",
+								borderColor: change.archived ? "#d97706" : "success.main",
+							}}
+						/>
+					</Box>
+					{change.authorship && (
+						<AttributionLine authorship={change.authorship.rolled} />
+					)}
 				</Box>
 				<Box
 					sx={{
@@ -389,6 +408,11 @@ export function ChangeViewer({
 									},
 								}}
 							/>
+						</Box>
+					)}
+					{fileAuthorship && (
+						<Box sx={{ mb: 1.5 }}>
+							<AttributionLine authorship={fileAuthorship} size="sm" />
 						</Box>
 					)}
 					<Box>

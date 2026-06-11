@@ -1,0 +1,60 @@
+{
+	"changes": {
+		"ears-keyword-showcase": {
+			"rolled": {
+				"createdAt": "2026-03-02T10:00:00Z",
+				"createdBy": {
+					"name": "Joana Pinto",
+					"email": "joana@speclens.dev"
+				},
+				"lastEditedAt": "2026-03-02T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Joana Pinto",
+					"email": "joana@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				"proposal.md": {
+					"createdAt": "2026-03-02T10:00:00Z",
+					"createdBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/ears/spec.md": {
+					"createdAt": "2026-03-02T10:00:00Z",
+					"createdBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-03-02T10:00:00Z",
+					"createdBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,1212 @@
+{
+	"changes": {
+		"2026-06-09-add-adr-cross-reference-checker": {
+			"rolled": {
+				"createdAt": "2026-02-19T10:00:00Z",
+				"createdBy": {
+					"name": "Daniel Reis",
+					"email": "daniel@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-19T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Daniel Reis",
+					"email": "daniel@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-19T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-19T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"design.md": {
+					"createdAt": "2026-02-19T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-19T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"proposal.md": {
+					"createdAt": "2026-02-19T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-19T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/adr-cross-reference/spec.md": {
+					"createdAt": "2026-02-19T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-19T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/adr-header-parser/spec.md": {
+					"createdAt": "2026-02-19T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-19T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-19T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-19T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-02-11-add-mermaid-color-coding-event-driven": {
+			"rolled": {
+				"createdAt": "2026-04-05T10:00:00Z",
+				"createdBy": {
+					"name": "Sofia Mendes",
+					"email": "sofia@speclens.dev"
+				},
+				"lastEditedAt": "2026-04-05T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Sofia Mendes",
+					"email": "sofia@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 4
+				},
+				"reviewer-notes.md": {
+					"createdAt": "2026-04-05T10:00:00Z",
+					"createdBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/mermaid-color-coding.md": {
+					"createdAt": "2026-04-05T10:00:00Z",
+					"createdBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-04-05T10:00:00Z",
+					"createdBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-02-11-add-minimalist-schema": {
+			"rolled": {
+				"createdAt": "2026-02-01T10:00:00Z",
+				"createdBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-01T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-01T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"design.md": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-01T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"proposal.md": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-01T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/custom-schema-packaging/spec.md": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-01T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/minimalist-schema-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-01T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-01T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-02-11-create-openspec-schema-understanding-skill": {
+			"rolled": {
+				"createdAt": "2026-02-15T10:00:00Z",
+				"createdBy": {
+					"name": "Marcus Tang",
+					"email": "marcus@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-15T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Marcus Tang",
+					"email": "marcus@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-15T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 3
+				},
+				"reviewer-notes.md": {
+					"createdAt": "2026-02-15T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-15T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/schema-guidance/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-15T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-15T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-15T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-02-11-update-minimalist-schema": {
+			"rolled": {
+				"createdAt": "2026-02-03T10:00:00Z",
+				"createdBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-03T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-03T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"reviewer-notes.md": {
+					"createdAt": "2026-02-03T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-03T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/minimalist-spec-format.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-03T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-03T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-03T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-02-14-add-event-driven-schema": {
+			"rolled": {
+				"createdAt": "2026-02-26T10:00:00Z",
+				"createdBy": {
+					"name": "Anna Costa",
+					"email": "anna@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-26T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Anna Costa",
+					"email": "anna@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-01T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-26T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"editCount": 4
+				},
+				"specs/event-driven-schema-workflow/spec.md": {
+					"createdAt": "2026-02-26T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-26T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-26T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-26T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-02-14-schema-authoring-skill-contributing": {
+			"rolled": {
+				"createdAt": "2026-04-20T10:00:00Z",
+				"createdBy": {
+					"name": "Daniel Reis",
+					"email": "daniel@speclens.dev"
+				},
+				"lastEditedAt": "2026-04-20T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Daniel Reis",
+					"email": "daniel@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-04-20T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-20T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"reviewer-notes.md": {
+					"createdAt": "2026-04-20T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-20T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/schema-authoring-skill-and-contributing.md": {
+					"createdAt": "2026-04-20T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-20T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-04-20T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-20T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-01-add-spec-driven-with-adr-schema": {
+			"rolled": {
+				"createdAt": "2026-02-05T10:00:00Z",
+				"createdBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-05T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-05T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/spec-driven-with-adr-schema-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-05T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-05T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-01-improve-readme-agent-install-instructions": {
+			"rolled": {
+				"createdAt": "2026-04-02T10:00:00Z",
+				"createdBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"lastEditedAt": "2026-04-02T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-04-02T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"reviewer-notes.md": {
+					"createdAt": "2026-04-02T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/ai-agent-install-instructions.md": {
+					"createdAt": "2026-04-02T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-04-02T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-02T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-10-add-behaviour-driven-schema": {
+			"rolled": {
+				"createdAt": "2026-03-24T10:00:00Z",
+				"createdBy": {
+					"name": "Joana Pinto",
+					"email": "joana@speclens.dev"
+				},
+				"lastEditedAt": "2026-03-24T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Joana Pinto",
+					"email": "joana@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-24T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 3
+				},
+				"design.md": {
+					"createdAt": "2026-03-24T10:00:00Z",
+					"createdBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"proposal.md": {
+					"createdAt": "2026-03-24T10:00:00Z",
+					"createdBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/behaviour-driven-schema-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"specs/custom-schema-packaging/spec.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-03-24T10:00:00Z",
+					"createdBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Joana Pinto",
+						"email": "joana@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-10-add-intent-driven-schema": {
+			"rolled": {
+				"createdAt": "2026-02-27T10:00:00Z",
+				"createdBy": {
+					"name": "Daniel Reis",
+					"email": "daniel@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-27T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Daniel Reis",
+					"email": "daniel@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-24T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"design.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"proposal.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/custom-schema-packaging/spec.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/intent-driven-schema-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-10-add-linearized-schema": {
+			"rolled": {
+				"createdAt": "2026-02-27T10:00:00Z",
+				"createdBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-27T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Pedro Silva",
+					"email": "pedro@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-24T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 3
+				},
+				"design.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"proposal.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/custom-schema-packaging/spec.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/linearized-schema-workflow/spec.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-27T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-10-remove-adr-folder-parameter": {
+			"rolled": {
+				"createdAt": "2026-04-18T10:00:00Z",
+				"createdBy": {
+					"name": "Marcus Tang",
+					"email": "marcus@speclens.dev"
+				},
+				"lastEditedAt": "2026-04-18T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Marcus Tang",
+					"email": "marcus@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-04-18T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-18T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/spec-driven-with-adr-schema-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-18T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 3
+				},
+				"tasks.md": {
+					"createdAt": "2026-04-18T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-04-18T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-10-remove-unproposed-behaviour-intent-schemas": {
+			"rolled": {
+				"createdAt": "2026-02-24T10:00:00Z",
+				"createdBy": {
+					"name": "Anna Costa",
+					"email": "anna@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-24T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Anna Costa",
+					"email": "anna@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-24T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/custom-schema-packaging/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-24T10:00:00Z",
+					"createdBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-24T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Anna Costa",
+						"email": "anna@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"archive/2026-05-11-fix-adr-generates-path": {
+			"rolled": {
+				"createdAt": "2026-02-11T10:00:00Z",
+				"createdBy": {
+					"name": "Marcus Tang",
+					"email": "marcus@speclens.dev"
+				},
+				"lastEditedAt": "2026-02-11T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Marcus Tang",
+					"email": "marcus@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-02-11T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-11T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"reviewer-notes.md": {
+					"createdAt": "2026-02-11T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-11T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/intent-driven-schema-workflow/spec.md": {
+					"createdAt": "2026-02-11T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-11T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/spec-driven-with-adr-schema-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-11T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-02-11T10:00:00Z",
+					"createdBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"lastEditedAt": "2026-02-11T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Marcus Tang",
+						"email": "marcus@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		},
+		"replace-linearized-schema-with-skill": {
+			"rolled": {
+				"createdAt": "2026-03-12T10:00:00Z",
+				"createdBy": {
+					"name": "Sofia Mendes",
+					"email": "sofia@speclens.dev"
+				},
+				"lastEditedAt": "2026-03-12T10:00:00Z",
+				"lastEditedBy": {
+					"name": "Sofia Mendes",
+					"email": "sofia@speclens.dev"
+				},
+				"editCount": 1
+			},
+			"files": {
+				".openspec.yaml": {
+					"createdAt": "2026-03-12T10:00:00Z",
+					"createdBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-12T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 1
+				},
+				"specs/custom-schema-packaging/spec.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-12T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"specs/linearized-schema-workflow/spec.md": {
+					"createdAt": "2026-02-27T10:00:00Z",
+					"createdBy": {
+						"name": "Pedro Silva",
+						"email": "pedro@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-12T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"specs/linearized-skill-workflow/spec.md": {
+					"createdAt": "2026-01-01T09:00:00Z",
+					"createdBy": {
+						"name": "Daniel Reis",
+						"email": "daniel@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-12T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 2
+				},
+				"tasks.md": {
+					"createdAt": "2026-03-12T10:00:00Z",
+					"createdBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"lastEditedAt": "2026-03-12T10:00:00Z",
+					"lastEditedBy": {
+						"name": "Sofia Mendes",
+						"email": "sofia@speclens.dev"
+					},
+					"editCount": 1
+				}
+			}
+		}
+	}
+}

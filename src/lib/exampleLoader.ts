@@ -22,6 +22,26 @@ export interface RepoConfig {
 	type: RepoType;
 }
 
+export interface Person {
+	name: string;
+	email: string;
+}
+
+export interface DocAuthorship {
+	createdBy: Person;
+	createdAt: string;
+	lastEditedBy: Person;
+	lastEditedAt: string;
+	editCount: number;
+}
+
+export interface ChangeAuthorship {
+	rolled: DocAuthorship;
+	// Keyed by path relative to the change folder root, e.g. "proposal.md"
+	// or "specs/search/spec.md" — matches DocumentFile.path.
+	files: Record<string, DocAuthorship>;
+}
+
 export interface Change {
 	slug: string;
 	name: string;
@@ -36,6 +56,7 @@ export interface Change {
 	specs: Record<string, string>;
 	proposal: string | null;
 	tasks: string | null;
+	authorship: ChangeAuthorship | null;
 }
 
 interface MockTimestamps {
@@ -158,6 +179,25 @@ const changeConfigFiles = import.meta.glob(
 	"/examples/*/openspec/changes/**/.openspec.yaml",
 	{ eager: true, query: "?raw", import: "default" },
 ) as Record<string, string>;
+
+interface HistoryFile {
+	changes: Record<string, ChangeAuthorship>;
+}
+
+const historyFiles = import.meta.glob("/examples/*/history.json", {
+	eager: true,
+	import: "default",
+}) as Record<string, HistoryFile>;
+
+function loadHistoryByRepo(): Map<string, Record<string, ChangeAuthorship>> {
+	const out = new Map<string, Record<string, ChangeAuthorship>>();
+	for (const [path, json] of Object.entries(historyFiles)) {
+		const m = path.match(/^\/examples\/([^/]+)\/history\.json$/);
+		if (!m) continue;
+		out.set(m[1], json?.changes ?? {});
+	}
+	return out;
+}
 
 interface ChangeConfigEntry {
 	parsed: ChangeConfig;
@@ -349,6 +389,7 @@ function buildRepos(): Repo[] {
 
 	const repoSchemas = loadRepoSchemas();
 	const changeConfigs = loadChangeConfigs();
+	const historyByRepo = loadHistoryByRepo();
 
 	const out: Repo[] = [];
 	for (const [path, config] of Object.entries(configFiles)) {
@@ -360,6 +401,7 @@ function buildRepos(): Repo[] {
 		const builders = [...(changesByRepo.get(repoId)?.values() ?? [])].sort(
 			(a, b) => a.name.localeCompare(b.name),
 		);
+		const repoHistory = historyByRepo.get(repoId) ?? {};
 		const changes: Change[] = builders.map((b) => {
 			const cfgKey = `${repoId}::${b.archived ? "archive/" : ""}${b.slug}`;
 			const cfgEntry = changeConfigs.get(cfgKey);
@@ -374,6 +416,7 @@ function buildRepos(): Repo[] {
 				cfg?.created && !Number.isNaN(Date.parse(cfg.created))
 					? new Date(cfg.created)
 					: b.createdAt;
+			const historyKey = `${b.archived ? "archive/" : ""}${b.slug}`;
 			return {
 				slug: b.slug,
 				name: b.name,
@@ -388,6 +431,7 @@ function buildRepos(): Repo[] {
 				specs: deriveSpecs(b.files),
 				proposal: findFileIgnoreCase(b.files, "proposal.md"),
 				tasks: findFileIgnoreCase(b.files, "tasks.md"),
+				authorship: repoHistory[historyKey] ?? null,
 			};
 		});
 		out.push({

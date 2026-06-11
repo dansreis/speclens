@@ -11,7 +11,10 @@
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
-		"check": "biome check ."
+		"check": "biome check .",
+		"seed:examples": "node scripts/seed-example-git.mjs",
+		"extract:history": "node scripts/extract-example-history.mjs",
+		"seed": "pnpm seed:examples && pnpm extract:history"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",

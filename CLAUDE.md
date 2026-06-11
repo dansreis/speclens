@@ -6,13 +6,13 @@ Context for working on **SpecLens** with Claude Code. Read this before making ch
 
 Desktop reader (Tauri 2 + React 19) for OpenSpec — the markdown convention with `proposal.md` / `tasks.md` / `specs/<capability>/spec.md` inside `<repo>/openspec/changes/<change-slug>/`. Archived changes live under `changes/archive/`.
 
-Currently UI-only against mock data in `examples/`. Real GitHub integration is the next major slice.
+Currently UI-only against seeded local-git fixtures in `examples/`. Real local-git integration (point SpecLens at any folder on disk) is the next major slice. **GitHub integration is explicitly off the roadmap** — see the no-GitHub direction memory.
 
 ## Stack decisions
 
 - **MUI + Emotion.** Confirmed UI stack. **Don't add Tailwind.**
 - **Zustand with `persist`.** `useAppStore` holds UI state (theme, sidebar collapse, selected repo/change/tab, scroll target). `useCommentsStore` holds comments (in-memory only — see TODO).
-- **Vite glob for examples.** `examples/*/openspec/changes/**/*.md` + `examples/*/config.json` are bundled at build time via `import.meta.glob` with `?raw`. When real GitHub integration lands, replace `exampleLoader.ts` while keeping the `Repo[]` shape consumers depend on.
+- **Vite glob for examples.** `examples/*/openspec/changes/**/*.md` + `examples/*/config.json` + `examples/*/history.json` are bundled at build time via `import.meta.glob` with `?raw` (markdown) or default JSON import. When real local-folder loading lands, replace `exampleLoader.ts` while keeping the `Repo[]` shape consumers depend on.
 - **No i18n, no tests, no comment persistence** — deferred. See `TODO.md`.
 
 ## Gates
@@ -38,8 +38,9 @@ src/
 ├── repos/
 │   └── RepositorySwitcher.tsx    # dropdown reading from selectedRepoId; ⌘1..N shortcuts
 ├── specs/
-│   ├── ChangeViewer.tsx          # title row (with stats/comments buttons) + tabs + body
+│   ├── ChangeViewer.tsx          # title row (with stats/comments buttons) + attribution + tabs + body
 │   ├── ChangesSidebar.tsx        # expanded list / collapsed avatar-initials mode
+│   ├── AttributionLine.tsx       # avatar(s) + "Created by X · edited by Y, 2d ago"
 │   ├── MarkdownView.tsx          # ReactMarkdown + selection + highlight rendering
 │   ├── Minimap.tsx               # spine + slide-out TOC panel (HackMD-style)
 │   └── DocumentStatsModal.tsx    # words / chars / paragraphs / sentences / headings / read time
@@ -60,6 +61,16 @@ src/
     ├── useAppStore.ts            # persisted: themeMode, sidebarCollapsed, selectedRepoId
     └── useCommentsStore.ts       # not persisted; seeds from mockComments
 ```
+
+## Authorship pipeline
+
+The `examples/` fixtures are real git repos so the UI has authorship data to render. Three pieces:
+
+- `scripts/seed-example-git.mjs` — `git init` each `examples/*/`, commits with a fixed cast (Daniel Reis, Anna Costa, Pedro Silva, Sofia Mendes, Marcus Tang, Joana Pinto) on dates pulled from a `TIMESTAMPS` map that mirrors `mockTimestamps` in `exampleLoader.ts`. Idempotent; `--force` to wipe.
+- `scripts/extract-example-history.mjs` — runs `git log --follow` per file under each change folder and writes `examples/<id>/history.json` shaped as `{ changes: { "<archive/>slug": { rolled, files } } }`.
+- `pnpm seed` runs both. The seeded `.git/` dirs are gitignored; `history.json` is checked in so a fresh clone renders without scripting.
+
+Keep `TIMESTAMPS` in the seed script in sync with `mockTimestamps` in `exampleLoader.ts` — they're the same calendar.
 
 ## Non-obvious things
 

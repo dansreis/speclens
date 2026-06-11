@@ -34,8 +34,8 @@ Deferred during the rebuild; revisit when actually needed.
 
 Bigger work, build out in their own slices.
 
-- [ ] **GitHub integration** — replace mock repos in `src/repos/RepositorySwitcher.tsx` and pull real change folders. Brings in `lib/github.ts`, PAT keychain via Rust, repository CRUD
-- [ ] **Onboarding / PAT entry** — first-run screen for token capture
+- [ ] **Local-folder loading** — replace `exampleLoader.ts`'s Vite glob with runtime FS reads via Tauri (`@tauri-apps/plugin-fs`), pointing at any folder with an `openspec/` tree. Keep the `Repo[]` shape consumers depend on.
+- [ ] **Runtime git history** — once real folders load, run `git log --follow` via Tauri (shell or a git crate) to derive `authorship` on the fly instead of relying on a build-time `history.json`. Current pipeline stays as fixture-only.
 - [ ] **Switching repos actually changes content** — currently visual only; needs real repo data wired to `changes`
 - [ ] **Click highlight → scroll to comment in panel** — reverse of the existing comment→highlight jump
 - [ ] **Cross-text-node selection for comments** — currently anchors only work within a single text node; selecting across an inline `<code>` block silently fails

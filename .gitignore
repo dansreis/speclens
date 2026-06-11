@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code local settings
 .claude/
+
+# Seeded example repos — regenerate with `pnpm seed:examples`
+examples/*/.git/
