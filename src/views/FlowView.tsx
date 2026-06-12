@@ -35,7 +35,6 @@ import {
 	type FlowDot,
 	type LifecycleState,
 } from "../lib/changeFlow";
-import { repos } from "../lib/exampleLoader";
 import { formatRelativeTime } from "../lib/relativeTime";
 import { useAppStore } from "../store/useAppStore";
 
@@ -604,6 +603,7 @@ export function FlowView() {
 	const theme = useTheme();
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const setFlowViewport = useAppStore((s) => s.setFlowViewport);
+	const repos = useAppStore((s) => s.repos);
 	const repo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 	const flow = useMemo(() => (repo ? buildFlow(repo) : null), [repo]);
 

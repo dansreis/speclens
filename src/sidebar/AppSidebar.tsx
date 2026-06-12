@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { type ReactNode, useMemo, useState } from "react";
-import { type Change, repos } from "../lib/exampleLoader";
+import type { Change } from "../lib/exampleLoader";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { RepositorySwitcher } from "../repos/RepositorySwitcher";
 import { type AppView, useAppStore } from "../store/useAppStore";
@@ -52,6 +52,7 @@ export function AppSidebar() {
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
+	const repos = useAppStore((s) => s.repos);
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 	const activeChange = useMemo(() => {
 		if (!activeRepo) return null;

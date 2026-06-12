@@ -5,7 +5,6 @@ import { Box, ButtonBase, Dialog, InputBase, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import type React from "react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { repos } from "../lib/exampleLoader";
 import { useAppStore } from "../store/useAppStore";
 
 const SPEC_COLOR = "info" as const;
@@ -142,6 +141,7 @@ export function SearchPalette({ open, onClose }: Props) {
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const repos = useAppStore((s) => s.repos);
 	const repo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 
 	const [query, setQuery] = useState("");

@@ -11,10 +11,7 @@
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
-		"check": "biome check .",
-		"seed:examples": "node scripts/seed-example-git.mjs",
-		"extract:history": "node scripts/extract-example-history.mjs",
-		"seed": "pnpm seed:examples && pnpm extract:history"
+		"check": "biome check ."
 	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",
@@ -22,6 +19,7 @@
 		"@mui/icons-material": "^9.0.1",
 		"@mui/material": "^9.0.1",
 		"@tauri-apps/api": "^2",
+		"@tauri-apps/plugin-dialog": "^2.7.1",
 		"@tauri-apps/plugin-opener": "^2",
 		"@xyflow/react": "^12.11.0",
 		"github-slugger": "^2.0.0",

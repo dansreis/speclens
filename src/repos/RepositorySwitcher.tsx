@@ -1,13 +1,17 @@
 import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import ComputerIcon from "@mui/icons-material/Computer";
 import FolderIcon from "@mui/icons-material/Folder";
+import FolderOffIcon from "@mui/icons-material/FolderOff";
 import GroupIcon from "@mui/icons-material/Group";
 import LockIcon from "@mui/icons-material/Lock";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import {
 	Box,
 	ButtonBase,
 	Divider,
+	IconButton,
 	ListItemText,
 	Menu,
 	MenuItem,
@@ -15,8 +19,9 @@ import {
 	Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { type RepoType, repos } from "../lib/exampleLoader";
-import { useAppStore } from "../store/useAppStore";
+import type { Repo, RepoType } from "../lib/exampleLoader";
+import { type RepoSource, useAppStore } from "../store/useAppStore";
+import { pickAndAddRepoSource } from "./addRepo";
 
 function typeIcon(type: RepoType) {
 	if (type === "private") return <LockIcon sx={{ fontSize: 14 }} />;
@@ -28,6 +33,12 @@ const isMac =
 	typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
 const modKey = isMac ? "⌘" : "Ctrl+";
 
+function folderName(path: string): string {
+	const trimmed = path.replace(/\/+$/, "");
+	const idx = trimmed.lastIndexOf("/");
+	return idx === -1 ? trimmed : trimmed.slice(idx + 1);
+}
+
 interface SwitcherProps {
 	collapsed?: boolean;
 }
@@ -35,6 +46,10 @@ interface SwitcherProps {
 export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const setSelectedRepoId = useAppStore((s) => s.setSelectedRepoId);
+	const repos = useAppStore((s) => s.repos);
+	const repoSources = useAppStore((s) => s.repoSources);
+	const removeRepoSource = useAppStore((s) => s.removeRepoSource);
+	const reloadRepo = useAppStore((s) => s.reloadRepo);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const open = Boolean(anchorEl);
 
@@ -42,7 +57,7 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 		if (!selectedRepoId && repos[0]) {
 			setSelectedRepoId(repos[0].id);
 		}
-	}, [selectedRepoId, setSelectedRepoId]);
+	}, [selectedRepoId, setSelectedRepoId, repos]);
 
 	const active = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 
@@ -53,6 +68,17 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 		setSelectedRepoId(id);
 		handleClose();
 	};
+	const handleAdd = async () => {
+		handleClose();
+		await pickAndAddRepoSource();
+	};
+
+	const rows: { source: RepoSource; repo: Repo | null }[] = repoSources.map(
+		(source) => ({
+			source,
+			repo: repos.find((r) => r.id === source.path) ?? null,
+		}),
+	);
 
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
@@ -72,9 +98,9 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 		};
 		document.addEventListener("keydown", handler);
 		return () => document.removeEventListener("keydown", handler);
-	}, [setSelectedRepoId]);
+	}, [setSelectedRepoId, repos]);
 
-	if (!active) return null;
+	const hasAnyRows = repoSources.length > 0;
 
 	const trigger = (
 		<ButtonBase
@@ -100,8 +126,8 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 					width: 32,
 					height: 32,
 					borderRadius: 1,
-					bgcolor: "primary.main",
-					color: "primary.contrastText",
+					bgcolor: active ? "primary.main" : "action.disabledBackground",
+					color: active ? "primary.contrastText" : "text.disabled",
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "center",
@@ -130,14 +156,14 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 								whiteSpace: "nowrap",
 							}}
 						>
-							{active.name}
+							{active ? active.name : "No repository"}
 						</Typography>
 						<Typography
 							variant="caption"
 							color="text.secondary"
 							sx={{ lineHeight: 1.2 }}
 						>
-							{active.type}
+							{active ? active.type : "Click to add"}
 						</Typography>
 					</Box>
 					<UnfoldMoreIcon
@@ -149,12 +175,33 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 		</ButtonBase>
 	);
 
+	let loadedIndex = 0;
+
+	const expandedTrigger =
+		!collapsed && active ? (
+			<Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+				<Box sx={{ flex: 1, minWidth: 0 }}>{trigger}</Box>
+				<Tooltip title="Reload repository" placement="bottom" arrow>
+					<IconButton
+						size="small"
+						onClick={() => reloadRepo(active.id)}
+						aria-label="Reload repository"
+						sx={{ color: "text.secondary" }}
+					>
+						<RefreshIcon fontSize="small" />
+					</IconButton>
+				</Tooltip>
+			</Box>
+		) : null;
+
 	return (
 		<>
-			{collapsed ? (
+			{collapsed && active ? (
 				<Tooltip title={active.name} placement="right" arrow>
 					{trigger}
 				</Tooltip>
+			) : expandedTrigger ? (
+				expandedTrigger
 			) : (
 				trigger
 			)}
@@ -165,7 +212,7 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 				anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
 				transformOrigin={{ vertical: "top", horizontal: "left" }}
 				slotProps={{
-					paper: { sx: { minWidth: 260, mt: 0.5 } },
+					paper: { sx: { minWidth: 280, mt: 0.5 } },
 					list: { sx: { py: 0.5 } },
 				}}
 			>
@@ -176,49 +223,129 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 				>
 					Repositories
 				</Typography>
-				{repos.map((repo, i) => (
-					<MenuItem
-						key={repo.id}
-						selected={repo.id === active.id}
-						onClick={() => handleSelect(repo.id)}
-						sx={{ gap: 1.25, py: 1 }}
-					>
-						<Box
-							sx={{
-								width: 24,
-								height: 24,
-								borderRadius: 0.75,
-								border: 1,
-								borderColor: "divider",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								flexShrink: 0,
-								color: "text.secondary",
-							}}
-						>
-							{typeIcon(repo.type)}
-						</Box>
-						<ListItemText
-							primary={repo.name}
-							secondary={repo.type}
-							slotProps={{
-								primary: { variant: "body2" },
-								secondary: { variant: "caption" },
-							}}
-						/>
-						<Typography
-							variant="caption"
-							color="text.secondary"
-							sx={{ ml: 2, fontFamily: "ui-monospace, monospace" }}
-						>
-							{modKey}
-							{i + 1}
+				{!hasAnyRows && (
+					<Box sx={{ px: 2, py: 1.5 }}>
+						<Typography variant="body2" color="text.secondary">
+							No repositories yet.
 						</Typography>
-					</MenuItem>
-				))}
+					</Box>
+				)}
+				{rows.map(({ source, repo }) => {
+					const isMissing = source.missing || !repo;
+					const isActive = repo?.id === active?.id && !!repo;
+					const shortcutIdx = !isMissing && repo ? ++loadedIndex : null;
+					return (
+						<MenuItem
+							key={source.path}
+							selected={isActive}
+							onClick={() => {
+								if (isMissing || !repo) return;
+								handleSelect(repo.id);
+							}}
+							sx={{
+								gap: 1.25,
+								py: 1,
+								cursor: isMissing ? "default" : "pointer",
+								opacity: isMissing ? 0.65 : 1,
+								"&:hover": isMissing ? { bgcolor: "transparent" } : undefined,
+								"&:hover .repo-delete": { opacity: 1 },
+							}}
+						>
+							<Box
+								sx={{
+									width: 24,
+									height: 24,
+									borderRadius: 0.75,
+									border: 1,
+									borderColor: isMissing ? "warning.main" : "divider",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									flexShrink: 0,
+									color: isMissing ? "warning.main" : "text.secondary",
+								}}
+							>
+								{isMissing ? (
+									<FolderOffIcon sx={{ fontSize: 14 }} />
+								) : repo ? (
+									typeIcon(repo.type)
+								) : null}
+							</Box>
+							<ListItemText
+								primary={repo?.name ?? folderName(source.path)}
+								secondary={
+									isMissing ? `Folder not found · ${source.path}` : source.path
+								}
+								slotProps={{
+									primary: {
+										variant: "body2",
+										sx: { fontWeight: isActive ? 600 : 400 },
+									},
+									secondary: {
+										variant: "caption",
+										sx: {
+											overflow: "hidden",
+											textOverflow: "ellipsis",
+											whiteSpace: "nowrap",
+											color: isMissing ? "warning.main" : "text.secondary",
+										},
+									},
+								}}
+							/>
+							{shortcutIdx !== null && (
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{ ml: 2, fontFamily: "ui-monospace, monospace" }}
+								>
+									{modKey}
+									{shortcutIdx}
+								</Typography>
+							)}
+							<Tooltip title="Reload" placement="top" arrow>
+								<IconButton
+									className="repo-delete"
+									size="small"
+									onClick={(e) => {
+										e.stopPropagation();
+										handleClose();
+										reloadRepo(source.path);
+									}}
+									sx={{
+										ml: 0.5,
+										opacity: isMissing ? 1 : 0,
+										transition: "opacity 150ms",
+										color: "text.secondary",
+									}}
+								>
+									<RefreshIcon sx={{ fontSize: 16 }} />
+								</IconButton>
+							</Tooltip>
+							<Tooltip title="Remove from list" placement="left" arrow>
+								<IconButton
+									className="repo-delete"
+									size="small"
+									onClick={(e) => {
+										e.stopPropagation();
+										removeRepoSource(source.path);
+									}}
+									sx={{
+										opacity: isMissing ? 1 : 0,
+										transition: "opacity 150ms",
+										color: "text.secondary",
+									}}
+								>
+									<CloseIcon sx={{ fontSize: 16 }} />
+								</IconButton>
+							</Tooltip>
+						</MenuItem>
+					);
+				})}
 				<Divider sx={{ my: 0.5 }} />
-				<MenuItem sx={{ gap: 1.25, py: 1, color: "text.secondary" }}>
+				<MenuItem
+					onClick={handleAdd}
+					sx={{ gap: 1.25, py: 1, color: "text.secondary" }}
+				>
 					<Box
 						sx={{
 							width: 24,

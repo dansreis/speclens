@@ -1,8 +1,19 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import {
+	getRepoSignature,
+	loadRepoFromPath,
+	type Repo,
+} from "../lib/exampleLoader";
+import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
 
 export type TabKey = string;
+
+export interface RepoSource {
+	path: string;
+	missing: boolean;
+}
 
 export type AppView =
 	| "overview"
@@ -25,6 +36,17 @@ export interface FlowViewport {
 }
 
 interface AppState {
+	repoSources: RepoSource[];
+	repos: Repo[];
+	reposLoading: boolean;
+	// Distinguishes a user-initiated single-repo load (modal Backdrop) from a
+	// silent background reload of all sources at app start (LinearProgress only).
+	blockingLoad: boolean;
+	addRepoSource: (path: string) => Promise<void>;
+	removeRepoSource: (path: string) => void;
+	reloadAllSources: () => Promise<void>;
+	reloadRepo: (path: string) => Promise<void>;
+
 	themeMode: PaletteMode;
 	setThemeMode: (mode: PaletteMode) => void;
 	toggleThemeMode: () => void;
@@ -78,7 +100,107 @@ const clampZoom = (z: number) =>
 
 export const useAppStore = create<AppState>()(
 	persist(
-		(set) => ({
+		(set, get) => ({
+			repoSources: [],
+			repos: [],
+			reposLoading: false,
+			blockingLoad: false,
+			addRepoSource: async (path) => {
+				if (get().repoSources.some((s) => s.path === path)) return;
+				set((state) => ({
+					repoSources: [...state.repoSources, { path, missing: false }],
+					reposLoading: true,
+					blockingLoad: true,
+				}));
+				try {
+					const { repo, signature } = await loadRepoFromPath(path);
+					cacheSet(path, signature, repo);
+					set((state) => ({
+						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+							(a, b) => a.name.localeCompare(b.name),
+						),
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: false } : s,
+						),
+						selectedRepoId: state.selectedRepoId ?? path,
+						reposLoading: false,
+						blockingLoad: false,
+					}));
+				} catch {
+					set((state) => ({
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: true } : s,
+						),
+						reposLoading: false,
+						blockingLoad: false,
+					}));
+				}
+			},
+			removeRepoSource: (path) => {
+				const { selectedRepoId } = get();
+				cacheDelete(path);
+				set({
+					repoSources: get().repoSources.filter((s) => s.path !== path),
+					repos: get().repos.filter((r) => r.id !== path),
+					selectedRepoId: selectedRepoId === path ? null : selectedRepoId,
+				});
+			},
+			reloadAllSources: async () => {
+				const sources = get().repoSources;
+				set({ reposLoading: true });
+				const updatedSources: RepoSource[] = [];
+				const loadedRepos: Repo[] = [];
+				for (const source of sources) {
+					try {
+						const currentSig = await getRepoSignature(source.path);
+						const cached = cacheGet(source.path);
+						if (cached && cached.signature === currentSig) {
+							loadedRepos.push(cached.repo);
+							updatedSources.push({ path: source.path, missing: false });
+							continue;
+						}
+						const { repo, signature } = await loadRepoFromPath(source.path);
+						cacheSet(source.path, signature, repo);
+						loadedRepos.push(repo);
+						updatedSources.push({ path: source.path, missing: false });
+					} catch {
+						updatedSources.push({ path: source.path, missing: true });
+					}
+				}
+				set({
+					repoSources: updatedSources,
+					repos: loadedRepos.sort((a, b) => a.name.localeCompare(b.name)),
+					reposLoading: false,
+				});
+			},
+			reloadRepo: async (path) => {
+				if (!get().repoSources.some((s) => s.path === path)) return;
+				set({ reposLoading: true, blockingLoad: true });
+				try {
+					const { repo, signature } = await loadRepoFromPath(path);
+					cacheSet(path, signature, repo);
+					set((state) => ({
+						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+							(a, b) => a.name.localeCompare(b.name),
+						),
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: false } : s,
+						),
+						reposLoading: false,
+						blockingLoad: false,
+					}));
+				} catch {
+					set((state) => ({
+						repos: state.repos.filter((r) => r.id !== path),
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: true } : s,
+						),
+						reposLoading: false,
+						blockingLoad: false,
+					}));
+				}
+			},
+
 			themeMode: window.matchMedia("(prefers-color-scheme: dark)").matches
 				? "dark"
 				: "light",
@@ -158,6 +280,12 @@ export const useAppStore = create<AppState>()(
 				markdownZoom: state.markdownZoom,
 				view: state.view,
 				highlightEars: state.highlightEars,
+				// Persist source paths only; reset `missing` on cold start so we
+				// re-probe — a folder may have been re-mounted since last session.
+				repoSources: state.repoSources.map((s) => ({
+					path: s.path,
+					missing: false,
+				})),
 			}),
 		},
 	),

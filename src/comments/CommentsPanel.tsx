@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import type { AppComment } from "../lib/comments";
-import { repos } from "../lib/exampleLoader";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
@@ -136,6 +135,7 @@ function CommentItem({
 export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const [filter, setFilter] = useState<Filter>("unresolved");
 	const comments = useCommentsStore((s) => s.comments);
+	const repos = useAppStore((s) => s.repos);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);

@@ -1,17 +1,22 @@
+import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutlined";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+	Backdrop,
 	Box,
+	Button,
 	ButtonBase,
+	CircularProgress,
 	CssBaseline,
 	IconButton,
+	LinearProgress,
 	ThemeProvider,
 	Tooltip,
 	Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
-import { repos } from "./lib/exampleLoader";
+import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { useAppStore } from "./store/useAppStore";
@@ -39,7 +44,18 @@ function App() {
 	const zoomIn = useAppStore((s) => s.zoomIn);
 	const zoomOut = useAppStore((s) => s.zoomOut);
 	const resetZoom = useAppStore((s) => s.resetZoom);
+	const repos = useAppStore((s) => s.repos);
+	const repoSources = useAppStore((s) => s.repoSources);
+	const reloadAllSources = useAppStore((s) => s.reloadAllSources);
+	const reposLoading = useAppStore((s) => s.reposLoading);
+	const blockingLoad = useAppStore((s) => s.blockingLoad);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
+
+	useEffect(() => {
+		if (repoSources.length > 0 && repos.length === 0) {
+			reloadAllSources();
+		}
+	}, [repoSources.length, repos.length, reloadAllSources]);
 
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
@@ -106,6 +122,40 @@ function App() {
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
+			{reposLoading && (
+				<LinearProgress
+					aria-label="Loading repositories"
+					sx={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						right: 0,
+						height: 3,
+						zIndex: (t) => t.zIndex.tooltip + 1,
+					}}
+				/>
+			)}
+			<Backdrop
+				open={blockingLoad}
+				sx={{
+					bgcolor: "background.default",
+					color: "text.primary",
+					zIndex: (t) => t.zIndex.modal + 1,
+					flexDirection: "column",
+					gap: 2,
+				}}
+			>
+				<CircularProgress color="primary" />
+				<Box sx={{ textAlign: "center", maxWidth: 360 }}>
+					<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+						Loading repository
+					</Typography>
+					<Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+						Reading files and walking git history. This can take a few seconds
+						for repos with long histories.
+					</Typography>
+				</Box>
+			</Backdrop>
 			<Box
 				sx={{
 					height: "100vh",
@@ -214,18 +264,61 @@ function App() {
 							}}
 						>
 							{!activeRepo ? (
-								<Box
-									sx={{
-										flex: 1,
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-									}}
-								>
-									<Typography color="text.secondary">
-										No repository available
-									</Typography>
-								</Box>
+								reposLoading && repoSources.length > 0 ? (
+									<Box
+										sx={{
+											flex: 1,
+											display: "flex",
+											flexDirection: "column",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 1.5,
+											p: 4,
+											textAlign: "center",
+										}}
+									>
+										<CircularProgress size={28} />
+										<Typography variant="body2" color="text.secondary">
+											Loading {repoSources.length} repositor
+											{repoSources.length === 1 ? "y" : "ies"}…
+										</Typography>
+									</Box>
+								) : (
+									<Box
+										sx={{
+											flex: 1,
+											display: "flex",
+											flexDirection: "column",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 2,
+											p: 4,
+											textAlign: "center",
+										}}
+									>
+										<Typography variant="h6" color="text.secondary">
+											{repos.length === 0 && repoSources.length === 0
+												? "No repositories yet"
+												: "No repository selected"}
+										</Typography>
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ maxWidth: 420 }}
+										>
+											Add a folder containing an{" "}
+											<Box component="code">openspec/</Box> directory to start
+											browsing its proposals, tasks, and specs.
+										</Typography>
+										<Button
+											variant="contained"
+											startIcon={<CreateNewFolderOutlinedIcon />}
+											onClick={() => pickAndAddRepoSource()}
+										>
+											Add repository
+										</Button>
+									</Box>
+								)
 							) : view === "overview" ? (
 								<OverviewView repo={activeRepo} />
 							) : view === "specs" ? (

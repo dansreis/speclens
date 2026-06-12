@@ -34,9 +34,9 @@ Deferred during the rebuild; revisit when actually needed.
 
 Bigger work, build out in their own slices.
 
-- [ ] **Local-folder loading** — replace `exampleLoader.ts`'s Vite glob with runtime FS reads via Tauri (`@tauri-apps/plugin-fs`), pointing at any folder with an `openspec/` tree. Keep the `Repo[]` shape consumers depend on.
-- [ ] **Runtime git history** — once real folders load, run `git log --follow` via Tauri (shell or a git crate) to derive `authorship` on the fly instead of relying on a build-time `history.json`. Current pipeline stays as fixture-only.
-- [ ] **Switching repos actually changes content** — currently visual only; needs real repo data wired to `changes`
+- [ ] **Relocate a missing repo** — currently the only options for a folder-not-found source are "remove" or "fix the path manually". A "Locate folder…" action in the menu (folder picker pre-pointed at the parent of the broken path) would let users re-bind without removing.
+- [ ] **Repo display name override** — read a `name:` field from `openspec/config.yaml` in `payloadToRepo` so projects can show as "AdMedia Platform" instead of `admedia-platform`.
+- [ ] **Cross-process source list sync** — if two SpecLens windows open at once, adding a repo in one won't show in the other until restart (Zustand persist only syncs on mount). Consider a Tauri event bus or a `storage` event listener.
 - [ ] **Click highlight → scroll to comment in panel** — reverse of the existing comment→highlight jump
 - [ ] **Cross-text-node selection for comments** — currently anchors only work within a single text node; selecting across an inline `<code>` block silently fails
 - [ ] **Comment threads / replies** — currently flat list
