@@ -344,25 +344,6 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 									{shortcutIdx}
 								</Typography>
 							)}
-							<Tooltip title="Reload" placement="top" arrow>
-								<IconButton
-									className="repo-delete"
-									size="small"
-									onClick={(e) => {
-										e.stopPropagation();
-										handleClose();
-										reloadRepo(source.path);
-									}}
-									sx={{
-										ml: 0.5,
-										opacity: isMissing ? 1 : 0,
-										transition: "opacity 150ms",
-										color: "text.secondary",
-									}}
-								>
-									<RefreshIcon sx={{ fontSize: 16 }} />
-								</IconButton>
-							</Tooltip>
 							<Tooltip title="Remove from list" placement="left" arrow>
 								<IconButton
 									className="repo-delete"
