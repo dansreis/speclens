@@ -163,9 +163,19 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 						<Typography
 							variant="caption"
 							color="text.secondary"
-							sx={{ lineHeight: 1.2 }}
+							sx={{
+								lineHeight: 1.2,
+								fontFamily:
+									active?.hasGit && active.headSha
+										? "ui-monospace, monospace"
+										: undefined,
+							}}
 						>
-							{active ? active.type : "Click to add"}
+							{active
+								? active.hasGit
+									? (active.headSha?.slice(0, 7) ?? "local")
+									: "local"
+								: "Click to add"}
 						</Typography>
 					</Box>
 					<UnfoldMoreIcon

@@ -31,6 +31,13 @@ struct RepoPayload {
     files: HashMap<String, String>,
     authorship: HashMap<String, DocAuthor>,
     change_rollups: HashMap<String, DocAuthor>,
+    /// True when `.git/` was found at the project root or its immediate
+    /// parent. Mirrors what `find_git_root` returns at load time.
+    has_git: bool,
+    /// Full SHA of the current HEAD commit when `has_git` is true. None
+    /// when there's no git, when the repo has no commits yet, or when
+    /// `git rev-parse HEAD` fails for any other reason.
+    head_sha: Option<String>,
     /// Fingerprint of the repo's current state. See `compute_signature`.
     signature: String,
 }
@@ -94,8 +101,14 @@ fn load_project(id: &str, project_root: &Path) -> Result<RepoPayload, String> {
 
     let mut authorship: HashMap<String, DocAuthor> = HashMap::new();
     let mut change_rollups: HashMap<String, DocAuthor> = HashMap::new();
+    let git_root_opt = find_git_root(project_root);
+    let has_git = git_root_opt.is_some();
+    let head_sha = git_root_opt
+        .as_ref()
+        .and_then(|root| git_command(root, &["rev-parse", "HEAD"]).ok())
+        .filter(|s| !s.is_empty());
 
-    if let Some(git_root) = find_git_root(project_root) {
+    if let Some(git_root) = git_root_opt {
         let project_rel = project_root
             .strip_prefix(&git_root)
             .map_err(|e| e.to_string())?;
@@ -135,6 +148,8 @@ fn load_project(id: &str, project_root: &Path) -> Result<RepoPayload, String> {
         files,
         authorship,
         change_rollups,
+        has_git,
+        head_sha,
         signature,
     })
 }

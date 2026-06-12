@@ -90,6 +90,8 @@ export interface Repo {
 	id: string;
 	name: string;
 	type: RepoType;
+	hasGit: boolean;
+	headSha: string | null;
 	schema: OpenSpecSchema;
 	config: OpenSpecConfig | null;
 	configYaml: string | null;
@@ -105,6 +107,8 @@ interface RepoPayload {
 	files: Record<string, string>;
 	authorship: Record<string, DocAuthorship>;
 	changeRollups: Record<string, DocAuthorship>;
+	hasGit: boolean;
+	headSha: string | null;
 	signature: string;
 }
 
@@ -352,6 +356,8 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 		id: sourcePath,
 		name: payload.id,
 		type: "local",
+		hasGit: payload.hasGit,
+		headSha: payload.headSha ?? null,
 		schema: repoSchema,
 		config,
 		configYaml: repoConfigYaml,
