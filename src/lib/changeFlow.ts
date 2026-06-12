@@ -1,4 +1,4 @@
-import type { Change, Repo } from "./exampleLoader";
+import type { Change, Repo } from "./repoLoader";
 import { countTaskCompletion } from "./tasksCompletion";
 
 export type DeltaOp = "added" | "modified" | "removed" | "renamed";

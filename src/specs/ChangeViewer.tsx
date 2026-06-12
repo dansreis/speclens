@@ -20,8 +20,8 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useRef } from "react";
 import { getStatsSections } from "../lib/documentSource";
-import type { Change } from "../lib/exampleLoader";
 import { extractHeadings } from "../lib/extractHeadings";
+import type { Change } from "../lib/repoLoader";
 import {
 	type Artifact,
 	artifactLabel,

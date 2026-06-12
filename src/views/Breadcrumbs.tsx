@@ -7,17 +7,23 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import type { Change } from "../lib/exampleLoader";
+import type { Change } from "../lib/repoLoader";
 import { type AppView, useAppStore } from "../store/useAppStore";
 
 const titles: Record<AppView, string> = {
-	overview: "Overview",
+	overview: "Home",
 	specs: "Specs",
 	changes: "Changes",
 	flow: "Flow",
 	graph: "Graph",
 	timeline: "Timeline",
+	schemas: "Schemas",
+	folder: "Library",
 };
+
+function folderTitle(name: string): string {
+	return name.charAt(0).toUpperCase() + name.slice(1);
+}
 
 interface Props {
 	activeChange: Change | null;
@@ -28,17 +34,33 @@ export function Breadcrumbs({ activeChange }: Props) {
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
+	const selectedSchema = useAppStore((s) => s.selectedSchema);
+	const setSelectedSchema = useAppStore((s) => s.setSelectedSchema);
+	const selectedFolder = useAppStore((s) => s.selectedFolder);
+	const selectedFolderDoc = useAppStore((s) => s.selectedFolderDoc);
+	const setSelectedFolderDoc = useAppStore((s) => s.setSelectedFolderDoc);
+
+	const rootTitle =
+		view === "folder" && selectedFolder
+			? folderTitle(selectedFolder)
+			: titles[view];
 
 	const detailLabel =
 		view === "specs" && selectedSpec
 			? selectedSpec
 			: view === "changes" && activeChange
 				? activeChange.name
-				: null;
+				: view === "schemas" && selectedSchema
+					? selectedSchema
+					: view === "folder" && selectedFolderDoc
+						? selectedFolderDoc
+						: null;
 
 	const goRoot = () => {
 		if (view === "specs") setSelectedSpec(null);
 		if (view === "changes") setSelectedChangeKey(null);
+		if (view === "schemas") setSelectedSchema(null);
+		if (view === "folder") setSelectedFolderDoc(null);
 	};
 
 	return (
@@ -62,11 +84,11 @@ export function Breadcrumbs({ activeChange }: Props) {
 							cursor: "pointer",
 						}}
 					>
-						{titles[view]}
+						{rootTitle}
 					</Link>
 				) : (
 					<Typography variant="body2" sx={{ fontWeight: 600 }}>
-						{titles[view]}
+						{rootTitle}
 					</Typography>
 				)}
 				{view === "flow" && (

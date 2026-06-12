@@ -1,6 +1,9 @@
-import type { Repo } from "./exampleLoader";
+import type { Repo } from "./repoLoader";
 
-const PREFIX = "speclens.repo-cache.";
+// Bump when the Repo shape changes in a way old entries can't satisfy. Older
+// entries under previous prefixes are orphaned and ignored; the next cold
+// start re-walks the repo and writes a fresh entry under the new prefix.
+const PREFIX = "speclens.repo-cache.v3.";
 
 interface CachedEntry {
 	signature: string;

@@ -19,7 +19,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import type { Repo, RepoType } from "../lib/exampleLoader";
+import type { Repo, RepoType } from "../lib/repoLoader";
 import { type RepoSource, useAppStore } from "../store/useAppStore";
 import { pickAndAddRepoSource } from "./addRepo";
 

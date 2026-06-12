@@ -1,5 +1,5 @@
 import { type TabKey, useAppStore } from "../store/useAppStore";
-import type { Change } from "./exampleLoader";
+import type { Change } from "./repoLoader";
 import { artifactLabel } from "./schema";
 
 export function getCurrentSource(

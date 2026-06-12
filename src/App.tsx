@@ -24,8 +24,10 @@ import { createAppTheme } from "./theme/theme";
 import { Breadcrumbs } from "./views/Breadcrumbs";
 import { ChangesView } from "./views/ChangesView";
 import { FlowView } from "./views/FlowView";
+import { FolderView } from "./views/FolderView";
 import { GraphView } from "./views/GraphView";
 import { OverviewView } from "./views/OverviewView";
+import { SchemasView } from "./views/SchemasView";
 import { SpecsView } from "./views/SpecsView";
 import { TimelineView } from "./views/TimelineView";
 
@@ -325,6 +327,10 @@ function App() {
 								<SpecsView repo={activeRepo} {...sharedDetailProps} />
 							) : view === "changes" ? (
 								<ChangesView repo={activeRepo} {...sharedDetailProps} />
+							) : view === "schemas" ? (
+								<SchemasView repo={activeRepo} />
+							) : view === "folder" ? (
+								<FolderView repo={activeRepo} />
 							) : view === "flow" ? (
 								<FlowView />
 							) : view === "graph" ? (

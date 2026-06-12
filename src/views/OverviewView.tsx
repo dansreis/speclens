@@ -9,8 +9,14 @@ import {
 	Typography,
 } from "@mui/material";
 import { type ReactNode, useMemo, useState } from "react";
-import type { Change, Repo } from "../lib/exampleLoader";
-import { formatCompactDateTime, formatDuration } from "../lib/relativeTime";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+	formatCompactDateTime,
+	formatDuration,
+	formatRelativeTime,
+} from "../lib/relativeTime";
+import type { Change, DocAuthorship, Repo } from "../lib/repoLoader";
 import { artifactLabel } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
@@ -40,9 +46,20 @@ interface Props {
 	repo: Repo | null;
 }
 
+type ActivityKind = "change" | "spec" | { folder: string };
+
+interface ActivityEntry {
+	kind: ActivityKind;
+	label: string;
+	authorship: DocAuthorship;
+	selectKey: string;
+}
+
 export function OverviewView({ repo }: Props) {
 	const setView = useAppStore((s) => s.setView);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
+	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
+	const openFolder = useAppStore((s) => s.openFolder);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const [configOpen, setConfigOpen] = useState(false);
 
@@ -133,16 +150,106 @@ export function OverviewView({ repo }: Props) {
 			.slice(0, RECENT_ARCHIVED_LIMIT);
 	}, [repo]);
 
+	const recentActivity = useMemo<ActivityEntry[]>(() => {
+		if (!repo) return [];
+		const entries: ActivityEntry[] = [];
+		for (const c of repo.changes) {
+			if (!c.authorship?.rolled) continue;
+			entries.push({
+				kind: "change",
+				label: c.name,
+				authorship: c.authorship.rolled,
+				selectKey: changeKey(c),
+			});
+		}
+		for (const s of repo.repoSpecs) {
+			if (!s.authorship) continue;
+			entries.push({
+				kind: "spec",
+				label: s.capability,
+				authorship: s.authorship,
+				selectKey: s.capability,
+			});
+		}
+		for (const folder of repo.folders) {
+			for (const doc of folder.docs) {
+				if (!doc.authorship) continue;
+				entries.push({
+					kind: { folder: folder.name },
+					label: doc.number ? `${doc.number}: ${doc.name}` : doc.name,
+					authorship: doc.authorship,
+					selectKey: doc.slug,
+				});
+			}
+		}
+		entries.sort(
+			(a, b) =>
+				new Date(b.authorship.lastEditedAt).getTime() -
+				new Date(a.authorship.lastEditedAt).getTime(),
+		);
+		return entries.slice(0, 10);
+	}, [repo]);
+
 	const handleSelect = (c: Change) => {
 		setView("changes");
 		setSelectedChangeKey(changeKey(c));
 		setActiveTab("proposal");
 	};
 
+	const handleActivitySelect = (entry: ActivityEntry) => {
+		if (entry.kind === "change") {
+			setView("changes");
+			setSelectedChangeKey(entry.selectKey);
+			setActiveTab("proposal");
+		} else if (entry.kind === "spec") {
+			setView("specs");
+			setSelectedSpec(entry.selectKey);
+		} else {
+			openFolder(entry.kind.folder, entry.selectKey);
+		}
+	};
+
+	const kindLabel = (kind: ActivityKind): string =>
+		typeof kind === "string" ? kind : kind.folder;
+
 	return (
 		<Box sx={{ p: 4 }}>
-			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 3 }}>
-				Overview
+			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
+				{repo?.name ?? "Home"}
+			</Typography>
+			{repo?.config?.context && (
+				<Box
+					sx={{
+						mb: 4,
+						color: "text.secondary",
+						"& p": { mb: 1 },
+						"& code": {
+							fontFamily: "ui-monospace, monospace",
+							fontSize: "0.875em",
+							bgcolor: "action.hover",
+							px: 0.5,
+							borderRadius: 0.5,
+						},
+						"& ul": { pl: 3, mb: 1 },
+						"& li": { mb: 0.25 },
+					}}
+				>
+					<ReactMarkdown remarkPlugins={[remarkGfm]}>
+						{repo.config.context}
+					</ReactMarkdown>
+				</Box>
+			)}
+			<Typography
+				variant="overline"
+				sx={{
+					color: "text.disabled",
+					fontWeight: 600,
+					letterSpacing: 0.6,
+					display: "block",
+					mb: 1.5,
+				}}
+			>
+				At a glance
 			</Typography>
 			<Box
 				sx={{
@@ -196,6 +303,65 @@ export function OverviewView({ repo }: Props) {
 					help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${WORDS_PER_MINUTE} words per minute.`}
 				/>
 			</Box>
+			{recentActivity.length > 0 && (
+				<Section title="Recent activity">
+					<Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+						{recentActivity.map((entry) => (
+							<ButtonBase
+								key={`${kindLabel(entry.kind)}:${entry.selectKey}`}
+								onClick={() => handleActivitySelect(entry)}
+								sx={{
+									display: "flex",
+									alignItems: "center",
+									gap: 2,
+									px: 1.5,
+									py: 1,
+									borderRadius: 1,
+									transition: "background-color 150ms",
+									"&:hover": { bgcolor: "action.hover" },
+								}}
+							>
+								<Chip
+									label={kindLabel(entry.kind)}
+									size="small"
+									variant="outlined"
+									sx={{
+										height: 18,
+										fontSize: "0.6875rem",
+										minWidth: 64,
+										fontFamily: "ui-monospace, monospace",
+										color: "text.secondary",
+									}}
+								/>
+								<Typography
+									variant="body2"
+									sx={{
+										color: "text.primary",
+										overflow: "hidden",
+										textOverflow: "ellipsis",
+										whiteSpace: "nowrap",
+										flex: 1,
+										textAlign: "left",
+									}}
+								>
+									{entry.label}
+								</Typography>
+								<Typography
+									variant="caption"
+									color="text.secondary"
+									sx={{
+										flexShrink: 0,
+										fontFamily: "ui-monospace, monospace",
+									}}
+								>
+									{entry.authorship.lastEditedBy.name} ·{" "}
+									{formatRelativeTime(new Date(entry.authorship.lastEditedAt))}
+								</Typography>
+							</ButtonBase>
+						))}
+					</Box>
+				</Section>
+			)}
 			{repo && (
 				<Section title="Repository config">
 					<RepoConfigCard repo={repo} onOpenRaw={() => setConfigOpen(true)} />

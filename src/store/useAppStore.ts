@@ -1,12 +1,12 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
 import {
 	getRepoSignature,
 	loadRepoFromPath,
 	type Repo,
-} from "../lib/exampleLoader";
-import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
+} from "../lib/repoLoader";
 
 export type TabKey = string;
 
@@ -21,7 +21,9 @@ export type AppView =
 	| "changes"
 	| "flow"
 	| "graph"
-	| "timeline";
+	| "timeline"
+	| "schemas"
+	| "folder";
 
 export interface ScrollTarget {
 	documentId: string;
@@ -62,6 +64,14 @@ interface AppState {
 
 	selectedSpec: string | null;
 	setSelectedSpec: (slug: string | null) => void;
+
+	selectedSchema: string | null;
+	setSelectedSchema: (name: string | null) => void;
+
+	selectedFolder: string | null;
+	selectedFolderDoc: string | null;
+	openFolder: (folder: string, doc?: string | null) => void;
+	setSelectedFolderDoc: (doc: string | null) => void;
 
 	activeTab: TabKey;
 	setActiveTab: (tab: TabKey) => void;
@@ -216,6 +226,9 @@ export const useAppStore = create<AppState>()(
 					selectedRepoId: id,
 					selectedChangeKey: null,
 					selectedSpec: null,
+					selectedSchema: null,
+					selectedFolder: null,
+					selectedFolderDoc: null,
 					activeTab: "proposal",
 					flowViewport: null,
 				}),
@@ -226,6 +239,9 @@ export const useAppStore = create<AppState>()(
 					view: v,
 					selectedChangeKey: v === "changes" ? state.selectedChangeKey : null,
 					selectedSpec: v === "specs" ? state.selectedSpec : null,
+					selectedSchema: v === "schemas" ? state.selectedSchema : null,
+					selectedFolder: v === "folder" ? state.selectedFolder : null,
+					selectedFolderDoc: v === "folder" ? state.selectedFolderDoc : null,
 				})),
 
 			selectedChangeKey: null,
@@ -233,6 +249,19 @@ export const useAppStore = create<AppState>()(
 
 			selectedSpec: null,
 			setSelectedSpec: (slug) => set({ selectedSpec: slug }),
+
+			selectedSchema: null,
+			setSelectedSchema: (name) => set({ selectedSchema: name }),
+
+			selectedFolder: null,
+			selectedFolderDoc: null,
+			openFolder: (folder, doc = null) =>
+				set({
+					view: "folder",
+					selectedFolder: folder,
+					selectedFolderDoc: doc,
+				}),
+			setSelectedFolderDoc: (doc) => set({ selectedFolderDoc: doc }),
 
 			activeTab: "proposal",
 			setActiveTab: (tab) => set({ activeTab: tab }),

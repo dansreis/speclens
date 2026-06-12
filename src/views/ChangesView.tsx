@@ -9,12 +9,12 @@ import {
 	Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import type { Change, Repo } from "../lib/exampleLoader";
 import { firstParagraphPreview } from "../lib/markdownPreview";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
+import type { Change, Repo } from "../lib/repoLoader";
 import { DEFAULT_SCHEMA } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";

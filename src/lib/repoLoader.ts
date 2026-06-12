@@ -52,6 +52,40 @@ export interface Change {
 	authorship: ChangeAuthorship | null;
 }
 
+export interface RepoFolderDoc {
+	slug: string;
+	name: string;
+	/** Leading NNNN- if present (e.g. "0001" from "0001-foo.md"). */
+	number: string | null;
+	/** openspec/-stripped path, e.g. "playbooks/add-background-job.md" */
+	path: string;
+	content: string;
+	authorship: DocAuthorship | null;
+}
+
+/** A top-level folder under openspec/ surfaced as a Library tab. Auto-discovered. */
+export interface RepoFolder {
+	/** Folder name as it appears under openspec/, e.g. "playbooks", "adr". */
+	name: string;
+	docs: RepoFolderDoc[];
+}
+
+export interface RepoSpecDoc {
+	capability: string;
+	content: string;
+	path: string;
+	authorship: DocAuthorship | null;
+}
+
+export interface RepoSchemaDoc {
+	name: string;
+	yaml: string;
+	schema: OpenSpecSchema;
+	path: string;
+	authorship: DocAuthorship | null;
+	isActive: boolean;
+}
+
 export interface Repo {
 	id: string;
 	name: string;
@@ -61,6 +95,9 @@ export interface Repo {
 	configYaml: string | null;
 	schemaYaml: string | null;
 	changes: Change[];
+	repoSpecs: RepoSpecDoc[];
+	schemas: RepoSchemaDoc[];
+	folders: RepoFolder[];
 }
 
 interface RepoPayload {
@@ -125,11 +162,21 @@ interface ChangeFiles {
 	relPathByFile: Map<string, string>;
 }
 
+function numberedSlug(slug: string): {
+	number: string | null;
+	rest: string;
+} {
+	const m = slug.match(/^(\d+)-(.*)$/);
+	if (!m) return { number: null, rest: slug };
+	return { number: m[1], rest: m[2] };
+}
+
 function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 	const rootFiles = new Map<string, string>();
+	const rootFileFullPaths = new Map<string, string>();
 	const schemaYamlByName = new Map<
 		string,
-		{ yaml: string; schema: OpenSpecSchema }
+		{ yaml: string; schema: OpenSpecSchema; path: string }
 	>();
 	const changeBuckets = new Map<string, ChangeFiles>();
 	let repoConfigYaml: string | null = null;
@@ -145,7 +192,11 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 		if (schemaMatch) {
 			const parsed = parseSchemaYaml(content);
 			if (parsed)
-				schemaYamlByName.set(schemaMatch[1], { yaml: content, schema: parsed });
+				schemaYamlByName.set(schemaMatch[1], {
+					yaml: content,
+					schema: parsed,
+					path: path.slice("openspec/".length),
+				});
 			continue;
 		}
 		const changeMatch = path.match(/^openspec\/changes\/(.+)$/);
@@ -176,7 +227,9 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 		// the repo-root map with the `openspec/` prefix stripped — schemas with
 		// `../../../adr/*.md` style globs land here via classifyGenerates.
 		if (path.startsWith("openspec/")) {
-			rootFiles.set(path.slice("openspec/".length), content);
+			const stripped = path.slice("openspec/".length);
+			rootFiles.set(stripped, content);
+			rootFileFullPaths.set(stripped, path);
 		}
 	}
 
@@ -224,6 +277,75 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 		};
 	});
 
+	const authorshipFor = (stripped: string): DocAuthorship | null => {
+		const full = rootFileFullPaths.get(stripped);
+		return full ? (payload.authorship[full] ?? null) : null;
+	};
+
+	const repoSpecs: RepoSpecDoc[] = [];
+	// Discover Library folders: every top-level folder under openspec/ except
+	// `specs/` (its own view, capability-keyed) and `schemas/` (own view, YAML +
+	// artifacts) becomes a Library tab automatically. We don't hardcode which
+	// folders exist — `playbooks/`, `adr/`, `daybooks/`, anything goes.
+	const folderBuckets = new Map<string, RepoFolderDoc[]>();
+
+	for (const [path, content] of rootFiles) {
+		const repoSpecMatch = path.match(/^specs\/([^/]+)\/spec\.md$/i);
+		if (repoSpecMatch) {
+			repoSpecs.push({
+				capability: repoSpecMatch[1],
+				content,
+				path,
+				authorship: authorshipFor(path),
+			});
+			continue;
+		}
+		if (path.startsWith("specs/") || path.startsWith("schemas/")) continue;
+		// Only surface markdown files in Library folders. Other extensions
+		// (templates, READMEs in non-md form, configs) are skipped.
+		const mdMatch = path.match(/^([^/]+)\/(.+)\.md$/i);
+		if (!mdMatch) continue;
+		const folderName = mdMatch[1];
+		// Strip leading subdirs from the slug so `adr/0001-foo.md` slugs to
+		// `0001-foo` but `playbooks/sub/foo.md` slugs to `sub/foo`.
+		const fullSlug = mdMatch[2];
+		const baseSlug = fullSlug.split("/").pop() ?? fullSlug;
+		const { number, rest } = numberedSlug(baseSlug);
+		const docs = folderBuckets.get(folderName) ?? [];
+		docs.push({
+			slug: fullSlug,
+			number,
+			name: slugToName(rest || baseSlug),
+			path,
+			content,
+			authorship: authorshipFor(path),
+		});
+		folderBuckets.set(folderName, docs);
+	}
+
+	repoSpecs.sort((a, b) => a.capability.localeCompare(b.capability));
+	const folders: RepoFolder[] = [...folderBuckets.entries()]
+		.map(([name, docs]) => ({
+			name,
+			docs: docs.sort((a, b) => {
+				const an = a.number ?? "";
+				const bn = b.number ?? "";
+				return an.localeCompare(bn) || a.slug.localeCompare(b.slug);
+			}),
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
+
+	const schemas: RepoSchemaDoc[] = [...schemaYamlByName.entries()]
+		.map(([name, entry]) => ({
+			name,
+			yaml: entry.yaml,
+			schema: entry.schema,
+			path: entry.path,
+			authorship: authorshipFor(entry.path),
+			isActive: name === schemaName,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
+
 	return {
 		// `id` must be unique across the loaded set — use the full source path so
 		// two folders with the same final segment don't collide on selectedRepoId.
@@ -235,5 +357,8 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 		configYaml: repoConfigYaml,
 		schemaYaml: repoSchemaYaml,
 		changes,
+		repoSpecs,
+		schemas,
+		folders,
 	};
 }

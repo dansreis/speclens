@@ -11,7 +11,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import type { Change, Repo } from "../lib/exampleLoader";
+import type { Change, Repo } from "../lib/repoLoader";
 import type { OpenSpecSchema } from "../lib/schema";
 
 interface Props {

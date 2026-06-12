@@ -1,6 +1,7 @@
 import {
 	Box,
 	ButtonBase,
+	Chip,
 	TextField,
 	ToggleButton,
 	ToggleButtonGroup,
@@ -8,15 +9,16 @@ import {
 	Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import type { Change, Repo } from "../lib/exampleLoader";
 import { firstParagraphPreview } from "../lib/markdownPreview";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
+import type { Change, Repo } from "../lib/repoLoader";
 import { DEFAULT_SCHEMA } from "../lib/schema";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
+import { RepoDocLayout } from "./RepoDocLayout";
 
 type SortMode = "name" | "changes" | "recent";
 
@@ -25,6 +27,7 @@ interface SpecRow {
 	changes: Change[];
 	preview: string;
 	latestDate: Date | null;
+	hasRepoSpec: boolean;
 }
 
 function buildSpecRows(repo: Repo | null): SpecRow[] {
@@ -48,8 +51,26 @@ function buildSpecRows(repo: Repo | null): SpecRow[] {
 					changes: [change],
 					preview: firstParagraphPreview(body),
 					latestDate: change.createdAt,
+					hasRepoSpec: false,
 				});
 			}
+		}
+	}
+	for (const repoSpec of repo.repoSpecs) {
+		const existing = map.get(repoSpec.capability);
+		if (existing) {
+			existing.hasRepoSpec = true;
+			if (!existing.preview) {
+				existing.preview = firstParagraphPreview(repoSpec.content);
+			}
+		} else {
+			map.set(repoSpec.capability, {
+				capability: repoSpec.capability,
+				changes: [],
+				preview: firstParagraphPreview(repoSpec.content),
+				latestDate: null,
+				hasRepoSpec: true,
+			});
 		}
 	}
 	return [...map.values()];
@@ -97,6 +118,19 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 	if (selectedSpec) {
 		const row = rows.find((r) => r.capability === selectedSpec);
 		const change = row?.changes[0] ?? null;
+		const repoSpec =
+			repo?.repoSpecs.find((s) => s.capability === selectedSpec) ?? null;
+		if (!change && repoSpec) {
+			return (
+				<RepoDocLayout
+					title={repoSpec.capability}
+					subtitle={repoSpec.path}
+					authorship={repoSpec.authorship}
+					source={repoSpec.content}
+					documentId={`repo-doc:${repoSpec.path}`}
+				/>
+			);
+		}
 		if (!change) {
 			return (
 				<Box sx={{ p: 4 }}>
@@ -180,12 +214,31 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 							}}
 						>
 							<Box sx={{ flex: 1, minWidth: 0 }}>
-								<Typography
-									variant="body2"
-									sx={{ fontWeight: 600, mb: row.preview ? 0.25 : 0 }}
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										gap: 1,
+										mb: row.preview ? 0.25 : 0,
+									}}
 								>
-									{row.capability}
-								</Typography>
+									<Typography variant="body2" sx={{ fontWeight: 600 }}>
+										{row.capability}
+									</Typography>
+									{row.hasRepoSpec && (
+										<Chip
+											label="repo spec"
+											size="small"
+											variant="outlined"
+											sx={{
+												height: 18,
+												fontSize: "0.6875rem",
+												borderColor: "primary.main",
+												color: "primary.main",
+											}}
+										/>
+									)}
+								</Box>
 								{row.preview && (
 									<Typography
 										variant="caption"

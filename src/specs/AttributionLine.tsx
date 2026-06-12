@@ -1,9 +1,9 @@
 import { Avatar, Box, Tooltip, Typography } from "@mui/material";
-import type { DocAuthorship, Person } from "../lib/exampleLoader";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
+import type { DocAuthorship, Person } from "../lib/repoLoader";
 
 function initialsFor(name: string): string {
 	const parts = name.trim().split(/\s+/).slice(0, 2);
