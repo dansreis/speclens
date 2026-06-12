@@ -149,25 +149,29 @@ export const useAppStore = create<AppState>()(
 				try {
 					const { repo, signature } = await loadRepoFromPath(path);
 					cacheSet(path, signature, repo);
-					set((state) => {
-						const becomesSelected = state.selectedRepoId === null;
-						return {
-							repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
-								(a, b) => a.name.localeCompare(b.name),
-							),
-							repoSources: state.repoSources.map((s) =>
-								s.path === path ? { path, missing: false } : s,
-							),
-							selectedRepoId: state.selectedRepoId ?? path,
-							view: becomesSelected ? "overview" : state.view,
-							loadedSignatures: {
-								...state.loadedSignatures,
-								[path]: signature,
-							},
-							reposLoading: false,
-							blockingLoad: false,
-						};
-					});
+					set((state) => ({
+						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+							(a, b) => a.name.localeCompare(b.name),
+						),
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: false } : s,
+						),
+						selectedRepoId: path,
+						view: "overview",
+						selectedChangeKey: null,
+						selectedSpec: null,
+						selectedSchema: null,
+						selectedFolder: null,
+						selectedFolderDoc: null,
+						activeTab: "proposal",
+						flowViewport: null,
+						loadedSignatures: {
+							...state.loadedSignatures,
+							[path]: signature,
+						},
+						reposLoading: false,
+						blockingLoad: false,
+					}));
 				} catch {
 					set((state) => ({
 						repoSources: state.repoSources.map((s) =>

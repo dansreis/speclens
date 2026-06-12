@@ -1,6 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import ComputerIcon from "@mui/icons-material/Computer";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import FolderIcon from "@mui/icons-material/Folder";
 import FolderOffIcon from "@mui/icons-material/FolderOff";
 import GroupIcon from "@mui/icons-material/Group";
@@ -10,7 +10,13 @@ import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import {
 	Badge,
 	Box,
+	Button,
 	ButtonBase,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogContentText,
+	DialogTitle,
 	Divider,
 	IconButton,
 	ListItemText,
@@ -53,6 +59,7 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 	const reloadRepo = useAppStore((s) => s.reloadRepo);
 	const staleRepos = useAppStore((s) => s.staleRepos);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+	const [pendingDelete, setPendingDelete] = useState<RepoSource | null>(null);
 	const open = Boolean(anchorEl);
 
 	useEffect(() => {
@@ -290,7 +297,6 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 								cursor: isMissing ? "default" : "pointer",
 								opacity: isMissing ? 0.65 : 1,
 								"&:hover": isMissing ? { bgcolor: "transparent" } : undefined,
-								"&:hover .repo-delete": { opacity: 1 },
 							}}
 						>
 							<Box
@@ -346,19 +352,14 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 							)}
 							<Tooltip title="Remove from list" placement="left" arrow>
 								<IconButton
-									className="repo-delete"
 									size="small"
 									onClick={(e) => {
 										e.stopPropagation();
-										removeRepoSource(source.path);
+										setPendingDelete(source);
 									}}
-									sx={{
-										opacity: isMissing ? 1 : 0,
-										transition: "opacity 150ms",
-										color: "text.secondary",
-									}}
+									sx={{ color: "error.main" }}
 								>
-									<CloseIcon sx={{ fontSize: 16 }} />
+									<DeleteOutlineIcon sx={{ fontSize: 16 }} />
 								</IconButton>
 							</Tooltip>
 						</MenuItem>
@@ -392,6 +393,36 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 					/>
 				</MenuItem>
 			</Menu>
+			<Dialog
+				open={!!pendingDelete}
+				onClose={() => setPendingDelete(null)}
+				maxWidth="xs"
+				fullWidth
+			>
+				<DialogTitle>Remove repository?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						This will remove{" "}
+						<Box component="span" sx={{ fontWeight: 600 }}>
+							{pendingDelete ? folderName(pendingDelete.path) : ""}
+						</Box>{" "}
+						from your list. The folder on disk is not affected.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setPendingDelete(null)}>Cancel</Button>
+					<Button
+						color="error"
+						variant="contained"
+						onClick={() => {
+							if (pendingDelete) removeRepoSource(pendingDelete.path);
+							setPendingDelete(null);
+						}}
+					>
+						Remove
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</>
 	);
 }
