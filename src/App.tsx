@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
+import { useRepoSyncWatcher } from "./lib/useRepoSyncWatcher";
 import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
@@ -52,6 +53,8 @@ function App() {
 	const reposLoading = useAppStore((s) => s.reposLoading);
 	const blockingLoad = useAppStore((s) => s.blockingLoad);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
+
+	useRepoSyncWatcher();
 
 	useEffect(() => {
 		if (repoSources.length > 0 && repos.length === 0) {

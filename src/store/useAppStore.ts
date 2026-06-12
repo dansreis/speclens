@@ -44,10 +44,20 @@ interface AppState {
 	// Distinguishes a user-initiated single-repo load (modal Backdrop) from a
 	// silent background reload of all sources at app start (LinearProgress only).
 	blockingLoad: boolean;
+	// Paths whose on-disk signature has drifted from the loaded copy. Populated
+	// by the background sync watcher; cleared on successful reload or removal.
+	staleRepos: Record<string, true>;
+	// Signature of each loaded repo at the moment it was loaded. The watcher
+	// compares the live `getRepoSignature` against this. Kept separate from the
+	// localStorage cache because that cache can silently fail (quota) on large
+	// repos, which would otherwise break drift detection.
+	loadedSignatures: Record<string, string>;
 	addRepoSource: (path: string) => Promise<void>;
 	removeRepoSource: (path: string) => void;
 	reloadAllSources: () => Promise<void>;
 	reloadRepo: (path: string) => Promise<void>;
+	markRepoStale: (path: string) => void;
+	clearRepoStale: (path: string) => void;
 
 	themeMode: PaletteMode;
 	setThemeMode: (mode: PaletteMode) => void;
@@ -115,6 +125,20 @@ export const useAppStore = create<AppState>()(
 			repos: [],
 			reposLoading: false,
 			blockingLoad: false,
+			staleRepos: {},
+			loadedSignatures: {},
+			markRepoStale: (path) =>
+				set((state) =>
+					state.staleRepos[path]
+						? state
+						: { staleRepos: { ...state.staleRepos, [path]: true } },
+				),
+			clearRepoStale: (path) =>
+				set((state) => {
+					if (!state.staleRepos[path]) return state;
+					const { [path]: _removed, ...rest } = state.staleRepos;
+					return { staleRepos: rest };
+				}),
 			addRepoSource: async (path) => {
 				if (get().repoSources.some((s) => s.path === path)) return;
 				set((state) => ({
@@ -125,17 +149,25 @@ export const useAppStore = create<AppState>()(
 				try {
 					const { repo, signature } = await loadRepoFromPath(path);
 					cacheSet(path, signature, repo);
-					set((state) => ({
-						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
-							(a, b) => a.name.localeCompare(b.name),
-						),
-						repoSources: state.repoSources.map((s) =>
-							s.path === path ? { path, missing: false } : s,
-						),
-						selectedRepoId: state.selectedRepoId ?? path,
-						reposLoading: false,
-						blockingLoad: false,
-					}));
+					set((state) => {
+						const becomesSelected = state.selectedRepoId === null;
+						return {
+							repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+								(a, b) => a.name.localeCompare(b.name),
+							),
+							repoSources: state.repoSources.map((s) =>
+								s.path === path ? { path, missing: false } : s,
+							),
+							selectedRepoId: state.selectedRepoId ?? path,
+							view: becomesSelected ? "overview" : state.view,
+							loadedSignatures: {
+								...state.loadedSignatures,
+								[path]: signature,
+							},
+							reposLoading: false,
+							blockingLoad: false,
+						};
+					});
 				} catch {
 					set((state) => ({
 						repoSources: state.repoSources.map((s) =>
@@ -147,12 +179,16 @@ export const useAppStore = create<AppState>()(
 				}
 			},
 			removeRepoSource: (path) => {
-				const { selectedRepoId } = get();
+				const { selectedRepoId, staleRepos, loadedSignatures } = get();
 				cacheDelete(path);
+				const { [path]: _removedStale, ...restStale } = staleRepos;
+				const { [path]: _removedSig, ...restSigs } = loadedSignatures;
 				set({
 					repoSources: get().repoSources.filter((s) => s.path !== path),
 					repos: get().repos.filter((r) => r.id !== path),
 					selectedRepoId: selectedRepoId === path ? null : selectedRepoId,
+					staleRepos: restStale,
+					loadedSignatures: restSigs,
 				});
 			},
 			reloadAllSources: async () => {
@@ -160,6 +196,7 @@ export const useAppStore = create<AppState>()(
 				set({ reposLoading: true });
 				const updatedSources: RepoSource[] = [];
 				const loadedRepos: Repo[] = [];
+				const sigs: Record<string, string> = {};
 				for (const source of sources) {
 					try {
 						const currentSig = await getRepoSignature(source.path);
@@ -167,12 +204,14 @@ export const useAppStore = create<AppState>()(
 						if (cached && cached.signature === currentSig) {
 							loadedRepos.push(cached.repo);
 							updatedSources.push({ path: source.path, missing: false });
+							sigs[source.path] = currentSig;
 							continue;
 						}
 						const { repo, signature } = await loadRepoFromPath(source.path);
 						cacheSet(source.path, signature, repo);
 						loadedRepos.push(repo);
 						updatedSources.push({ path: source.path, missing: false });
+						sigs[source.path] = signature;
 					} catch {
 						updatedSources.push({ path: source.path, missing: true });
 					}
@@ -181,6 +220,8 @@ export const useAppStore = create<AppState>()(
 					repoSources: updatedSources,
 					repos: loadedRepos.sort((a, b) => a.name.localeCompare(b.name)),
 					reposLoading: false,
+					staleRepos: {},
+					loadedSignatures: sigs,
 				});
 			},
 			reloadRepo: async (path) => {
@@ -189,25 +230,39 @@ export const useAppStore = create<AppState>()(
 				try {
 					const { repo, signature } = await loadRepoFromPath(path);
 					cacheSet(path, signature, repo);
-					set((state) => ({
-						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
-							(a, b) => a.name.localeCompare(b.name),
-						),
-						repoSources: state.repoSources.map((s) =>
-							s.path === path ? { path, missing: false } : s,
-						),
-						reposLoading: false,
-						blockingLoad: false,
-					}));
+					set((state) => {
+						const { [path]: _removedStale, ...restStale } = state.staleRepos;
+						return {
+							repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+								(a, b) => a.name.localeCompare(b.name),
+							),
+							repoSources: state.repoSources.map((s) =>
+								s.path === path ? { path, missing: false } : s,
+							),
+							reposLoading: false,
+							blockingLoad: false,
+							staleRepos: restStale,
+							loadedSignatures: {
+								...state.loadedSignatures,
+								[path]: signature,
+							},
+						};
+					});
 				} catch {
-					set((state) => ({
-						repos: state.repos.filter((r) => r.id !== path),
-						repoSources: state.repoSources.map((s) =>
-							s.path === path ? { path, missing: true } : s,
-						),
-						reposLoading: false,
-						blockingLoad: false,
-					}));
+					set((state) => {
+						const { [path]: _removedStale, ...restStale } = state.staleRepos;
+						const { [path]: _removedSig, ...restSigs } = state.loadedSignatures;
+						return {
+							repos: state.repos.filter((r) => r.id !== path),
+							repoSources: state.repoSources.map((s) =>
+								s.path === path ? { path, missing: true } : s,
+							),
+							reposLoading: false,
+							blockingLoad: false,
+							staleRepos: restStale,
+							loadedSignatures: restSigs,
+						};
+					});
 				}
 			},
 
@@ -224,6 +279,7 @@ export const useAppStore = create<AppState>()(
 			setSelectedRepoId: (id) =>
 				set({
 					selectedRepoId: id,
+					view: "overview",
 					selectedChangeKey: null,
 					selectedSpec: null,
 					selectedSchema: null,
@@ -307,7 +363,6 @@ export const useAppStore = create<AppState>()(
 				sidebarCollapsed: state.sidebarCollapsed,
 				selectedRepoId: state.selectedRepoId,
 				markdownZoom: state.markdownZoom,
-				view: state.view,
 				highlightEars: state.highlightEars,
 				// Persist source paths only; reset `missing` on cold start so we
 				// re-probe — a folder may have been re-mounted since last session.

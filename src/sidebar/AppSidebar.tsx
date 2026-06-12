@@ -43,7 +43,7 @@ const workflowNav: NavItem[] = [
 	{
 		key: "overview",
 		id: "overview",
-		label: "Home",
+		label: "Overview",
 		icon: <GridViewOutlinedIcon />,
 	},
 	{

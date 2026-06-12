@@ -215,7 +215,7 @@ export function OverviewView({ repo }: Props) {
 	return (
 		<Box sx={{ p: 4 }}>
 			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
-				{repo?.name ?? "Home"}
+				{repo?.name ?? "Overview"}
 			</Typography>
 			{repo?.config?.context && (
 				<Box

@@ -157,10 +157,12 @@ async fn repo_signature(path: String) -> Result<String, String> {
 
 /// A fingerprint that changes iff the project's loaded content would change.
 ///
-/// Git-backed: `git:<HEAD-sha>:<hash of porcelain status scoped to project>`.
-/// HEAD covers commits anywhere in the repo (over-invalidates if changes
-/// happened in a sibling project, which is fine — better than missing edits).
-/// Porcelain status covers uncommitted local changes inside the project tree.
+/// Git-backed: `git:<HEAD-sha>:<hash of (path, content) for every tracked +
+/// untracked-not-ignored file under project>`. Equivalent in semantics to
+/// `git ls-files --cached --others --exclude-standard -z | xargs -0 sha256sum
+/// | sha256sum`. Catches every byte change to every non-ignored file under
+/// the project; HEAD-sha additionally invalidates on commits that don't
+/// change working-tree contents (so authorship updates are picked up).
 ///
 /// Non-git: `fs:<hash of (relative path, mtime ns) for every file under openspec/>`.
 fn compute_signature(project_root: &Path) -> String {
@@ -171,13 +173,31 @@ fn compute_signature(project_root: &Path) -> String {
             .ok()
             .map(path_to_forward_slash)
             .unwrap_or_default();
-        let status_args: Vec<&str> = if project_rel.is_empty() {
-            vec!["status", "--porcelain"]
-        } else {
-            vec!["status", "--porcelain", "--", &project_rel]
-        };
-        let status = git_command(&git_root, &status_args).unwrap_or_default();
-        return format!("git:{}:{:x}", head, hash_str(&status));
+        let mut ls_args: Vec<&str> = vec![
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ];
+        if !project_rel.is_empty() {
+            ls_args.push("--");
+            ls_args.push(&project_rel);
+        }
+        let raw = git_command_bytes(&git_root, &ls_args).unwrap_or_default();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        for path_bytes in raw.split(|&b| b == 0) {
+            if path_bytes.is_empty() {
+                continue;
+            }
+            path_bytes.hash(&mut hasher);
+            let rel = String::from_utf8_lossy(path_bytes);
+            let full = git_root.join(rel.as_ref());
+            if let Ok(contents) = fs::read(&full) {
+                contents.hash(&mut hasher);
+            }
+        }
+        return format!("git:{}:{:x}", head, hasher.finish());
     }
     let openspec_dir = project_root.join("openspec");
     let mut entries: Vec<(String, u128)> = Vec::new();
@@ -224,10 +244,17 @@ fn git_command(repo_root: &Path, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn hash_str(s: &str) -> u64 {
-    let mut h = std::collections::hash_map::DefaultHasher::new();
-    s.hash(&mut h);
-    h.finish()
+fn git_command_bytes(repo_root: &Path, args: &[&str]) -> Result<Vec<u8>, String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    Ok(output.stdout)
 }
 
 fn is_hidden_or_skipped(entry: &walkdir::DirEntry) -> bool {

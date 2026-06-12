@@ -49,6 +49,7 @@ export function RepoDocList({ items, emptyMessage, onSelect }: Props) {
 				>
 					<Box sx={{ flex: 1, minWidth: 0 }}>
 						<Typography
+							component="div"
 							variant="body2"
 							sx={{ fontWeight: 600, mb: item.preview ? 0.25 : 0 }}
 						>
@@ -56,6 +57,7 @@ export function RepoDocList({ items, emptyMessage, onSelect }: Props) {
 						</Typography>
 						{item.secondary && (
 							<Typography
+								component="div"
 								variant="caption"
 								color="text.secondary"
 								sx={{ display: "block", mb: item.preview ? 0.25 : 0 }}
@@ -65,6 +67,7 @@ export function RepoDocList({ items, emptyMessage, onSelect }: Props) {
 						)}
 						{item.preview && (
 							<Typography
+								component="div"
 								variant="caption"
 								color="text.secondary"
 								sx={{

@@ -8,6 +8,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import UnfoldMoreIcon from "@mui/icons-material/UnfoldMore";
 import {
+	Badge,
 	Box,
 	ButtonBase,
 	Divider,
@@ -50,6 +51,7 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 	const repoSources = useAppStore((s) => s.repoSources);
 	const removeRepoSource = useAppStore((s) => s.removeRepoSource);
 	const reloadRepo = useAppStore((s) => s.reloadRepo);
+	const staleRepos = useAppStore((s) => s.staleRepos);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const open = Boolean(anchorEl);
 
@@ -177,19 +179,49 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 
 	let loadedIndex = 0;
 
+	const activeStale = active ? !!staleRepos[active.id] : false;
 	const expandedTrigger =
 		!collapsed && active ? (
 			<Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
 				<Box sx={{ flex: 1, minWidth: 0 }}>{trigger}</Box>
-				<Tooltip title="Reload repository" placement="bottom" arrow>
-					<IconButton
-						size="small"
-						onClick={() => reloadRepo(active.id)}
-						aria-label="Reload repository"
-						sx={{ color: "text.secondary" }}
+				<Tooltip
+					title={
+						activeStale
+							? "Changes detected on disk since this repository was loaded. Click to refresh and pick them up."
+							: "Reload repository"
+					}
+					placement="bottom"
+					arrow
+				>
+					<Badge
+						overlap="circular"
+						anchorOrigin={{ vertical: "top", horizontal: "right" }}
+						badgeContent={activeStale ? "⚠️" : null}
+						sx={{
+							"& .MuiBadge-badge": {
+								fontSize: "0.75rem",
+								minWidth: 16,
+								height: 16,
+								padding: 0,
+								bgcolor: "transparent",
+							},
+						}}
 					>
-						<RefreshIcon fontSize="small" />
-					</IconButton>
+						<IconButton
+							size="small"
+							onClick={() => reloadRepo(active.id)}
+							aria-label={
+								activeStale
+									? "Reload repository (changes detected)"
+									: "Reload repository"
+							}
+							sx={{
+								color: activeStale ? "warning.main" : "text.secondary",
+							}}
+						>
+							<RefreshIcon fontSize="small" />
+						</IconButton>
+					</Badge>
 				</Tooltip>
 			</Box>
 		) : null;

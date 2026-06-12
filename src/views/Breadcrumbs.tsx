@@ -11,7 +11,7 @@ import type { Change } from "../lib/repoLoader";
 import { type AppView, useAppStore } from "../store/useAppStore";
 
 const titles: Record<AppView, string> = {
-	overview: "Home",
+	overview: "Overview",
 	specs: "Specs",
 	changes: "Changes",
 	flow: "Flow",
