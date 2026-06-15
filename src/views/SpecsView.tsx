@@ -128,6 +128,7 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 					authorship={repoSpec.authorship}
 					source={repoSpec.content}
 					documentId={`repo-doc:${repoSpec.path}`}
+					documentKind="repo-spec"
 				/>
 			);
 		}

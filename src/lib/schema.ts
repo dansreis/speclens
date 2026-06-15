@@ -107,7 +107,7 @@ export function globToRegex(glob: string): RegExp | null {
  *
  * Anything starting with `../` is treated as repo-root-scoped: leading `../`
  * segments are stripped (regardless of how many) and the rest matches against
- * the repo-root file map. This matches OpenSpec's intent — `<repo>/adr/*.md`
+ * the repo-root file map. This matches OpenSpec's intent - `<repo>/adr/*.md`
  * always means the repo's top-level `adr/`, regardless of how deep the change
  * folder sits.
  */

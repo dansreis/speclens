@@ -19,7 +19,7 @@ export function TimelineView() {
 				Timeline
 			</Typography>
 			<Typography variant="body2" color="text.secondary">
-				Coming soon — a chronological view of change lifecycles.
+				Coming soon - a chronological view of change lifecycles.
 			</Typography>
 		</Box>
 	);

@@ -285,7 +285,7 @@ fn path_to_forward_slash(p: &Path) -> String {
 }
 
 /// Looks for `.git` AT the project root or its immediate parent. We don't walk
-/// further up — otherwise a folder loaded from inside an unrelated git checkout
+/// further up - otherwise a folder loaded from inside an unrelated git checkout
 /// (e.g. the user's home dir or `~/Projects`) would attribute authorship from
 /// that unrelated repo's history.
 fn find_git_root(start: &Path) -> Option<PathBuf> {
@@ -396,6 +396,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_sql::Builder::default().build())
         .invoke_handler(tauri::generate_handler![load_repo, repo_signature])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,8 @@
 export interface HighlightTarget {
 	text: string;
 	occurrence: number;
+	/** Optional tag carried in the returned found-map (typically a commentId). */
+	id?: string;
 }
 
 const MARK_CLASS = "user-highlight";
@@ -52,12 +54,22 @@ export function clearHighlights(container: HTMLElement): void {
 	container.normalize();
 }
 
+/**
+ * Applies each target as a `<mark>` wrap. Returns a per-id map of whether the
+ * target's text+occurrence was located in the container; ids only appear in the
+ * map for targets that were passed with an `id`.
+ */
 export function applyHighlights(
 	container: HTMLElement,
 	targets: HighlightTarget[],
-): void {
+): Record<string, boolean> {
 	clearHighlights(container);
-	for (const target of targets) applyOne(container, target);
+	const found: Record<string, boolean> = {};
+	for (const target of targets) {
+		const ok = applyOne(container, target);
+		if (target.id !== undefined) found[target.id] = ok;
+	}
+	return found;
 }
 
 interface Segment {

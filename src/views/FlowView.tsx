@@ -50,7 +50,7 @@ const TIME_AXIS_GAP = 40;
 const LABEL_OVERHANG_RIGHT = 120;
 const LABEL_OVERHANG_TOP = 110;
 
-// Marginal uniform padding, high maxZoom — the chart fills the canvas as much
+// Marginal uniform padding, high maxZoom - the chart fills the canvas as much
 // as possible, centered. Lower padding → tighter fit. Raise maxZoom → small
 // repos can grow further.
 const FIT_VIEW_PADDING = 0.02;
@@ -212,7 +212,7 @@ function ChangeNode({ data }: NodeProps<ChangeNodeType>) {
 					/>
 				)}
 			</Box>
-			{/* Diagonal label — bottom-left pivots above pill's top edge */}
+			{/* Diagonal label - bottom-left pivots above pill's top edge */}
 			<Box
 				sx={{
 					position: "absolute",

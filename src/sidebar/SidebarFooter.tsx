@@ -105,7 +105,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 							}
 						/>
 						<Typography variant="caption" color="text.secondary">
-							More options planned — see <code>TODO.md</code>.
+							More options planned - see <code>TODO.md</code>.
 						</Typography>
 					</Stack>
 				</DialogContent>

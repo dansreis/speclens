@@ -1,28 +1,42 @@
+import AddIcon from "@mui/icons-material/Add";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
 	Avatar,
 	Box,
+	Button,
 	IconButton,
+	MenuItem,
+	Select,
 	Tab,
 	Tabs,
+	TextField,
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
-import type { AppComment } from "../lib/comments";
+import { useEffect, useMemo, useState } from "react";
+import type { AppComment, DocumentKind } from "../lib/comments";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
+import {
+	REQUEST_HEADING_COMMENT_EVENT,
+	type RequestHeadingCommentDetail,
+} from "../specs/MarkdownView";
 import { type TabKey, useAppStore } from "../store/useAppStore";
-import { useCommentsStore } from "../store/useCommentsStore";
+import { useCommentsStore, withOrphans } from "../store/useCommentsStore";
 
 const PANEL_WIDTH = 340;
 
-type Filter = "unresolved" | "resolved";
+type Scope = "section" | "document" | "repo" | "orphans" | "all";
+type ResolvedTab = "unresolved" | "resolved";
 
 interface Props {
 	open: boolean;
@@ -31,14 +45,33 @@ interface Props {
 	onTogglePin: () => void;
 }
 
+function scopeLabel(s: Scope): string {
+	switch (s) {
+		case "section":
+			return "This section";
+		case "document":
+			return "This document";
+		case "repo":
+			return "This repo";
+		case "orphans":
+			return "Orphans";
+		case "all":
+			return "All";
+	}
+}
+
 function CommentItem({
 	comment,
 	onJump,
+	onToggleResolved,
+	onDelete,
 }: {
 	comment: AppComment;
 	onJump: (comment: AppComment) => void;
+	onToggleResolved: (id: string) => void;
+	onDelete: (id: string) => void;
 }) {
-	const jumpable = Boolean(comment.highlight);
+	const jumpable = Boolean(comment.highlight && !comment.orphan);
 	return (
 		<Box
 			sx={{
@@ -78,15 +111,52 @@ function CommentItem({
 						</Box>
 					</Tooltip>
 				</Box>
-				{comment.resolved && (
-					<Tooltip title="Resolved" arrow>
-						<CheckCircleIcon
+				{comment.orphan && (
+					<Tooltip title="Original location or text no longer found" arrow>
+						<WarningAmberIcon
 							fontSize="small"
-							sx={{ color: "success.main", flexShrink: 0 }}
+							sx={{ color: "warning.main", flexShrink: 0 }}
 						/>
 					</Tooltip>
 				)}
+				<Tooltip title={comment.resolved ? "Mark unresolved" : "Resolve"} arrow>
+					<IconButton
+						size="small"
+						onClick={() => onToggleResolved(comment.id)}
+						aria-label={comment.resolved ? "Mark unresolved" : "Mark resolved"}
+						sx={{ color: comment.resolved ? "success.main" : "text.secondary" }}
+					>
+						{comment.resolved ? (
+							<CheckCircleIcon fontSize="small" />
+						) : (
+							<CheckCircleOutlineIcon fontSize="small" />
+						)}
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Delete" arrow>
+					<IconButton
+						size="small"
+						onClick={() => {
+							if (window.confirm("Delete this comment?")) {
+								onDelete(comment.id);
+							}
+						}}
+						aria-label="Delete comment"
+						sx={{ color: "error.main" }}
+					>
+						<DeleteOutlineIcon fontSize="small" />
+					</IconButton>
+				</Tooltip>
 			</Box>
+			{comment.headingSlug && (
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					sx={{ display: "block", mb: 0.5 }}
+				>
+					§ {comment.headingSlug}
+				</Typography>
+			)}
 			{comment.quote && (
 				<Tooltip
 					title={jumpable ? "Jump to highlight" : ""}
@@ -132,47 +202,194 @@ function CommentItem({
 	);
 }
 
+function deriveDocumentKindFromView(view: string): DocumentKind {
+	if (view === "specs") return "repo-spec";
+	if (view === "folder") return "folder-doc";
+	if (view === "schemas") return "schema";
+	return "change";
+}
+
+function commentsToMarkdown(
+	comments: AppComment[],
+	repoName: string,
+	scope: Scope,
+): string {
+	const lines: string[] = [];
+	lines.push(`# Comments - ${repoName} - ${scopeLabel(scope)}`);
+	lines.push("");
+	const byDoc = new Map<string, AppComment[]>();
+	for (const c of comments) {
+		const k = `${c.documentKind}::${c.documentId ?? "Repo-level"}`;
+		const arr = byDoc.get(k) ?? [];
+		arr.push(c);
+		byDoc.set(k, arr);
+	}
+	for (const [k, group] of byDoc) {
+		const [kind, docId] = k.split("::");
+		lines.push(`## ${kind}: ${docId}`);
+		lines.push("");
+		for (const c of group) {
+			if (c.headingSlug) lines.push(`[heading: ${c.headingSlug}]`);
+			if (c.quote) lines.push(`> ${c.quote}`);
+			lines.push("");
+			lines.push(c.body);
+			lines.push("");
+			const stamp = c.timestamp.toISOString();
+			lines.push(
+				`- ${c.author}, ${stamp}${c.resolved ? " [resolved]" : ""}${c.orphan ? " [orphan]" : ""}`,
+			);
+			lines.push("");
+		}
+	}
+	return lines.join("\n");
+}
+
 export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
-	const [filter, setFilter] = useState<Filter>("unresolved");
-	const comments = useCommentsStore((s) => s.comments);
+	const [resolvedTab, setResolvedTab] = useState<ResolvedTab>("unresolved");
+	const [scope, setScope] = useState<Scope>("document");
+	const [composerOpen, setComposerOpen] = useState(false);
+	const [composerBody, setComposerBody] = useState("");
+	const [composerHeading, setComposerHeading] = useState<string | null>(null);
+
+	const allComments = useCommentsStore((s) => s.comments);
+	const highlightOrphans = useCommentsStore((s) => s.highlightOrphans);
+	const documentOrphans = useCommentsStore((s) => s.documentOrphans);
+	const addComment = useCommentsStore((s) => s.addComment);
+	const deleteComment = useCommentsStore((s) => s.deleteComment);
+	const toggleResolved = useCommentsStore((s) => s.toggleResolved);
+
 	const repos = useAppStore((s) => s.repos);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
+	const view = useAppStore((s) => s.view);
+	const currentDocumentId = useAppStore((s) => s.currentDocumentId);
+	const currentHeadingSlug = useAppStore((s) => s.currentHeadingSlug);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
 
+	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+
+	useEffect(() => {
+		const handler = (e: Event) => {
+			const detail = (e as CustomEvent<RequestHeadingCommentDetail>).detail;
+			if (!detail?.slug) return;
+			setScope("section");
+			setComposerHeading(detail.slug);
+			setComposerOpen(true);
+		};
+		document.addEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
+		return () =>
+			document.removeEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
+	}, []);
+
+	const comments = useMemo(
+		() => withOrphans(allComments, highlightOrphans, documentOrphans),
+		[allComments, highlightOrphans, documentOrphans],
+	);
+
+	const repoScoped = useMemo(
+		() =>
+			activeRepo ? comments.filter((c) => c.repoId === activeRepo.id) : [],
+		[comments, activeRepo],
+	);
+
+	const filtered = useMemo(() => {
+		if (scope === "all") return comments;
+		if (scope === "orphans") return comments.filter((c) => c.orphan);
+		if (scope === "repo") return repoScoped;
+		if (scope === "document") {
+			if (!currentDocumentId) return [];
+			return repoScoped.filter((c) => c.documentId === currentDocumentId);
+		}
+		// section
+		if (!currentDocumentId || !currentHeadingSlug) return [];
+		return repoScoped.filter(
+			(c) =>
+				c.documentId === currentDocumentId &&
+				c.headingSlug === currentHeadingSlug,
+		);
+	}, [scope, comments, repoScoped, currentDocumentId, currentHeadingSlug]);
+
+	const counts = useMemo(() => {
+		const unresolved = filtered.filter((c) => !c.resolved).length;
+		const resolved = filtered.length - unresolved;
+		return { unresolved, resolved };
+	}, [filtered]);
+
+	const visibleComments = useMemo(
+		() =>
+			filtered.filter((c) =>
+				resolvedTab === "unresolved" ? !c.resolved : c.resolved,
+			),
+		[filtered, resolvedTab],
+	);
+
 	const handleJump = (comment: AppComment) => {
 		const h = comment.highlight;
-		if (!h) return;
-		const parts = h.documentId.split("/");
+		if (!h || comment.documentKind !== "change" || !comment.documentId) return;
+		const parts = comment.documentId.split("/");
 		const tab = parts[parts.length - 1] as TabKey;
 		const slug = parts.slice(0, -1).join("/");
-		const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 		const change = activeRepo?.changes.find((c) => c.slug === slug);
 		if (!change) return;
 		const key = `${change.archived ? "archive/" : ""}${change.slug}`;
 		setSelectedChangeKey(key);
 		setActiveTab(tab);
 		setScrollTarget({
-			documentId: h.documentId,
+			documentId: comment.documentId,
 			text: h.text,
 			occurrence: h.occurrence,
 		});
 	};
 
-	const counts = useMemo(() => {
-		const unresolved = comments.filter((c) => !c.resolved).length;
-		const resolved = comments.length - unresolved;
-		return { unresolved, resolved };
-	}, [comments]);
+	const sectionHeading = composerHeading ?? currentHeadingSlug;
 
-	const visibleComments = useMemo(
-		() =>
-			comments.filter((c) =>
-				filter === "unresolved" ? !c.resolved : c.resolved,
-			),
-		[comments, filter],
-	);
+	const canCompose =
+		!!activeRepo &&
+		(scope === "repo" ||
+			(scope === "document" && !!currentDocumentId) ||
+			(scope === "section" && !!currentDocumentId && !!sectionHeading));
+
+	const submitNewComment = async () => {
+		const body = composerBody.trim();
+		if (!body || !activeRepo) return;
+		if (scope === "repo") {
+			await addComment({
+				repoId: activeRepo.id,
+				documentKind: "repo",
+				documentId: null,
+				body,
+			});
+		} else if (scope === "document" && currentDocumentId) {
+			await addComment({
+				repoId: activeRepo.id,
+				documentKind: deriveDocumentKindFromView(view),
+				documentId: currentDocumentId,
+				body,
+			});
+		} else if (scope === "section" && currentDocumentId && sectionHeading) {
+			await addComment({
+				repoId: activeRepo.id,
+				documentKind: deriveDocumentKindFromView(view),
+				documentId: currentDocumentId,
+				headingSlug: sectionHeading,
+				body,
+			});
+		}
+		setComposerBody("");
+		setComposerOpen(false);
+		setComposerHeading(null);
+	};
+
+	const handleExport = async () => {
+		const name = activeRepo?.name ?? "Repo";
+		const md = commentsToMarkdown(visibleComments, name, scope);
+		try {
+			await navigator.clipboard.writeText(md);
+		} catch {
+			// Clipboard API may be blocked; fall through silently.
+		}
+	};
 
 	const pinnedSx = {
 		position: "relative" as const,
@@ -215,41 +432,158 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 					borderBottom: 1,
 					borderColor: "divider",
 					flexShrink: 0,
+					gap: 0.5,
 				}}
 			>
-				<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+				<Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
 					Comments
 				</Typography>
-				<Box sx={{ display: "flex", gap: 0.5 }}>
-					<Tooltip title={pinned ? "Unpin Comments" : "Pin Comments"}>
+				<Tooltip title="Export to clipboard as markdown">
+					<span>
 						<IconButton
 							size="small"
-							onClick={onTogglePin}
-							aria-label={pinned ? "Unpin Comments" : "Pin Comments"}
-							sx={{ color: pinned ? "primary.main" : "text.secondary" }}
-						>
-							{pinned ? (
-								<PushPinIcon fontSize="small" />
-							) : (
-								<PushPinOutlinedIcon fontSize="small" />
-							)}
-						</IconButton>
-					</Tooltip>
-					<Tooltip title="Close">
-						<IconButton
-							size="small"
-							onClick={onClose}
-							aria-label="Close Comments"
+							onClick={handleExport}
+							disabled={visibleComments.length === 0}
+							aria-label="Export comments"
 							sx={{ color: "text.secondary" }}
 						>
-							<CloseIcon fontSize="small" />
+							<ContentCopyIcon fontSize="small" />
 						</IconButton>
-					</Tooltip>
-				</Box>
+					</span>
+				</Tooltip>
+				<Tooltip title={pinned ? "Unpin Comments" : "Pin Comments"}>
+					<IconButton
+						size="small"
+						onClick={onTogglePin}
+						aria-label={pinned ? "Unpin Comments" : "Pin Comments"}
+						sx={{ color: pinned ? "primary.main" : "text.secondary" }}
+					>
+						{pinned ? (
+							<PushPinIcon fontSize="small" />
+						) : (
+							<PushPinOutlinedIcon fontSize="small" />
+						)}
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Close">
+					<IconButton
+						size="small"
+						onClick={onClose}
+						aria-label="Close Comments"
+						sx={{ color: "text.secondary" }}
+					>
+						<CloseIcon fontSize="small" />
+					</IconButton>
+				</Tooltip>
 			</Box>
+			<Box
+				sx={{
+					px: 1.5,
+					py: 1,
+					display: "flex",
+					alignItems: "center",
+					gap: 1,
+					borderBottom: 1,
+					borderColor: "divider",
+					flexShrink: 0,
+				}}
+			>
+				<Select
+					size="small"
+					value={scope}
+					onChange={(e) => setScope(e.target.value as Scope)}
+					sx={{ flex: 1, fontSize: "0.8125rem" }}
+				>
+					<MenuItem value="section">{scopeLabel("section")}</MenuItem>
+					<MenuItem value="document">{scopeLabel("document")}</MenuItem>
+					<MenuItem value="repo">{scopeLabel("repo")}</MenuItem>
+					<MenuItem value="orphans">{scopeLabel("orphans")}</MenuItem>
+					<MenuItem value="all">{scopeLabel("all")}</MenuItem>
+				</Select>
+				<Tooltip
+					title={canCompose ? "Add comment" : "No target for new comment"}
+				>
+					<span>
+						<IconButton
+							size="small"
+							onClick={() => setComposerOpen((o) => !o)}
+							disabled={!canCompose}
+							aria-label="Add comment"
+							sx={{
+								bgcolor: composerOpen ? "action.selected" : undefined,
+								color: "text.secondary",
+							}}
+						>
+							<AddIcon fontSize="small" />
+						</IconButton>
+					</span>
+				</Tooltip>
+			</Box>
+			{composerOpen && canCompose && (
+				<Box
+					sx={{
+						px: 1.5,
+						py: 1,
+						borderBottom: 1,
+						borderColor: "divider",
+						flexShrink: 0,
+					}}
+				>
+					<TextField
+						autoFocus
+						multiline
+						minRows={2}
+						maxRows={6}
+						fullWidth
+						placeholder={
+							scope === "repo"
+								? "Add a repo-level comment…"
+								: scope === "section" && sectionHeading
+									? `Add a comment on § ${sectionHeading}…`
+									: "Add a comment on this document…"
+						}
+						value={composerBody}
+						onChange={(e) => setComposerBody(e.target.value)}
+						size="small"
+						onKeyDown={(e) => {
+							if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+								e.preventDefault();
+								void submitNewComment();
+							}
+							if (e.key === "Escape") {
+								e.preventDefault();
+								setComposerOpen(false);
+								setComposerBody("");
+							}
+						}}
+					/>
+					<Box
+						sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}
+					>
+						<Button
+							size="small"
+							onClick={() => {
+								setComposerOpen(false);
+								setComposerBody("");
+								setComposerHeading(null);
+							}}
+						>
+							Cancel
+						</Button>
+						<Button
+							size="small"
+							variant="contained"
+							disabled={!composerBody.trim()}
+							onClick={() => void submitNewComment()}
+						>
+							Comment
+						</Button>
+					</Box>
+				</Box>
+			)}
 			<Tabs
-				value={filter}
-				onChange={(_, v) => setFilter(v as Filter)}
+				value={resolvedTab}
+				onChange={(_, v) => setResolvedTab(v as ResolvedTab)}
 				variant="fullWidth"
 				sx={{
 					borderBottom: 1,
@@ -273,12 +607,18 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 				{visibleComments.length === 0 ? (
 					<Box sx={{ p: 4, textAlign: "center" }}>
 						<Typography variant="body2" color="text.secondary">
-							No {filter} comments
+							No {resolvedTab} comments
 						</Typography>
 					</Box>
 				) : (
 					visibleComments.map((c) => (
-						<CommentItem key={c.id} comment={c} onJump={handleJump} />
+						<CommentItem
+							key={c.id}
+							comment={c}
+							onJump={handleJump}
+							onToggleResolved={(id) => void toggleResolved(id)}
+							onDelete={(id) => void deleteComment(id)}
+						/>
 					))
 				)}
 			</Box>

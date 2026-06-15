@@ -6,7 +6,7 @@
 
 Desktop reader for OpenSpec change folders (`proposal.md` / `tasks.md` / `specs/<capability>/spec.md`). Browse changes across repositories, comment on text selections, and inspect document stats.
 
-> **Status:** UI-first development against mock data. GitHub integration is on the roadmap — see [`TODO.md`](./TODO.md).
+> **Status:** UI-first development against mock data. GitHub integration is on the roadmap - see [`TODO.md`](./TODO.md).
 
 ## Tech stack
 
@@ -63,19 +63,19 @@ Each `examples/exampleN/` is a mock repository with a `config.json` (name + type
 
 Spec markdown is rendered with inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin scenario steps. Toggle it in **Settings** (gear icon, bottom of the sidebar). The fixture repo `speclens/ears-showcase` (`examples/ears-markdown-showcase/`) exercises every keyword and includes negative cases.
 
-Colors are MUI palette tokens, not hex codes — they track light/dark mode and any future theme changes automatically. Keywords are grouped by their semantic role, not by uniqueness, so a few share a token (e.g. SHOULD and THEN both use `info`).
+Colors are MUI palette tokens, not hex codes - they track light/dark mode and any future theme changes automatically. Keywords are grouped by their semantic role, not by uniqueness, so a few share a token (e.g. SHOULD and THEN both use `info`).
 
 | Keyword(s)  | Role                       | MUI token        |
 | ----------- | -------------------------- | ---------------- |
-| SHALL, MUST | Mandatory — the spine of a requirement | `primary.main`   |
-| SHOULD      | Recommended — weaker than SHALL        | `info.main`      |
-| MAY         | Permitted — explicitly optional         | `secondary.main` |
+| SHALL, MUST | Mandatory - the spine of a requirement | `primary.main`   |
+| SHOULD      | Recommended - weaker than SHALL        | `info.main`      |
+| MAY         | Permitted - explicitly optional         | `secondary.main` |
 | WHEN        | Discrete event trigger     | `success.main`   |
 | WHILE       | Ongoing state              | `warning.main`   |
 | WHERE       | Feature-flag conditional   | `secondary.main` |
 | IF          | Unwanted-behavior branch   | `error.main`     |
 | THEN        | Consequence (paired with IF or scenario) | `info.main`      |
-| GIVEN, AND  | Scenario scaffolding — muted on purpose  | `text.secondary` |
+| GIVEN, AND  | Scenario scaffolding - muted on purpose  | `text.secondary` |
 
 All matches are uppercase + word-bounded, and skipped inside `code`, `pre`, and `kbd` so code samples and keyboard hints stay neutral.
 
@@ -87,4 +87,4 @@ See [`TODO.md`](./TODO.md) for planned settings (max width, comments on/off, the
 
 ## See also
 
-- [`CLAUDE.md`](./CLAUDE.md) — architectural notes for working on the project with Claude Code.
+- [`CLAUDE.md`](./CLAUDE.md) - architectural notes for working on the project with Claude Code.

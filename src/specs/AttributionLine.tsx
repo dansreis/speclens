@@ -86,7 +86,7 @@ export function AttributionLine({ authorship, size = "md" }: Props) {
 					title={`${formatAbsoluteDateTime(editedDate)}${
 						sameAuthor
 							? ""
-							: ` — created ${formatAbsoluteDateTime(new Date(createdAt))}`
+							: ` - created ${formatAbsoluteDateTime(new Date(createdAt))}`
 					}`}
 					arrow
 				>

@@ -297,7 +297,7 @@ export function ChangeViewer({
 						"& .MuiAlert-message": { py: 0.5 },
 					}}
 				>
-					All tasks are complete — this change is ready to archive.
+					All tasks are complete - this change is ready to archive.
 				</Alert>
 			)}
 			<Box

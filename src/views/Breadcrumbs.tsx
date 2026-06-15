@@ -148,7 +148,7 @@ function FlowInfo() {
 			</Box>
 			<Box sx={{ fontSize: "0.75rem", lineHeight: 1.55 }}>
 				A timeline of how this repo's specs have evolved. Each horizontal lane
-				is a <strong>capability</strong> — a named slice of the spec like "auth"
+				is a <strong>capability</strong> - a named slice of the spec like "auth"
 				or "billing", defined by its own{" "}
 				<Box
 					component="code"

@@ -16,11 +16,15 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
+import { useDocumentOrphans } from "./lib/orphanDetection";
 import { useRepoSyncWatcher } from "./lib/useRepoSyncWatcher";
 import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
+import { REQUEST_HEADING_COMMENT_EVENT } from "./specs/MarkdownView";
+import { bootstrap } from "./store/bootstrap";
 import { useAppStore } from "./store/useAppStore";
+import { useCommentsStore } from "./store/useCommentsStore";
 import { createAppTheme } from "./theme/theme";
 import { Breadcrumbs } from "./views/Breadcrumbs";
 import { ChangesView } from "./views/ChangesView";
@@ -34,6 +38,39 @@ import { TimelineView } from "./views/TimelineView";
 
 function changeKey(c: { slug: string; archived: boolean }): string {
 	return `${c.archived ? "archive/" : ""}${c.slug}`;
+}
+
+export function HydrationGate({ children }: { children: React.ReactNode }) {
+	const [ready, setReady] = useState(false);
+	useEffect(() => {
+		let cancelled = false;
+		bootstrap()
+			.then(() => {
+				if (!cancelled) setReady(true);
+			})
+			.catch((err) => {
+				console.error("bootstrap failed", err);
+				if (!cancelled) setReady(true);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+	if (!ready) {
+		return (
+			<Box
+				sx={{
+					height: "100vh",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+				}}
+			>
+				<CircularProgress size={32} />
+			</Box>
+		);
+	}
+	return <>{children}</>;
 }
 
 function App() {
@@ -53,8 +90,10 @@ function App() {
 	const reposLoading = useAppStore((s) => s.reposLoading);
 	const blockingLoad = useAppStore((s) => s.blockingLoad);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
+	const allComments = useCommentsStore((s) => s.comments);
 
 	useRepoSyncWatcher();
+	useDocumentOrphans(allComments, repos);
 
 	useEffect(() => {
 		if (repoSources.length > 0 && repos.length === 0) {
@@ -118,6 +157,13 @@ function App() {
 	useEffect(() => {
 		if (!activeChange) setCommentsOpen(false);
 	}, [activeChange]);
+
+	useEffect(() => {
+		const handler = () => setCommentsOpen(true);
+		document.addEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
+		return () =>
+			document.removeEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
+	}, []);
 
 	const sharedDetailProps = {
 		commentsOpen,

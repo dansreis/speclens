@@ -21,7 +21,7 @@ export function formatCompactDateTime(date: Date): string {
 }
 
 export function formatDuration(ms: number): string {
-	if (ms < 0) return "—";
+	if (ms < 0) return "-";
 	const minutes = Math.floor(ms / 60000);
 	if (minutes < 60) return `${minutes}m`;
 	const hours = Math.floor(minutes / 60);

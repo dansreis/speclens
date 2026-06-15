@@ -1,12 +1,20 @@
 import { keyframes } from "@emotion/react";
+import AddCommentIcon from "@mui/icons-material/AddComment";
 import { Box } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ComponentPropsWithoutRef,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { SelectionPopover } from "../comments/SelectionPopover";
+import type { DocumentKind } from "../lib/comments";
 import { rehypeEarsKeywords } from "../lib/earsKeywords";
 import {
 	applyHighlights,
@@ -14,8 +22,59 @@ import {
 	type HighlightTarget,
 	highlightKey,
 } from "../lib/highlight";
+import { useCurrentHeading } from "../lib/useCurrentHeading";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
+
+export const REQUEST_HEADING_COMMENT_EVENT = "speclens:request-heading-comment";
+
+export interface RequestHeadingCommentDetail {
+	slug: string;
+}
+
+type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+function makeHeading(level: HeadingLevel) {
+	const Tag = `h${level}` as HeadingTag;
+	return function MdHeading({
+		id,
+		children,
+		...rest
+	}: ComponentPropsWithoutRef<HeadingTag>) {
+		return (
+			<Tag id={id} {...rest} className="md-heading">
+				<span className="md-heading-text">{children}</span>
+				{id && (
+					<button
+						type="button"
+						className="md-heading-add"
+						aria-label="Add comment on this section"
+						onClick={() => {
+							document.dispatchEvent(
+								new CustomEvent<RequestHeadingCommentDetail>(
+									REQUEST_HEADING_COMMENT_EVENT,
+									{ detail: { slug: id } },
+								),
+							);
+						}}
+					>
+						<AddCommentIcon sx={{ fontSize: 14 }} />
+					</button>
+				)}
+			</Tag>
+		);
+	};
+}
+
+const headingComponents = {
+	h1: makeHeading(1),
+	h2: makeHeading(2),
+	h3: makeHeading(3),
+	h4: makeHeading(4),
+	h5: makeHeading(5),
+	h6: makeHeading(6),
+};
 
 const flashAnim = keyframes`
   0%, 100% {
@@ -31,6 +90,7 @@ const flashAnim = keyframes`
 interface Props {
 	source: string;
 	documentId?: string;
+	documentKind?: DocumentKind;
 }
 
 interface PendingSelection {
@@ -40,15 +100,23 @@ interface PendingSelection {
 	left: number;
 }
 
-export function MarkdownView({ source, documentId }: Props) {
+export function MarkdownView({
+	source,
+	documentId,
+	documentKind = "change",
+}: Props) {
 	const contentRef = useRef<HTMLDivElement | null>(null);
 	const [pending, setPending] = useState<PendingSelection | null>(null);
 	const comments = useCommentsStore((s) => s.comments);
 	const addComment = useCommentsStore((s) => s.addComment);
+	const setHighlightOrphans = useCommentsStore((s) => s.setHighlightOrphans);
 	const scrollTarget = useAppStore((s) => s.scrollTarget);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const markdownZoom = useAppStore((s) => s.markdownZoom);
 	const highlightEars = useAppStore((s) => s.highlightEars);
+
+	useCurrentHeading(contentRef, documentId ?? null);
 
 	const rehypePlugins = useMemo(
 		() =>
@@ -58,19 +126,34 @@ export function MarkdownView({ source, documentId }: Props) {
 		[highlightEars],
 	);
 
-	const highlights: HighlightTarget[] = documentId
-		? comments
-				.filter((c) => c.highlight?.documentId === documentId)
-				.map((c) => ({
-					text: c.highlight?.text ?? "",
-					occurrence: c.highlight?.occurrence ?? 1,
-				}))
-		: [];
+	const highlights: HighlightTarget[] =
+		documentId && selectedRepoId
+			? comments
+					.filter(
+						(c) =>
+							c.highlight &&
+							c.repoId === selectedRepoId &&
+							c.documentId === documentId,
+					)
+					.map((c) => ({
+						id: c.id,
+						text: c.highlight?.text ?? "",
+						occurrence: c.highlight?.occurrence ?? 1,
+					}))
+			: [];
 
 	useEffect(() => {
 		const container = contentRef.current;
 		if (!container) return;
-		applyHighlights(container, highlights);
+		const found = applyHighlights(container, highlights);
+		if (documentId && selectedRepoId) {
+			const orphans: Record<string, boolean> = {};
+			for (const [id, ok] of Object.entries(found)) orphans[id] = !ok;
+			setHighlightOrphans(orphans, {
+				repoId: selectedRepoId,
+				documentId,
+			});
+		}
 
 		if (scrollTarget && documentId && scrollTarget.documentId === documentId) {
 			const key = highlightKey({
@@ -133,11 +216,17 @@ export function MarkdownView({ source, documentId }: Props) {
 	}, [documentId]);
 
 	const handleSubmit = (body: string) => {
-		if (!pending || !documentId) return;
-		addComment(body, {
-			text: pending.text,
-			occurrence: pending.occurrence,
+		if (!pending || !documentId || !selectedRepoId) return;
+		void addComment({
+			repoId: selectedRepoId,
+			documentKind,
 			documentId,
+			body,
+			quote: pending.text,
+			highlight: {
+				text: pending.text,
+				occurrence: pending.occurrence,
+			},
 		});
 		setPending(null);
 		window.getSelection()?.removeAllRanges();
@@ -286,11 +375,33 @@ export function MarkdownView({ source, documentId }: Props) {
 						color: "text.secondary",
 						bgcolor: "action.hover",
 					},
+					"& .md-heading": {
+						display: "flex",
+						alignItems: "center",
+						gap: 1,
+					},
+					"& .md-heading-text": { flex: "0 1 auto", minWidth: 0 },
+					"& .md-heading-add": {
+						all: "unset",
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						width: 20,
+						height: 20,
+						borderRadius: "50%",
+						color: "text.secondary",
+						opacity: 0,
+						cursor: "pointer",
+						transition: "opacity 120ms, background-color 120ms",
+					},
+					"& .md-heading:hover .md-heading-add": { opacity: 1 },
+					"& .md-heading-add:hover": { bgcolor: "action.hover" },
 				}}
 			>
 				<ReactMarkdown
 					remarkPlugins={[remarkGfm]}
 					rehypePlugins={rehypePlugins}
+					components={headingComponents}
 				>
 					{source}
 				</ReactMarkdown>

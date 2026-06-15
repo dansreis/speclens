@@ -28,6 +28,7 @@ import {
 import { useEffect, useState } from "react";
 import type { Repo, RepoType } from "../lib/repoLoader";
 import { type RepoSource, useAppStore } from "../store/useAppStore";
+import { useCommentsStore } from "../store/useCommentsStore";
 import { pickAndAddRepoSource } from "./addRepo";
 
 function typeIcon(type: RepoType) {
@@ -56,10 +57,17 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 	const repos = useAppStore((s) => s.repos);
 	const repoSources = useAppStore((s) => s.repoSources);
 	const removeRepoSource = useAppStore((s) => s.removeRepoSource);
+	const allComments = useCommentsStore((s) => s.comments);
+	const deleteCommentsForRepo = useCommentsStore(
+		(s) => s.deleteCommentsForRepo,
+	);
 	const reloadRepo = useAppStore((s) => s.reloadRepo);
 	const staleRepos = useAppStore((s) => s.staleRepos);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 	const [pendingDelete, setPendingDelete] = useState<RepoSource | null>(null);
+	const commentsForRepo = pendingDelete
+		? allComments.filter((c) => c.repoId === pendingDelete.path).length
+		: 0;
 	const open = Boolean(anchorEl);
 
 	useEffect(() => {
@@ -408,6 +416,15 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 						</Box>{" "}
 						from your list. The folder on disk is not affected.
 					</DialogContentText>
+					{commentsForRepo > 0 && (
+						<DialogContentText sx={{ mt: 1.5, color: "warning.main" }}>
+							This will also permanently delete{" "}
+							<Box component="span" sx={{ fontWeight: 600 }}>
+								{commentsForRepo}
+							</Box>{" "}
+							comment{commentsForRepo === 1 ? "" : "s"} attached to this repo.
+						</DialogContentText>
+					)}
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => setPendingDelete(null)}>Cancel</Button>
@@ -415,7 +432,11 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 						color="error"
 						variant="contained"
 						onClick={() => {
-							if (pendingDelete) removeRepoSource(pendingDelete.path);
+							if (pendingDelete) {
+								const path = pendingDelete.path;
+								void deleteCommentsForRepo(path);
+								removeRepoSource(path);
+							}
 							setPendingDelete(null);
 						}}
 					>

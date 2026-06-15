@@ -126,8 +126,8 @@ export function AppSidebar() {
 		}));
 	}, [activeRepo, view, setView]);
 	// Library tabs: Specs and Schemas are special (their views render content
-	// differently from generic markdown). Everything else under openspec/ — any
-	// folder — is auto-discovered from repo.folders and surfaced as a tab.
+	// differently from generic markdown). Everything else under openspec/ - any
+	// folder - is auto-discovered from repo.folders and surfaced as a tab.
 	const resolvedLibrary = useMemo<ResolvedNavItem[]>(() => {
 		if (!activeRepo) return [];
 		const items: ResolvedNavItem[] = [];

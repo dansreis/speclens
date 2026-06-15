@@ -555,7 +555,7 @@ function RepoConfigCard({
 									whiteSpace: "nowrap",
 								}}
 							>
-								— {artifact.description}
+								- {artifact.description}
 							</Typography>
 						)}
 					</Box>

@@ -1,5 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import type { ReactNode } from "react";
+import type { DocumentKind } from "../lib/comments";
 import type { DocAuthorship } from "../lib/repoLoader";
 import { AttributionLine } from "../specs/AttributionLine";
 import { MarkdownView } from "../specs/MarkdownView";
@@ -10,6 +11,7 @@ interface Props {
 	authorship?: DocAuthorship | null;
 	source: string;
 	documentId: string;
+	documentKind: DocumentKind;
 }
 
 export function RepoDocLayout({
@@ -18,6 +20,7 @@ export function RepoDocLayout({
 	authorship,
 	source,
 	documentId,
+	documentKind,
 }: Props) {
 	return (
 		<Box>
@@ -45,7 +48,11 @@ export function RepoDocLayout({
 				{authorship && <AttributionLine authorship={authorship} size="sm" />}
 			</Box>
 			<Box sx={{ px: 4, py: 3 }}>
-				<MarkdownView source={source} documentId={documentId} />
+				<MarkdownView
+					source={source}
+					documentId={documentId}
+					documentKind={documentKind}
+				/>
 			</Box>
 		</Box>
 	);

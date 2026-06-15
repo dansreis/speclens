@@ -168,7 +168,7 @@ export function SchemasView({ repo }: Props) {
 									color="text.secondary"
 									sx={{ flex: 1 }}
 								>
-									— {artifact.description}
+									- {artifact.description}
 								</Typography>
 							)}
 						</Box>

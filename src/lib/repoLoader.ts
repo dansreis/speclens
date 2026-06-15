@@ -228,7 +228,7 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 			continue;
 		}
 		// openspec/adr/*.md and any other top-level openspec content goes into
-		// the repo-root map with the `openspec/` prefix stripped — schemas with
+		// the repo-root map with the `openspec/` prefix stripped - schemas with
 		// `../../../adr/*.md` style globs land here via classifyGenerates.
 		if (path.startsWith("openspec/")) {
 			const stripped = path.slice("openspec/".length);
@@ -290,7 +290,7 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 	// Discover Library folders: every top-level folder under openspec/ except
 	// `specs/` (its own view, capability-keyed) and `schemas/` (own view, YAML +
 	// artifacts) becomes a Library tab automatically. We don't hardcode which
-	// folders exist — `playbooks/`, `adr/`, `daybooks/`, anything goes.
+	// folders exist - `playbooks/`, `adr/`, `daybooks/`, anything goes.
 	const folderBuckets = new Map<string, RepoFolderDoc[]>();
 
 	for (const [path, content] of rootFiles) {
@@ -351,7 +351,7 @@ function payloadToRepo(payload: RepoPayload, sourcePath: string): Repo {
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	return {
-		// `id` must be unique across the loaded set — use the full source path so
+		// `id` must be unique across the loaded set - use the full source path so
 		// two folders with the same final segment don't collide on selectedRepoId.
 		id: sourcePath,
 		name: payload.id,

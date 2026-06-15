@@ -1,6 +1,6 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { subscribeWithSelector } from "zustand/middleware";
 import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
 import {
 	getRepoSignature,
@@ -41,16 +41,8 @@ interface AppState {
 	repoSources: RepoSource[];
 	repos: Repo[];
 	reposLoading: boolean;
-	// Distinguishes a user-initiated single-repo load (modal Backdrop) from a
-	// silent background reload of all sources at app start (LinearProgress only).
 	blockingLoad: boolean;
-	// Paths whose on-disk signature has drifted from the loaded copy. Populated
-	// by the background sync watcher; cleared on successful reload or removal.
 	staleRepos: Record<string, true>;
-	// Signature of each loaded repo at the moment it was loaded. The watcher
-	// compares the live `getRepoSignature` against this. Kept separate from the
-	// localStorage cache because that cache can silently fail (quota) on large
-	// repos, which would otherwise break drift detection.
 	loadedSignatures: Record<string, string>;
 	addRepoSource: (path: string) => Promise<void>;
 	removeRepoSource: (path: string) => void;
@@ -96,6 +88,11 @@ interface AppState {
 	scrollTarget: ScrollTarget | null;
 	setScrollTarget: (target: ScrollTarget | null) => void;
 
+	currentDocumentId: string | null;
+	currentHeadingSlug: string | null;
+	setCurrentDocument: (id: string | null) => void;
+	setCurrentHeadingSlug: (slug: string | null) => void;
+
 	flowViewport: FlowViewport | null;
 	setFlowViewport: (v: FlowViewport | null) => void;
 
@@ -119,170 +116,43 @@ const clampZoom = (z: number) =>
 	Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) * 100) / 100;
 
 export const useAppStore = create<AppState>()(
-	persist(
-		(set, get) => ({
-			repoSources: [],
-			repos: [],
-			reposLoading: false,
-			blockingLoad: false,
-			staleRepos: {},
-			loadedSignatures: {},
-			markRepoStale: (path) =>
-				set((state) =>
-					state.staleRepos[path]
-						? state
-						: { staleRepos: { ...state.staleRepos, [path]: true } },
-				),
-			clearRepoStale: (path) =>
-				set((state) => {
-					if (!state.staleRepos[path]) return state;
-					const { [path]: _removed, ...rest } = state.staleRepos;
-					return { staleRepos: rest };
-				}),
-			addRepoSource: async (path) => {
-				if (get().repoSources.some((s) => s.path === path)) return;
+	subscribeWithSelector((set, get) => ({
+		repoSources: [],
+		repos: [],
+		reposLoading: false,
+		blockingLoad: false,
+		staleRepos: {},
+		loadedSignatures: {},
+		markRepoStale: (path) =>
+			set((state) =>
+				state.staleRepos[path]
+					? state
+					: { staleRepos: { ...state.staleRepos, [path]: true } },
+			),
+		clearRepoStale: (path) =>
+			set((state) => {
+				if (!state.staleRepos[path]) return state;
+				const { [path]: _removed, ...rest } = state.staleRepos;
+				return { staleRepos: rest };
+			}),
+		addRepoSource: async (path) => {
+			if (get().repoSources.some((s) => s.path === path)) return;
+			set((state) => ({
+				repoSources: [...state.repoSources, { path, missing: false }],
+				reposLoading: true,
+				blockingLoad: true,
+			}));
+			try {
+				const { repo, signature } = await loadRepoFromPath(path);
+				await cacheSet(path, signature, repo);
 				set((state) => ({
-					repoSources: [...state.repoSources, { path, missing: false }],
-					reposLoading: true,
-					blockingLoad: true,
-				}));
-				try {
-					const { repo, signature } = await loadRepoFromPath(path);
-					cacheSet(path, signature, repo);
-					set((state) => ({
-						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
-							(a, b) => a.name.localeCompare(b.name),
-						),
-						repoSources: state.repoSources.map((s) =>
-							s.path === path ? { path, missing: false } : s,
-						),
-						selectedRepoId: path,
-						view: "overview",
-						selectedChangeKey: null,
-						selectedSpec: null,
-						selectedSchema: null,
-						selectedFolder: null,
-						selectedFolderDoc: null,
-						activeTab: "proposal",
-						flowViewport: null,
-						loadedSignatures: {
-							...state.loadedSignatures,
-							[path]: signature,
-						},
-						reposLoading: false,
-						blockingLoad: false,
-					}));
-				} catch {
-					set((state) => ({
-						repoSources: state.repoSources.map((s) =>
-							s.path === path ? { path, missing: true } : s,
-						),
-						reposLoading: false,
-						blockingLoad: false,
-					}));
-				}
-			},
-			removeRepoSource: (path) => {
-				const { selectedRepoId, staleRepos, loadedSignatures } = get();
-				cacheDelete(path);
-				const { [path]: _removedStale, ...restStale } = staleRepos;
-				const { [path]: _removedSig, ...restSigs } = loadedSignatures;
-				set({
-					repoSources: get().repoSources.filter((s) => s.path !== path),
-					repos: get().repos.filter((r) => r.id !== path),
-					selectedRepoId: selectedRepoId === path ? null : selectedRepoId,
-					staleRepos: restStale,
-					loadedSignatures: restSigs,
-				});
-			},
-			reloadAllSources: async () => {
-				const sources = get().repoSources;
-				set({ reposLoading: true });
-				const updatedSources: RepoSource[] = [];
-				const loadedRepos: Repo[] = [];
-				const sigs: Record<string, string> = {};
-				for (const source of sources) {
-					try {
-						const currentSig = await getRepoSignature(source.path);
-						const cached = cacheGet(source.path);
-						if (cached && cached.signature === currentSig) {
-							loadedRepos.push(cached.repo);
-							updatedSources.push({ path: source.path, missing: false });
-							sigs[source.path] = currentSig;
-							continue;
-						}
-						const { repo, signature } = await loadRepoFromPath(source.path);
-						cacheSet(source.path, signature, repo);
-						loadedRepos.push(repo);
-						updatedSources.push({ path: source.path, missing: false });
-						sigs[source.path] = signature;
-					} catch {
-						updatedSources.push({ path: source.path, missing: true });
-					}
-				}
-				set({
-					repoSources: updatedSources,
-					repos: loadedRepos.sort((a, b) => a.name.localeCompare(b.name)),
-					reposLoading: false,
-					staleRepos: {},
-					loadedSignatures: sigs,
-				});
-			},
-			reloadRepo: async (path) => {
-				if (!get().repoSources.some((s) => s.path === path)) return;
-				set({ reposLoading: true, blockingLoad: true });
-				try {
-					const { repo, signature } = await loadRepoFromPath(path);
-					cacheSet(path, signature, repo);
-					set((state) => {
-						const { [path]: _removedStale, ...restStale } = state.staleRepos;
-						return {
-							repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
-								(a, b) => a.name.localeCompare(b.name),
-							),
-							repoSources: state.repoSources.map((s) =>
-								s.path === path ? { path, missing: false } : s,
-							),
-							reposLoading: false,
-							blockingLoad: false,
-							staleRepos: restStale,
-							loadedSignatures: {
-								...state.loadedSignatures,
-								[path]: signature,
-							},
-						};
-					});
-				} catch {
-					set((state) => {
-						const { [path]: _removedStale, ...restStale } = state.staleRepos;
-						const { [path]: _removedSig, ...restSigs } = state.loadedSignatures;
-						return {
-							repos: state.repos.filter((r) => r.id !== path),
-							repoSources: state.repoSources.map((s) =>
-								s.path === path ? { path, missing: true } : s,
-							),
-							reposLoading: false,
-							blockingLoad: false,
-							staleRepos: restStale,
-							loadedSignatures: restSigs,
-						};
-					});
-				}
-			},
-
-			themeMode: window.matchMedia("(prefers-color-scheme: dark)").matches
-				? "dark"
-				: "light",
-			setThemeMode: (mode) => set({ themeMode: mode }),
-			toggleThemeMode: () =>
-				set((state) => ({
-					themeMode: state.themeMode === "light" ? "dark" : "light",
-				})),
-
-			selectedRepoId: null,
-			setSelectedRepoId: (id) =>
-				set({
-					selectedRepoId: id,
+					repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+						(a, b) => a.name.localeCompare(b.name),
+					),
+					repoSources: state.repoSources.map((s) =>
+						s.path === path ? { path, missing: false } : s,
+					),
+					selectedRepoId: path,
 					view: "overview",
 					selectedChangeKey: null,
 					selectedSpec: null,
@@ -291,90 +161,205 @@ export const useAppStore = create<AppState>()(
 					selectedFolderDoc: null,
 					activeTab: "proposal",
 					flowViewport: null,
-				}),
-
-			view: "overview",
-			setView: (v) =>
-				set((state) => ({
-					view: v,
-					selectedChangeKey: v === "changes" ? state.selectedChangeKey : null,
-					selectedSpec: v === "specs" ? state.selectedSpec : null,
-					selectedSchema: v === "schemas" ? state.selectedSchema : null,
-					selectedFolder: v === "folder" ? state.selectedFolder : null,
-					selectedFolderDoc: v === "folder" ? state.selectedFolderDoc : null,
-				})),
-
-			selectedChangeKey: null,
-			setSelectedChangeKey: (key) => set({ selectedChangeKey: key }),
-
-			selectedSpec: null,
-			setSelectedSpec: (slug) => set({ selectedSpec: slug }),
-
-			selectedSchema: null,
-			setSelectedSchema: (name) => set({ selectedSchema: name }),
-
-			selectedFolder: null,
-			selectedFolderDoc: null,
-			openFolder: (folder, doc = null) =>
-				set({
-					view: "folder",
-					selectedFolder: folder,
-					selectedFolderDoc: doc,
-				}),
-			setSelectedFolderDoc: (doc) => set({ selectedFolderDoc: doc }),
-
-			activeTab: "proposal",
-			setActiveTab: (tab) => set({ activeTab: tab }),
-
-			selectedFiles: {},
-			setSelectedFile: (changeSlug, artifactId, name) =>
-				set((state) => ({
-					selectedFiles: {
-						...state.selectedFiles,
-						[`${changeSlug}::${artifactId}`]: name,
+					loadedSignatures: {
+						...state.loadedSignatures,
+						[path]: signature,
 					},
-				})),
-
-			scrollTarget: null,
-			setScrollTarget: (target) => set({ scrollTarget: target }),
-
-			flowViewport: null,
-			setFlowViewport: (v) => set({ flowViewport: v }),
-
-			sidebarCollapsed: false,
-			toggleSidebarCollapsed: () =>
-				set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-
-			markdownZoom: 1,
-			zoomIn: () =>
+					reposLoading: false,
+					blockingLoad: false,
+				}));
+			} catch {
 				set((state) => ({
-					markdownZoom: clampZoom(state.markdownZoom + ZOOM_STEP),
-				})),
-			zoomOut: () =>
-				set((state) => ({
-					markdownZoom: clampZoom(state.markdownZoom - ZOOM_STEP),
-				})),
-			resetZoom: () => set({ markdownZoom: 1 }),
-
-			highlightEars: true,
-			toggleHighlightEars: () =>
-				set((state) => ({ highlightEars: !state.highlightEars })),
-		}),
-		{
-			name: "speclens.app-state",
-			partialize: (state) => ({
-				themeMode: state.themeMode,
-				sidebarCollapsed: state.sidebarCollapsed,
-				selectedRepoId: state.selectedRepoId,
-				markdownZoom: state.markdownZoom,
-				highlightEars: state.highlightEars,
-				// Persist source paths only; reset `missing` on cold start so we
-				// re-probe — a folder may have been re-mounted since last session.
-				repoSources: state.repoSources.map((s) => ({
-					path: s.path,
-					missing: false,
-				})),
-			}),
+					repoSources: state.repoSources.map((s) =>
+						s.path === path ? { path, missing: true } : s,
+					),
+					reposLoading: false,
+					blockingLoad: false,
+				}));
+			}
 		},
-	),
+		removeRepoSource: (path) => {
+			const { selectedRepoId, staleRepos, loadedSignatures } = get();
+			void cacheDelete(path);
+			const { [path]: _removedStale, ...restStale } = staleRepos;
+			const { [path]: _removedSig, ...restSigs } = loadedSignatures;
+			set({
+				repoSources: get().repoSources.filter((s) => s.path !== path),
+				repos: get().repos.filter((r) => r.id !== path),
+				selectedRepoId: selectedRepoId === path ? null : selectedRepoId,
+				staleRepos: restStale,
+				loadedSignatures: restSigs,
+			});
+		},
+		reloadAllSources: async () => {
+			const sources = get().repoSources;
+			set({ reposLoading: true });
+			const updatedSources: RepoSource[] = [];
+			const loadedRepos: Repo[] = [];
+			const sigs: Record<string, string> = {};
+			for (const source of sources) {
+				try {
+					const currentSig = await getRepoSignature(source.path);
+					const cached = await cacheGet(source.path);
+					if (cached && cached.signature === currentSig) {
+						loadedRepos.push(cached.repo);
+						updatedSources.push({ path: source.path, missing: false });
+						sigs[source.path] = currentSig;
+						continue;
+					}
+					const { repo, signature } = await loadRepoFromPath(source.path);
+					await cacheSet(source.path, signature, repo);
+					loadedRepos.push(repo);
+					updatedSources.push({ path: source.path, missing: false });
+					sigs[source.path] = signature;
+				} catch {
+					updatedSources.push({ path: source.path, missing: true });
+				}
+			}
+			set({
+				repoSources: updatedSources,
+				repos: loadedRepos.sort((a, b) => a.name.localeCompare(b.name)),
+				reposLoading: false,
+				staleRepos: {},
+				loadedSignatures: sigs,
+			});
+		},
+		reloadRepo: async (path) => {
+			if (!get().repoSources.some((s) => s.path === path)) return;
+			set({ reposLoading: true, blockingLoad: true });
+			try {
+				const { repo, signature } = await loadRepoFromPath(path);
+				await cacheSet(path, signature, repo);
+				set((state) => {
+					const { [path]: _removedStale, ...restStale } = state.staleRepos;
+					return {
+						repos: [...state.repos.filter((r) => r.id !== path), repo].sort(
+							(a, b) => a.name.localeCompare(b.name),
+						),
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: false } : s,
+						),
+						reposLoading: false,
+						blockingLoad: false,
+						staleRepos: restStale,
+						loadedSignatures: {
+							...state.loadedSignatures,
+							[path]: signature,
+						},
+					};
+				});
+			} catch {
+				set((state) => {
+					const { [path]: _removedStale, ...restStale } = state.staleRepos;
+					const { [path]: _removedSig, ...restSigs } = state.loadedSignatures;
+					return {
+						repos: state.repos.filter((r) => r.id !== path),
+						repoSources: state.repoSources.map((s) =>
+							s.path === path ? { path, missing: true } : s,
+						),
+						reposLoading: false,
+						blockingLoad: false,
+						staleRepos: restStale,
+						loadedSignatures: restSigs,
+					};
+				});
+			}
+		},
+
+		themeMode: window.matchMedia("(prefers-color-scheme: dark)").matches
+			? "dark"
+			: "light",
+		setThemeMode: (mode) => set({ themeMode: mode }),
+		toggleThemeMode: () =>
+			set((state) => ({
+				themeMode: state.themeMode === "light" ? "dark" : "light",
+			})),
+
+		selectedRepoId: null,
+		setSelectedRepoId: (id) =>
+			set({
+				selectedRepoId: id,
+				view: "overview",
+				selectedChangeKey: null,
+				selectedSpec: null,
+				selectedSchema: null,
+				selectedFolder: null,
+				selectedFolderDoc: null,
+				activeTab: "proposal",
+				flowViewport: null,
+			}),
+
+		view: "overview",
+		setView: (v) =>
+			set((state) => ({
+				view: v,
+				selectedChangeKey: v === "changes" ? state.selectedChangeKey : null,
+				selectedSpec: v === "specs" ? state.selectedSpec : null,
+				selectedSchema: v === "schemas" ? state.selectedSchema : null,
+				selectedFolder: v === "folder" ? state.selectedFolder : null,
+				selectedFolderDoc: v === "folder" ? state.selectedFolderDoc : null,
+			})),
+
+		selectedChangeKey: null,
+		setSelectedChangeKey: (key) => set({ selectedChangeKey: key }),
+
+		selectedSpec: null,
+		setSelectedSpec: (slug) => set({ selectedSpec: slug }),
+
+		selectedSchema: null,
+		setSelectedSchema: (name) => set({ selectedSchema: name }),
+
+		selectedFolder: null,
+		selectedFolderDoc: null,
+		openFolder: (folder, doc = null) =>
+			set({
+				view: "folder",
+				selectedFolder: folder,
+				selectedFolderDoc: doc,
+			}),
+		setSelectedFolderDoc: (doc) => set({ selectedFolderDoc: doc }),
+
+		activeTab: "proposal",
+		setActiveTab: (tab) => set({ activeTab: tab }),
+
+		selectedFiles: {},
+		setSelectedFile: (changeSlug, artifactId, name) =>
+			set((state) => ({
+				selectedFiles: {
+					...state.selectedFiles,
+					[`${changeSlug}::${artifactId}`]: name,
+				},
+			})),
+
+		scrollTarget: null,
+		setScrollTarget: (target) => set({ scrollTarget: target }),
+
+		currentDocumentId: null,
+		currentHeadingSlug: null,
+		setCurrentDocument: (id) =>
+			set({ currentDocumentId: id, currentHeadingSlug: null }),
+		setCurrentHeadingSlug: (slug) => set({ currentHeadingSlug: slug }),
+
+		flowViewport: null,
+		setFlowViewport: (v) => set({ flowViewport: v }),
+
+		sidebarCollapsed: false,
+		toggleSidebarCollapsed: () =>
+			set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+		markdownZoom: 1,
+		zoomIn: () =>
+			set((state) => ({
+				markdownZoom: clampZoom(state.markdownZoom + ZOOM_STEP),
+			})),
+		zoomOut: () =>
+			set((state) => ({
+				markdownZoom: clampZoom(state.markdownZoom - ZOOM_STEP),
+			})),
+		resetZoom: () => set({ markdownZoom: 1 }),
+
+		highlightEars: true,
+		toggleHighlightEars: () =>
+			set((state) => ({ highlightEars: !state.highlightEars })),
+	})),
 );

@@ -79,6 +79,7 @@ export function FolderView({ repo }: Props) {
 				authorship={doc.authorship}
 				source={doc.content}
 				documentId={`repo-doc:${doc.path}`}
+				documentKind="folder-doc"
 			/>
 		);
 	}

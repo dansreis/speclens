@@ -12,7 +12,7 @@ const POLL_INTERVAL_MS = 15 * 1000;
  * refresh button (see `RepositorySwitcher`); the watcher never reloads
  * on its own.
  *
- * Only the currently selected repo is polled — switching repos triggers
+ * Only the currently selected repo is polled - switching repos triggers
  * an immediate one-shot check on the new one.
  *
  * The window `focus` listener is what catches the common case of editing
@@ -43,7 +43,7 @@ export function useRepoSyncWatcher(): void {
 					useAppStore.getState().markRepoStale(selectedRepoId);
 				}
 			} catch {
-				// Folder may be transiently unavailable (unmounted, locked) —
+				// Folder may be transiently unavailable (unmounted, locked) -
 				// the next tick will retry. Don't flip `missing` from here;
 				// that's the loader's job.
 			}

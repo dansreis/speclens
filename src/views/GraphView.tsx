@@ -19,7 +19,7 @@ export function GraphView() {
 				Graph
 			</Typography>
 			<Typography variant="body2" color="text.secondary">
-				Coming soon — a visual map of specs and the changes that touch them.
+				Coming soon - a visual map of specs and the changes that touch them.
 			</Typography>
 		</Box>
 	);

@@ -3,5 +3,14 @@
 	"identifier": "default",
 	"description": "Capability for the main window",
 	"windows": ["main"],
-	"permissions": ["core:default", "opener:default", "dialog:default"]
+	"permissions": [
+		"core:default",
+		"opener:default",
+		"dialog:default",
+		"sql:default",
+		"sql:allow-load",
+		"sql:allow-execute",
+		"sql:allow-select",
+		"sql:allow-close"
+	]
 }
