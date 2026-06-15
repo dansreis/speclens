@@ -5,6 +5,8 @@ import {
 	Button,
 	ButtonBase,
 	Chip,
+	Tab,
+	Tabs,
 	Tooltip,
 	Typography,
 } from "@mui/material";
@@ -62,6 +64,9 @@ export function OverviewView({ repo }: Props) {
 	const openFolder = useAppStore((s) => s.openFolder);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const [configOpen, setConfigOpen] = useState(false);
+	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
+		"summary",
+	);
 
 	const stats = useMemo(() => {
 		if (!repo) {
@@ -214,182 +219,212 @@ export function OverviewView({ repo }: Props) {
 
 	return (
 		<Box sx={{ p: 4 }}>
-			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
+			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
 				{repo?.name ?? "Overview"}
 			</Typography>
-			{repo?.config?.context && (
-				<Box
-					sx={{
-						mb: 4,
-						color: "text.secondary",
-						"& p": { mb: 1 },
-						"& code": {
-							fontFamily: "ui-monospace, monospace",
-							fontSize: "0.875em",
-							bgcolor: "action.hover",
-							px: 0.5,
-							borderRadius: 0.5,
-						},
-						"& ul": { pl: 3, mb: 1 },
-						"& li": { mb: 0.25 },
-					}}
-				>
-					<ReactMarkdown remarkPlugins={[remarkGfm]}>
-						{repo.config.context}
-					</ReactMarkdown>
-				</Box>
-			)}
-			<Typography
-				variant="overline"
+			<Tabs
+				value={tab}
+				onChange={(_, v) => setTab(v)}
 				sx={{
-					color: "text.disabled",
-					fontWeight: 600,
-					letterSpacing: 0.6,
-					display: "block",
-					mb: 1.5,
+					mb: 3,
+					borderBottom: 1,
+					borderColor: "divider",
+					minHeight: 40,
 				}}
 			>
-				At a glance
-			</Typography>
-			<Box
-				sx={{
-					display: "grid",
-					gridTemplateColumns: {
-						xs: "repeat(2, 1fr)",
-						md: "repeat(4, 1fr)",
-					},
-					gap: 2,
-					mb: 5,
-				}}
-			>
-				<StatCard
-					value={stats.specs}
-					label="Specs"
-					help="Number of distinct capability specs referenced across all changes in this repo."
-				/>
-				<StatCard
-					value={stats.active}
-					label="Active Changes"
-					help="Proposals currently in flight. Anything under openspec/changes/ that hasn't been archived yet."
-				/>
-				<StatCard
-					value={stats.archived}
-					label="Archived Changes"
-					help="Completed proposals moved to openspec/changes/archive/."
-				/>
-				<StatCard
-					value={`${stats.completion}%`}
-					label="Task Completion"
-					help="Share of checklist items marked done across every tasks file in this repo (active + archived)."
-				/>
-				<StatCard
-					value={stats.avgLifecycle ?? "n/a"}
-					label="Avg lifecycle (archived)"
-					help="Average time between a change's creation and its archival, computed from archived changes only."
-				/>
-				<StatCard
-					value={stats.stale}
-					label="Stale active (>30d)"
-					help="Active changes created more than 30 days ago that haven't been archived yet. Worth revisiting."
-				/>
-				<StatCard
-					value={stats.capabilitiesInMotion}
-					label="Capabilities in motion"
-					help="Distinct capability specs touched by active (non-archived) changes. The surface area of in-flight work."
-				/>
-				<StatCard
-					value={stats.totalReadingTime}
-					label="Total reading time"
-					help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${WORDS_PER_MINUTE} words per minute.`}
-				/>
-			</Box>
-			{recentActivity.length > 0 && (
-				<Section title="Recent activity">
-					<Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-						{recentActivity.map((entry) => (
-							<ButtonBase
-								key={`${kindLabel(entry.kind)}:${entry.selectKey}`}
-								onClick={() => handleActivitySelect(entry)}
-								sx={{
-									display: "flex",
-									alignItems: "center",
-									gap: 2,
-									px: 1.5,
-									py: 1,
-									borderRadius: 1,
-									transition: "background-color 150ms",
-									"&:hover": { bgcolor: "action.hover" },
-								}}
-							>
-								<Chip
-									label={kindLabel(entry.kind)}
-									size="small"
-									variant="outlined"
-									sx={{
-										height: 18,
-										fontSize: "0.6875rem",
-										minWidth: 64,
-										fontFamily: "ui-monospace, monospace",
-										color: "text.secondary",
-									}}
-								/>
-								<Typography
-									variant="body2"
-									sx={{
-										color: "text.primary",
-										overflow: "hidden",
-										textOverflow: "ellipsis",
-										whiteSpace: "nowrap",
-										flex: 1,
-										textAlign: "left",
-									}}
-								>
-									{entry.label}
-								</Typography>
-								<Typography
-									variant="caption"
-									color="text.secondary"
-									sx={{
-										flexShrink: 0,
-										fontFamily: "ui-monospace, monospace",
-									}}
-								>
-									{entry.authorship.lastEditedBy.name} ·{" "}
-									{formatRelativeTime(new Date(entry.authorship.lastEditedAt))}
-								</Typography>
-							</ButtonBase>
-						))}
+				<Tab value="summary" label="Summary" />
+				<Tab value="activity" label="Activity" />
+				<Tab value="changes" label="Changes" />
+				<Tab value="config" label="Config" />
+			</Tabs>
+			{tab === "summary" && (
+				<>
+					<Typography
+						variant="overline"
+						sx={{
+							color: "text.disabled",
+							fontWeight: 600,
+							letterSpacing: 0.6,
+							display: "block",
+							mb: 1.5,
+						}}
+					>
+						At a glance
+					</Typography>
+					<Box
+						sx={{
+							display: "grid",
+							gridTemplateColumns: {
+								xs: "repeat(2, 1fr)",
+								md: "repeat(4, 1fr)",
+							},
+							gap: 2,
+							mb: 4,
+						}}
+					>
+						<StatCard
+							value={stats.specs}
+							label="Specs"
+							help="Number of distinct capability specs referenced across all changes in this repo."
+						/>
+						<StatCard
+							value={stats.active}
+							label="Active Changes"
+							help="Proposals currently in flight. Anything under openspec/changes/ that hasn't been archived yet."
+						/>
+						<StatCard
+							value={stats.archived}
+							label="Archived Changes"
+							help="Completed proposals moved to openspec/changes/archive/."
+						/>
+						<StatCard
+							value={`${stats.completion}%`}
+							label="Task Completion"
+							help="Share of checklist items marked done across every tasks file in this repo (active + archived)."
+						/>
+						<StatCard
+							value={stats.avgLifecycle ?? "n/a"}
+							label="Avg lifecycle (archived)"
+							help="Average time between a change's creation and its archival, computed from archived changes only."
+						/>
+						<StatCard
+							value={stats.stale}
+							label="Stale active (>30d)"
+							help="Active changes created more than 30 days ago that haven't been archived yet. Worth revisiting."
+						/>
+						<StatCard
+							value={stats.capabilitiesInMotion}
+							label="Capabilities in motion"
+							help="Distinct capability specs touched by active (non-archived) changes. The surface area of in-flight work."
+						/>
+						<StatCard
+							value={stats.totalReadingTime}
+							label="Total reading time"
+							help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${WORDS_PER_MINUTE} words per minute.`}
+						/>
 					</Box>
+					{repo?.config?.context && (
+						<Box
+							sx={{
+								color: "text.secondary",
+								"& p": { mb: 1 },
+								"& code": {
+									fontFamily: "ui-monospace, monospace",
+									fontSize: "0.875em",
+									bgcolor: "action.hover",
+									px: 0.5,
+									borderRadius: 0.5,
+								},
+								"& ul": { pl: 3, mb: 1 },
+								"& li": { mb: 0.25 },
+							}}
+						>
+							<ReactMarkdown remarkPlugins={[remarkGfm]}>
+								{repo.config.context}
+							</ReactMarkdown>
+						</Box>
+					)}
+				</>
+			)}
+			{tab === "activity" && (
+				<Section title="Recent activity">
+					{recentActivity.length === 0 ? (
+						<Typography variant="body2" color="text.secondary">
+							No recent activity
+						</Typography>
+					) : (
+						<Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+							{recentActivity.map((entry) => (
+								<ButtonBase
+									key={`${kindLabel(entry.kind)}:${entry.selectKey}`}
+									onClick={() => handleActivitySelect(entry)}
+									sx={{
+										display: "flex",
+										alignItems: "center",
+										gap: 2,
+										px: 1.5,
+										py: 1,
+										borderRadius: 1,
+										transition: "background-color 150ms",
+										"&:hover": { bgcolor: "action.hover" },
+									}}
+								>
+									<Chip
+										label={kindLabel(entry.kind)}
+										size="small"
+										variant="outlined"
+										sx={{
+											height: 18,
+											fontSize: "0.6875rem",
+											minWidth: 64,
+											fontFamily: "ui-monospace, monospace",
+											color: "text.secondary",
+										}}
+									/>
+									<Typography
+										variant="body2"
+										sx={{
+											color: "text.primary",
+											overflow: "hidden",
+											textOverflow: "ellipsis",
+											whiteSpace: "nowrap",
+											flex: 1,
+											textAlign: "left",
+										}}
+									>
+										{entry.label}
+									</Typography>
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{
+											flexShrink: 0,
+											fontFamily: "ui-monospace, monospace",
+										}}
+									>
+										{entry.authorship.lastEditedBy.name} ·{" "}
+										{formatRelativeTime(
+											new Date(entry.authorship.lastEditedAt),
+										)}
+									</Typography>
+								</ButtonBase>
+							))}
+						</Box>
+					)}
 				</Section>
 			)}
-			{repo && (
+			{tab === "changes" && (
+				<>
+					<Section title="Active Changes">
+						{activeChanges.length === 0 ? (
+							<Typography variant="body2" color="text.secondary">
+								No active changes
+							</Typography>
+						) : (
+							<ChangeList changes={activeChanges} onSelect={handleSelect} />
+						)}
+					</Section>
+					<Section title="Recently Archived">
+						{recentArchived.length === 0 ? (
+							<Typography variant="body2" color="text.secondary">
+								No archived changes
+							</Typography>
+						) : (
+							<ChangeList changes={recentArchived} onSelect={handleSelect} />
+						)}
+					</Section>
+				</>
+			)}
+			{tab === "config" && repo && (
 				<Section title="Repository config">
 					<RepoConfigCard repo={repo} onOpenRaw={() => setConfigOpen(true)} />
 				</Section>
 			)}
-			<Section title="Active Changes">
-				{activeChanges.length === 0 ? (
-					<Typography variant="body2" color="text.secondary">
-						No active changes
-					</Typography>
-				) : (
-					<ChangeList changes={activeChanges} onSelect={handleSelect} />
-				)}
-			</Section>
 			<RepoConfigModal
 				open={configOpen}
 				repo={repo}
 				onClose={() => setConfigOpen(false)}
 			/>
-			<Section title="Recently Archived">
-				{recentArchived.length === 0 ? (
-					<Typography variant="body2" color="text.secondary">
-						No archived changes
-					</Typography>
-				) : (
-					<ChangeList changes={recentArchived} onSelect={handleSelect} />
-				)}
-			</Section>
 		</Box>
 	);
 }
