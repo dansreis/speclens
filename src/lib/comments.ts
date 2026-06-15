@@ -16,7 +16,6 @@ export interface AppComment {
 	repoId: string;
 	documentKind: DocumentKind;
 	documentId: string | null;
-	headingSlug: string | null;
 	body: string;
 	quote: string | null;
 	highlight: Highlight | null;

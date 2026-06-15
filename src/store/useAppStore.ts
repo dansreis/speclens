@@ -89,9 +89,7 @@ interface AppState {
 	setScrollTarget: (target: ScrollTarget | null) => void;
 
 	currentDocumentId: string | null;
-	currentHeadingSlug: string | null;
 	setCurrentDocument: (id: string | null) => void;
-	setCurrentHeadingSlug: (slug: string | null) => void;
 
 	flowViewport: FlowViewport | null;
 	setFlowViewport: (v: FlowViewport | null) => void;
@@ -335,10 +333,7 @@ export const useAppStore = create<AppState>()(
 		setScrollTarget: (target) => set({ scrollTarget: target }),
 
 		currentDocumentId: null,
-		currentHeadingSlug: null,
-		setCurrentDocument: (id) =>
-			set({ currentDocumentId: id, currentHeadingSlug: null }),
-		setCurrentHeadingSlug: (slug) => set({ currentHeadingSlug: slug }),
+		setCurrentDocument: (id) => set({ currentDocumentId: id }),
 
 		flowViewport: null,
 		setFlowViewport: (v) => set({ flowViewport: v }),

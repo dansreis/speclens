@@ -12,7 +12,6 @@ export interface AddCommentInput {
 	repoId: string;
 	documentKind: DocumentKind;
 	documentId: string | null;
-	headingSlug?: string | null;
 	body: string;
 	quote?: string | null;
 	highlight?: Highlight | null;
@@ -53,7 +52,6 @@ function rowToComment(row: CommentRow): AppComment {
 		repoId: row.repo_id,
 		documentKind: row.document_kind as DocumentKind,
 		documentId: row.document_id,
-		headingSlug: row.heading_slug,
 		body: row.body,
 		quote: row.quote,
 		highlight,
@@ -70,7 +68,6 @@ function commentToRow(c: AppComment): CommentRow {
 		repo_id: c.repoId,
 		document_kind: c.documentKind,
 		document_id: c.documentId,
-		heading_slug: c.headingSlug,
 		body: c.body,
 		quote: c.quote,
 		highlight_text: c.highlight?.text ?? null,
@@ -94,7 +91,6 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
 			repoId: input.repoId,
 			documentKind: input.documentKind,
 			documentId: input.documentId,
-			headingSlug: input.headingSlug ?? null,
 			body: input.body,
 			quote: input.quote ?? input.highlight?.text ?? null,
 			highlight: input.highlight ?? null,

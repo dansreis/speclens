@@ -21,7 +21,6 @@ import { useRepoSyncWatcher } from "./lib/useRepoSyncWatcher";
 import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
-import { REQUEST_HEADING_COMMENT_EVENT } from "./specs/MarkdownView";
 import { bootstrap } from "./store/bootstrap";
 import { useAppStore } from "./store/useAppStore";
 import { useCommentsStore } from "./store/useCommentsStore";
@@ -157,13 +156,6 @@ function App() {
 	useEffect(() => {
 		if (!activeChange) setCommentsOpen(false);
 	}, [activeChange]);
-
-	useEffect(() => {
-		const handler = () => setCommentsOpen(true);
-		document.addEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
-		return () =>
-			document.removeEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
-	}, []);
 
 	const sharedDetailProps = {
 		commentsOpen,

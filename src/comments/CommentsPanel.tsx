@@ -20,22 +20,18 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { AppComment, DocumentKind } from "../lib/comments";
 import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
-import {
-	REQUEST_HEADING_COMMENT_EVENT,
-	type RequestHeadingCommentDetail,
-} from "../specs/MarkdownView";
 import { type TabKey, useAppStore } from "../store/useAppStore";
 import { useCommentsStore, withOrphans } from "../store/useCommentsStore";
 
 const PANEL_WIDTH = 340;
 
-type Scope = "section" | "document" | "repo" | "orphans" | "all";
+type Scope = "document" | "repo" | "orphans" | "all";
 type ResolvedTab = "unresolved" | "resolved";
 
 interface Props {
@@ -47,8 +43,6 @@ interface Props {
 
 function scopeLabel(s: Scope): string {
 	switch (s) {
-		case "section":
-			return "This section";
 		case "document":
 			return "This document";
 		case "repo":
@@ -148,15 +142,6 @@ function CommentItem({
 					</IconButton>
 				</Tooltip>
 			</Box>
-			{comment.headingSlug && (
-				<Typography
-					variant="caption"
-					color="text.secondary"
-					sx={{ display: "block", mb: 0.5 }}
-				>
-					§ {comment.headingSlug}
-				</Typography>
-			)}
 			{comment.quote && (
 				<Tooltip
 					title={jumpable ? "Jump to highlight" : ""}
@@ -229,7 +214,6 @@ function commentsToMarkdown(
 		lines.push(`## ${kind}: ${docId}`);
 		lines.push("");
 		for (const c of group) {
-			if (c.headingSlug) lines.push(`[heading: ${c.headingSlug}]`);
 			if (c.quote) lines.push(`> ${c.quote}`);
 			lines.push("");
 			lines.push(c.body);
@@ -249,7 +233,6 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const [scope, setScope] = useState<Scope>("document");
 	const [composerOpen, setComposerOpen] = useState(false);
 	const [composerBody, setComposerBody] = useState("");
-	const [composerHeading, setComposerHeading] = useState<string | null>(null);
 
 	const allComments = useCommentsStore((s) => s.comments);
 	const highlightOrphans = useCommentsStore((s) => s.highlightOrphans);
@@ -262,25 +245,11 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const view = useAppStore((s) => s.view);
 	const currentDocumentId = useAppStore((s) => s.currentDocumentId);
-	const currentHeadingSlug = useAppStore((s) => s.currentHeadingSlug);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
 
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
-
-	useEffect(() => {
-		const handler = (e: Event) => {
-			const detail = (e as CustomEvent<RequestHeadingCommentDetail>).detail;
-			if (!detail?.slug) return;
-			setScope("section");
-			setComposerHeading(detail.slug);
-			setComposerOpen(true);
-		};
-		document.addEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
-		return () =>
-			document.removeEventListener(REQUEST_HEADING_COMMENT_EVENT, handler);
-	}, []);
 
 	const comments = useMemo(
 		() => withOrphans(allComments, highlightOrphans, documentOrphans),
@@ -297,18 +266,9 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 		if (scope === "all") return comments;
 		if (scope === "orphans") return comments.filter((c) => c.orphan);
 		if (scope === "repo") return repoScoped;
-		if (scope === "document") {
-			if (!currentDocumentId) return [];
-			return repoScoped.filter((c) => c.documentId === currentDocumentId);
-		}
-		// section
-		if (!currentDocumentId || !currentHeadingSlug) return [];
-		return repoScoped.filter(
-			(c) =>
-				c.documentId === currentDocumentId &&
-				c.headingSlug === currentHeadingSlug,
-		);
-	}, [scope, comments, repoScoped, currentDocumentId, currentHeadingSlug]);
+		if (!currentDocumentId) return [];
+		return repoScoped.filter((c) => c.documentId === currentDocumentId);
+	}, [scope, comments, repoScoped, currentDocumentId]);
 
 	const counts = useMemo(() => {
 		const unresolved = filtered.filter((c) => !c.resolved).length;
@@ -342,13 +302,9 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 		});
 	};
 
-	const sectionHeading = composerHeading ?? currentHeadingSlug;
-
 	const canCompose =
 		!!activeRepo &&
-		(scope === "repo" ||
-			(scope === "document" && !!currentDocumentId) ||
-			(scope === "section" && !!currentDocumentId && !!sectionHeading));
+		(scope === "repo" || (scope === "document" && !!currentDocumentId));
 
 	const submitNewComment = async () => {
 		const body = composerBody.trim();
@@ -367,18 +323,9 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 				documentId: currentDocumentId,
 				body,
 			});
-		} else if (scope === "section" && currentDocumentId && sectionHeading) {
-			await addComment({
-				repoId: activeRepo.id,
-				documentKind: deriveDocumentKindFromView(view),
-				documentId: currentDocumentId,
-				headingSlug: sectionHeading,
-				body,
-			});
 		}
 		setComposerBody("");
 		setComposerOpen(false);
-		setComposerHeading(null);
 	};
 
 	const handleExport = async () => {
@@ -494,7 +441,6 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 					onChange={(e) => setScope(e.target.value as Scope)}
 					sx={{ flex: 1, fontSize: "0.8125rem" }}
 				>
-					<MenuItem value="section">{scopeLabel("section")}</MenuItem>
 					<MenuItem value="document">{scopeLabel("document")}</MenuItem>
 					<MenuItem value="repo">{scopeLabel("repo")}</MenuItem>
 					<MenuItem value="orphans">{scopeLabel("orphans")}</MenuItem>
@@ -538,9 +484,7 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 						placeholder={
 							scope === "repo"
 								? "Add a repo-level comment…"
-								: scope === "section" && sectionHeading
-									? `Add a comment on § ${sectionHeading}…`
-									: "Add a comment on this document…"
+								: "Add a comment on this document…"
 						}
 						value={composerBody}
 						onChange={(e) => setComposerBody(e.target.value)}
@@ -565,7 +509,6 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 							onClick={() => {
 								setComposerOpen(false);
 								setComposerBody("");
-								setComposerHeading(null);
 							}}
 						>
 							Cancel

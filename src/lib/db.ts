@@ -41,7 +41,6 @@ async function migrate(db: Database): Promise<void> {
 				repo_id TEXT NOT NULL,
 				document_kind TEXT NOT NULL,
 				document_id TEXT,
-				heading_slug TEXT,
 				body TEXT NOT NULL,
 				quote TEXT,
 				highlight_text TEXT,
@@ -198,7 +197,6 @@ export interface CommentRow {
 	repo_id: string;
 	document_kind: string;
 	document_id: string | null;
-	heading_slug: string | null;
 	body: string;
 	quote: string | null;
 	highlight_text: string | null;
@@ -220,16 +218,15 @@ export async function commentsInsert(row: CommentRow): Promise<void> {
 	const db = await getDb();
 	await db.execute(
 		`INSERT INTO comments (
-			id, repo_id, document_kind, document_id, heading_slug,
+			id, repo_id, document_kind, document_id,
 			body, quote, highlight_text, highlight_occurrence,
 			author, initials, created_at, resolved
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		[
 			row.id,
 			row.repo_id,
 			row.document_kind,
 			row.document_id,
-			row.heading_slug,
 			row.body,
 			row.quote,
 			row.highlight_text,

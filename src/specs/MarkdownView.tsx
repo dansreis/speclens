@@ -1,14 +1,7 @@
 import { keyframes } from "@emotion/react";
-import AddCommentIcon from "@mui/icons-material/AddComment";
 import { Box } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import {
-	type ComponentPropsWithoutRef,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
@@ -22,59 +15,9 @@ import {
 	type HighlightTarget,
 	highlightKey,
 } from "../lib/highlight";
-import { useCurrentHeading } from "../lib/useCurrentHeading";
+import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
-
-export const REQUEST_HEADING_COMMENT_EVENT = "speclens:request-heading-comment";
-
-export interface RequestHeadingCommentDetail {
-	slug: string;
-}
-
-type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
-type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
-
-function makeHeading(level: HeadingLevel) {
-	const Tag = `h${level}` as HeadingTag;
-	return function MdHeading({
-		id,
-		children,
-		...rest
-	}: ComponentPropsWithoutRef<HeadingTag>) {
-		return (
-			<Tag id={id} {...rest} className="md-heading">
-				<span className="md-heading-text">{children}</span>
-				{id && (
-					<button
-						type="button"
-						className="md-heading-add"
-						aria-label="Add comment on this section"
-						onClick={() => {
-							document.dispatchEvent(
-								new CustomEvent<RequestHeadingCommentDetail>(
-									REQUEST_HEADING_COMMENT_EVENT,
-									{ detail: { slug: id } },
-								),
-							);
-						}}
-					>
-						<AddCommentIcon sx={{ fontSize: 14 }} />
-					</button>
-				)}
-			</Tag>
-		);
-	};
-}
-
-const headingComponents = {
-	h1: makeHeading(1),
-	h2: makeHeading(2),
-	h3: makeHeading(3),
-	h4: makeHeading(4),
-	h5: makeHeading(5),
-	h6: makeHeading(6),
-};
 
 const flashAnim = keyframes`
   0%, 100% {
@@ -116,7 +59,7 @@ export function MarkdownView({
 	const markdownZoom = useAppStore((s) => s.markdownZoom);
 	const highlightEars = useAppStore((s) => s.highlightEars);
 
-	useCurrentHeading(contentRef, documentId ?? null);
+	useCurrentDocument(documentId ?? null);
 
 	const rehypePlugins = useMemo(
 		() =>
@@ -375,33 +318,11 @@ export function MarkdownView({
 						color: "text.secondary",
 						bgcolor: "action.hover",
 					},
-					"& .md-heading": {
-						display: "flex",
-						alignItems: "center",
-						gap: 1,
-					},
-					"& .md-heading-text": { flex: "0 1 auto", minWidth: 0 },
-					"& .md-heading-add": {
-						all: "unset",
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						width: 20,
-						height: 20,
-						borderRadius: "50%",
-						color: "text.secondary",
-						opacity: 0,
-						cursor: "pointer",
-						transition: "opacity 120ms, background-color 120ms",
-					},
-					"& .md-heading:hover .md-heading-add": { opacity: 1 },
-					"& .md-heading-add:hover": { bgcolor: "action.hover" },
 				}}
 			>
 				<ReactMarkdown
 					remarkPlugins={[remarkGfm]}
 					rehypePlugins={rehypePlugins}
-					components={headingComponents}
 				>
 					{source}
 				</ReactMarkdown>

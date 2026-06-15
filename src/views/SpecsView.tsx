@@ -14,9 +14,7 @@ import {
 	formatAbsoluteDateTime,
 	formatRelativeTime,
 } from "../lib/relativeTime";
-import type { Change, Repo } from "../lib/repoLoader";
-import { DEFAULT_SCHEMA } from "../lib/schema";
-import { ChangeViewer } from "../specs/ChangeViewer";
+import type { Change, Repo, RepoSpecDoc } from "../lib/repoLoader";
 import { useAppStore } from "../store/useAppStore";
 import { RepoDocLayout } from "./RepoDocLayout";
 
@@ -24,10 +22,14 @@ type SortMode = "name" | "changes" | "recent";
 
 interface SpecRow {
 	capability: string;
-	changes: Change[];
+	repoSpec: RepoSpecDoc | null;
+	referencingChanges: Change[];
 	preview: string;
 	latestDate: Date | null;
-	hasRepoSpec: boolean;
+}
+
+function changeKey(c: Change): string {
+	return `${c.archived ? "archive/" : ""}${c.slug}`;
 }
 
 function buildSpecRows(repo: Repo | null): SpecRow[] {
@@ -38,7 +40,7 @@ function buildSpecRows(repo: Repo | null): SpecRow[] {
 		for (const [capability, body] of Object.entries(content)) {
 			const existing = map.get(capability);
 			if (existing) {
-				existing.changes.push(change);
+				existing.referencingChanges.push(change);
 				if (
 					change.createdAt &&
 					(!existing.latestDate || change.createdAt > existing.latestDate)
@@ -48,10 +50,10 @@ function buildSpecRows(repo: Repo | null): SpecRow[] {
 			} else {
 				map.set(capability, {
 					capability,
-					changes: [change],
+					repoSpec: null,
+					referencingChanges: [change],
 					preview: firstParagraphPreview(body),
 					latestDate: change.createdAt,
-					hasRepoSpec: false,
 				});
 			}
 		}
@@ -59,17 +61,17 @@ function buildSpecRows(repo: Repo | null): SpecRow[] {
 	for (const repoSpec of repo.repoSpecs) {
 		const existing = map.get(repoSpec.capability);
 		if (existing) {
-			existing.hasRepoSpec = true;
+			existing.repoSpec = repoSpec;
 			if (!existing.preview) {
 				existing.preview = firstParagraphPreview(repoSpec.content);
 			}
 		} else {
 			map.set(repoSpec.capability, {
 				capability: repoSpec.capability,
-				changes: [],
+				repoSpec,
+				referencingChanges: [],
 				preview: firstParagraphPreview(repoSpec.content),
 				latestDate: null,
-				hasRepoSpec: true,
 			});
 		}
 	}
@@ -82,12 +84,20 @@ interface Props {
 	onToggleComments: () => void;
 }
 
-export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
+export function SpecsView({ repo }: Props) {
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const setView = useAppStore((s) => s.setView);
+	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const [filter, setFilter] = useState("");
 	const [sort, setSort] = useState<SortMode>("name");
+
+	const openChange = (change: Change) => {
+		setSelectedChangeKey(changeKey(change));
+		setActiveTab("specs");
+		setView("changes");
+	};
 
 	const rows = useMemo(() => buildSpecRows(repo), [repo]);
 
@@ -102,7 +112,7 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 		} else if (sort === "changes") {
 			sorted.sort(
 				(a, b) =>
-					b.changes.length - a.changes.length ||
+					b.referencingChanges.length - a.referencingChanges.length ||
 					a.capability.localeCompare(b.capability),
 			);
 		} else {
@@ -117,22 +127,7 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 
 	if (selectedSpec) {
 		const row = rows.find((r) => r.capability === selectedSpec);
-		const change = row?.changes[0] ?? null;
-		const repoSpec =
-			repo?.repoSpecs.find((s) => s.capability === selectedSpec) ?? null;
-		if (!change && repoSpec) {
-			return (
-				<RepoDocLayout
-					title={repoSpec.capability}
-					subtitle={repoSpec.path}
-					authorship={repoSpec.authorship}
-					source={repoSpec.content}
-					documentId={`repo-doc:${repoSpec.path}`}
-					documentKind="repo-spec"
-				/>
-			);
-		}
-		if (!change) {
+		if (!row) {
 			return (
 				<Box sx={{ p: 4 }}>
 					<Typography color="text.secondary">
@@ -141,14 +136,7 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 				</Box>
 			);
 		}
-		return (
-			<ChangeViewer
-				change={change}
-				schema={change.schema ?? repo?.schema ?? DEFAULT_SCHEMA}
-				commentsOpen={commentsOpen}
-				onToggleComments={onToggleComments}
-			/>
-		);
+		return <CapabilityView row={row} onOpenChange={openChange} />;
 	}
 
 	const handleSelect = (capability: string) => {
@@ -226,9 +214,9 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 									<Typography variant="body2" sx={{ fontWeight: 600 }}>
 										{row.capability}
 									</Typography>
-									{row.hasRepoSpec && (
+									{row.repoSpec ? (
 										<Chip
-											label="repo spec"
+											label="Canonical"
 											size="small"
 											variant="outlined"
 											sx={{
@@ -236,6 +224,18 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 												fontSize: "0.6875rem",
 												borderColor: "primary.main",
 												color: "primary.main",
+											}}
+										/>
+									) : (
+										<Chip
+											label="Proposed only"
+											size="small"
+											variant="outlined"
+											sx={{
+												height: 18,
+												fontSize: "0.6875rem",
+												borderColor: "warning.main",
+												color: "warning.main",
 											}}
 										/>
 									)}
@@ -266,8 +266,8 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 								}}
 							>
 								<Typography variant="caption" color="text.secondary">
-									{row.changes.length} change
-									{row.changes.length === 1 ? "" : "s"}
+									{row.referencingChanges.length} change
+									{row.referencingChanges.length === 1 ? "" : "s"}
 								</Typography>
 								{row.latestDate && (
 									<Tooltip
@@ -289,6 +289,130 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 					))
 				)}
 			</Box>
+		</Box>
+	);
+}
+
+interface CapabilityViewProps {
+	row: SpecRow;
+	onOpenChange: (change: Change) => void;
+}
+
+function CapabilityView({ row, onOpenChange }: CapabilityViewProps) {
+	const { capability, repoSpec, referencingChanges } = row;
+	return (
+		<Box>
+			{repoSpec ? (
+				<RepoDocLayout
+					title={capability}
+					subtitle={repoSpec.path}
+					authorship={repoSpec.authorship}
+					source={repoSpec.content}
+					documentId={`repo-spec:${repoSpec.path}`}
+					documentKind="repo-spec"
+				/>
+			) : (
+				<Box
+					sx={{
+						px: 4,
+						pt: 3,
+						pb: 2,
+						borderBottom: 1,
+						borderColor: "divider",
+					}}
+				>
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+						<Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+							{capability}
+						</Typography>
+						<Chip
+							label="Proposed only"
+							size="small"
+							variant="outlined"
+							sx={{
+								height: 20,
+								fontSize: "0.6875rem",
+								borderColor: "warning.main",
+								color: "warning.main",
+							}}
+						/>
+					</Box>
+					<Typography color="text.secondary">
+						No canonical spec yet for <strong>{capability}</strong>. This
+						capability is only referenced by{" "}
+						{referencingChanges.length === 1
+							? "1 change proposal"
+							: `${referencingChanges.length} change proposals`}{" "}
+						below.
+					</Typography>
+				</Box>
+			)}
+			{referencingChanges.length > 0 && (
+				<Box sx={{ px: 4, py: 3 }}>
+					<Typography
+						variant="overline"
+						color="text.secondary"
+						sx={{ display: "block", mb: 1 }}
+					>
+						Referenced by {referencingChanges.length} change
+						{referencingChanges.length === 1 ? "" : "s"}
+					</Typography>
+					<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+						{referencingChanges.map((change) => (
+							<ButtonBase
+								key={`${change.archived ? "archive/" : ""}${change.slug}`}
+								onClick={() => onOpenChange(change)}
+								sx={{
+									display: "flex",
+									alignItems: "center",
+									gap: 1.5,
+									textAlign: "left",
+									px: 2,
+									py: 1,
+									border: 1,
+									borderColor: "divider",
+									borderRadius: 1,
+									bgcolor: "background.paper",
+									transition: "border-color 150ms, background-color 150ms",
+									"&:hover": {
+										borderColor: "primary.main",
+										bgcolor: "action.hover",
+									},
+								}}
+							>
+								<Box sx={{ flex: 1, minWidth: 0 }}>
+									<Typography variant="body2" sx={{ fontWeight: 600 }}>
+										{change.name}
+									</Typography>
+								</Box>
+								{change.archived && (
+									<Chip
+										label="archived"
+										size="small"
+										variant="outlined"
+										sx={{ height: 18, fontSize: "0.6875rem" }}
+									/>
+								)}
+								{change.createdAt && (
+									<Tooltip
+										title={formatAbsoluteDateTime(change.createdAt)}
+										arrow
+										placement="left"
+									>
+										<Typography
+											variant="caption"
+											color="text.disabled"
+											sx={{ cursor: "default" }}
+										>
+											{formatRelativeTime(change.createdAt)}
+										</Typography>
+									</Tooltip>
+								)}
+							</ButtonBase>
+						))}
+					</Box>
+				</Box>
+			)}
 		</Box>
 	);
 }
