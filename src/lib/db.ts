@@ -99,6 +99,14 @@ export async function kvSet(key: string, value: unknown): Promise<void> {
 	);
 }
 
+// ponytail: serial chain so concurrent DELETE+INSERT batches can't interleave.
+let writeChain: Promise<unknown> = Promise.resolve();
+function serialize<T>(fn: () => Promise<T>): Promise<T> {
+	const result = writeChain.then(fn, fn);
+	writeChain = result.catch(() => {});
+	return result;
+}
+
 // ───── repo_sources ─────
 
 export interface SourceRow {
@@ -138,14 +146,23 @@ export async function sourcesDelete(path: string): Promise<void> {
 }
 
 export async function sourcesReplaceAll(rows: SourceRow[]): Promise<void> {
-	const db = await getDb();
-	await db.execute("DELETE FROM repo_sources");
-	for (const r of rows) {
-		await db.execute(
-			"INSERT INTO repo_sources (path, missing, position) VALUES ($1, $2, $3)",
-			[r.path, r.missing ? 1 : 0, r.position],
-		);
-	}
+	return serialize(async () => {
+		const db = await getDb();
+		await db.execute("BEGIN");
+		try {
+			await db.execute("DELETE FROM repo_sources");
+			for (const r of rows) {
+				await db.execute(
+					"INSERT INTO repo_sources (path, missing, position) VALUES ($1, $2, $3)",
+					[r.path, r.missing ? 1 : 0, r.position],
+				);
+			}
+			await db.execute("COMMIT");
+		} catch (e) {
+			await db.execute("ROLLBACK").catch(() => {});
+			throw e;
+		}
+	});
 }
 
 // ───── repo_cache ─────

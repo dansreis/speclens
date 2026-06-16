@@ -18,11 +18,18 @@ function validDocumentIds(repo: Repo): Set<string> {
 		for (const [tabId, files] of Object.entries(c.documentFiles)) {
 			for (const f of files) ids.add(`${c.slug}/${tabId}/${f.name}`);
 		}
+		const changeKey = `${c.archived ? "archive/" : ""}${c.slug}`;
 		for (const cap of Object.keys(c.specs)) {
 			ids.add(`${c.slug}/specs/${cap}`);
+			// SpecCapabilityViewer's per-change delta tab.
+			ids.add(`spec:${cap}:${changeKey}`);
 		}
 	}
-	for (const spec of repo.repoSpecs) ids.add(`repo-doc:${spec.path}`);
+	for (const spec of repo.repoSpecs) {
+		ids.add(`repo-doc:${spec.path}`);
+		// SpecCapabilityViewer's canonical tab.
+		ids.add(`spec:${spec.capability}`);
+	}
 	for (const folder of repo.folders) {
 		for (const doc of folder.docs) ids.add(`repo-doc:${doc.path}`);
 	}

@@ -46,12 +46,22 @@ export function clearHighlights(container: HTMLElement): void {
 		container.querySelectorAll<HTMLElement>(`mark.${MARK_CLASS}`),
 	);
 	for (const mark of marks) {
-		const parent = mark.parentNode;
-		if (!parent) continue;
-		while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-		parent.removeChild(mark);
+		try {
+			const parent = mark.parentNode;
+			if (!parent) continue;
+			while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+			parent.removeChild(mark);
+		} catch {
+			// React may have detached the mark between our snapshot and this
+			// step (mid-reconciliation). The next applyHighlights pass will
+			// re-establish a consistent state.
+		}
 	}
-	container.normalize();
+	try {
+		container.normalize();
+	} catch {
+		// no-op
+	}
 }
 
 /**

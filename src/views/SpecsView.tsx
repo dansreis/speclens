@@ -1,7 +1,9 @@
+import ClearIcon from "@mui/icons-material/Clear";
 import {
 	Box,
 	ButtonBase,
-	Chip,
+	IconButton,
+	InputAdornment,
 	TextField,
 	ToggleButton,
 	ToggleButtonGroup,
@@ -15,8 +17,8 @@ import {
 	formatRelativeTime,
 } from "../lib/relativeTime";
 import type { Change, Repo, RepoSpecDoc } from "../lib/repoLoader";
+import { SpecCapabilityViewer } from "../specs/SpecCapabilityViewer";
 import { useAppStore } from "../store/useAppStore";
-import { RepoDocLayout } from "./RepoDocLayout";
 
 type SortMode = "name" | "changes" | "recent";
 
@@ -84,7 +86,7 @@ interface Props {
 	onToggleComments: () => void;
 }
 
-export function SpecsView({ repo }: Props) {
+export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
@@ -136,7 +138,16 @@ export function SpecsView({ repo }: Props) {
 				</Box>
 			);
 		}
-		return <CapabilityView row={row} onOpenChange={openChange} />;
+		return (
+			<SpecCapabilityViewer
+				capability={row.capability}
+				repoSpec={row.repoSpec}
+				referencingChanges={row.referencingChanges}
+				onOpenChange={openChange}
+				commentsOpen={commentsOpen}
+				onToggleComments={onToggleComments}
+			/>
+		);
 	}
 
 	const handleSelect = (capability: string) => {
@@ -153,6 +164,22 @@ export function SpecsView({ repo }: Props) {
 					onChange={(e) => setFilter(e.target.value)}
 					size="small"
 					sx={{ flex: 1 }}
+					slotProps={{
+						input: {
+							endAdornment: filter ? (
+								<InputAdornment position="end">
+									<IconButton
+										size="small"
+										onClick={() => setFilter("")}
+										aria-label="Clear filter"
+										edge="end"
+									>
+										<ClearIcon fontSize="small" />
+									</IconButton>
+								</InputAdornment>
+							) : null,
+						},
+					}}
 				/>
 				<ToggleButtonGroup
 					size="small"
@@ -203,43 +230,12 @@ export function SpecsView({ repo }: Props) {
 							}}
 						>
 							<Box sx={{ flex: 1, minWidth: 0 }}>
-								<Box
-									sx={{
-										display: "flex",
-										alignItems: "center",
-										gap: 1,
-										mb: row.preview ? 0.25 : 0,
-									}}
+								<Typography
+									variant="body2"
+									sx={{ fontWeight: 600, mb: row.preview ? 0.25 : 0 }}
 								>
-									<Typography variant="body2" sx={{ fontWeight: 600 }}>
-										{row.capability}
-									</Typography>
-									{row.repoSpec ? (
-										<Chip
-											label="Canonical"
-											size="small"
-											variant="outlined"
-											sx={{
-												height: 18,
-												fontSize: "0.6875rem",
-												borderColor: "primary.main",
-												color: "primary.main",
-											}}
-										/>
-									) : (
-										<Chip
-											label="Proposed only"
-											size="small"
-											variant="outlined"
-											sx={{
-												height: 18,
-												fontSize: "0.6875rem",
-												borderColor: "warning.main",
-												color: "warning.main",
-											}}
-										/>
-									)}
-								</Box>
+									{row.capability}
+								</Typography>
 								{row.preview && (
 									<Typography
 										variant="caption"
@@ -289,130 +285,6 @@ export function SpecsView({ repo }: Props) {
 					))
 				)}
 			</Box>
-		</Box>
-	);
-}
-
-interface CapabilityViewProps {
-	row: SpecRow;
-	onOpenChange: (change: Change) => void;
-}
-
-function CapabilityView({ row, onOpenChange }: CapabilityViewProps) {
-	const { capability, repoSpec, referencingChanges } = row;
-	return (
-		<Box>
-			{repoSpec ? (
-				<RepoDocLayout
-					title={capability}
-					subtitle={repoSpec.path}
-					authorship={repoSpec.authorship}
-					source={repoSpec.content}
-					documentId={`repo-spec:${repoSpec.path}`}
-					documentKind="repo-spec"
-				/>
-			) : (
-				<Box
-					sx={{
-						px: 4,
-						pt: 3,
-						pb: 2,
-						borderBottom: 1,
-						borderColor: "divider",
-					}}
-				>
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
-						<Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-							{capability}
-						</Typography>
-						<Chip
-							label="Proposed only"
-							size="small"
-							variant="outlined"
-							sx={{
-								height: 20,
-								fontSize: "0.6875rem",
-								borderColor: "warning.main",
-								color: "warning.main",
-							}}
-						/>
-					</Box>
-					<Typography color="text.secondary">
-						No canonical spec yet for <strong>{capability}</strong>. This
-						capability is only referenced by{" "}
-						{referencingChanges.length === 1
-							? "1 change proposal"
-							: `${referencingChanges.length} change proposals`}{" "}
-						below.
-					</Typography>
-				</Box>
-			)}
-			{referencingChanges.length > 0 && (
-				<Box sx={{ px: 4, py: 3 }}>
-					<Typography
-						variant="overline"
-						color="text.secondary"
-						sx={{ display: "block", mb: 1 }}
-					>
-						Referenced by {referencingChanges.length} change
-						{referencingChanges.length === 1 ? "" : "s"}
-					</Typography>
-					<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-						{referencingChanges.map((change) => (
-							<ButtonBase
-								key={`${change.archived ? "archive/" : ""}${change.slug}`}
-								onClick={() => onOpenChange(change)}
-								sx={{
-									display: "flex",
-									alignItems: "center",
-									gap: 1.5,
-									textAlign: "left",
-									px: 2,
-									py: 1,
-									border: 1,
-									borderColor: "divider",
-									borderRadius: 1,
-									bgcolor: "background.paper",
-									transition: "border-color 150ms, background-color 150ms",
-									"&:hover": {
-										borderColor: "primary.main",
-										bgcolor: "action.hover",
-									},
-								}}
-							>
-								<Box sx={{ flex: 1, minWidth: 0 }}>
-									<Typography variant="body2" sx={{ fontWeight: 600 }}>
-										{change.name}
-									</Typography>
-								</Box>
-								{change.archived && (
-									<Chip
-										label="archived"
-										size="small"
-										variant="outlined"
-										sx={{ height: 18, fontSize: "0.6875rem" }}
-									/>
-								)}
-								{change.createdAt && (
-									<Tooltip
-										title={formatAbsoluteDateTime(change.createdAt)}
-										arrow
-										placement="left"
-									>
-										<Typography
-											variant="caption"
-											color="text.disabled"
-											sx={{ cursor: "default" }}
-										>
-											{formatRelativeTime(change.createdAt)}
-										</Typography>
-									</Tooltip>
-								)}
-							</ButtonBase>
-						))}
-					</Box>
-				</Box>
-			)}
 		</Box>
 	);
 }

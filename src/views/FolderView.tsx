@@ -8,13 +8,15 @@ import { RepoDocList } from "./RepoDocList";
 
 interface Props {
 	repo: Repo | null;
+	commentsOpen: boolean;
+	onToggleComments: () => void;
 }
 
 function folderTitle(name: string): string {
 	return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-export function FolderView({ repo }: Props) {
+export function FolderView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedFolder = useAppStore((s) => s.selectedFolder);
 	const selectedFolderDoc = useAppStore((s) => s.selectedFolderDoc);
 	const setSelectedFolderDoc = useAppStore((s) => s.setSelectedFolderDoc);
@@ -80,6 +82,8 @@ export function FolderView({ repo }: Props) {
 				source={doc.content}
 				documentId={`repo-doc:${doc.path}`}
 				documentKind="folder-doc"
+				commentsOpen={commentsOpen}
+				onToggleComments={onToggleComments}
 			/>
 		);
 	}

@@ -22,11 +22,16 @@ import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { bootstrap } from "./store/bootstrap";
-import { useAppStore } from "./store/useAppStore";
+import {
+	getNavSnapshot,
+	navSnapshotsEqual,
+	useAppStore,
+} from "./store/useAppStore";
 import { useCommentsStore } from "./store/useCommentsStore";
 import { createAppTheme } from "./theme/theme";
 import { Breadcrumbs } from "./views/Breadcrumbs";
 import { ChangesView } from "./views/ChangesView";
+import { ErrorBoundary } from "./views/ErrorBoundary";
 import { FlowView } from "./views/FlowView";
 import { FolderView } from "./views/FolderView";
 import { GraphView } from "./views/GraphView";
@@ -78,6 +83,7 @@ function App() {
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
+	const selectedFolderDoc = useAppStore((s) => s.selectedFolderDoc);
 	const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
 	const toggleSidebarCollapsed = useAppStore((s) => s.toggleSidebarCollapsed);
 	const zoomIn = useAppStore((s) => s.zoomIn);
@@ -123,11 +129,45 @@ function App() {
 			} else if (e.key === "k" || e.key === "K") {
 				e.preventDefault();
 				setSearchOpen((o) => !o);
+			} else if (e.key === "[") {
+				e.preventDefault();
+				useAppStore.getState().goBack();
+			} else if (e.key === "]") {
+				e.preventDefault();
+				useAppStore.getState().goForward();
 			}
 		};
 		document.addEventListener("keydown", handler);
 		return () => document.removeEventListener("keydown", handler);
 	}, [zoomIn, zoomOut, resetZoom]);
+
+	// Mouse buttons 4 (back) and 5 (forward).
+	useEffect(() => {
+		const handler = (e: MouseEvent) => {
+			if (e.button === 3) {
+				e.preventDefault();
+				useAppStore.getState().goBack();
+			} else if (e.button === 4) {
+				e.preventDefault();
+				useAppStore.getState().goForward();
+			}
+		};
+		document.addEventListener("mousedown", handler);
+		return () => document.removeEventListener("mousedown", handler);
+	}, []);
+
+	// Track navigation history: push the prior snapshot to the past whenever a
+	// nav field changes (unless the change came from goBack/goForward).
+	useEffect(() => {
+		return useAppStore.subscribe(
+			getNavSnapshot,
+			(_next, prev) => {
+				if (useAppStore.getState()._navRestoring) return;
+				useAppStore.getState().pushNavSnapshot(prev);
+			},
+			{ equalityFn: navSnapshotsEqual },
+		);
+	}, []);
 
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 
@@ -153,9 +193,14 @@ function App() {
 	const [commentsPinned, setCommentsPinned] = useState(false);
 	const [searchOpen, setSearchOpen] = useState(false);
 
+	const hasActiveDocument =
+		!!activeChange ||
+		(view === "specs" && !!selectedSpec) ||
+		(view === "folder" && !!selectedFolderDoc);
+
 	useEffect(() => {
-		if (!activeChange) setCommentsOpen(false);
-	}, [activeChange]);
+		if (!hasActiveDocument) setCommentsOpen(false);
+	}, [hasActiveDocument]);
 
 	const sharedDetailProps = {
 		commentsOpen,
@@ -306,79 +351,83 @@ function App() {
 								minHeight: 0,
 							}}
 						>
-							{!activeRepo ? (
-								reposLoading && repoSources.length > 0 ? (
-									<Box
-										sx={{
-											flex: 1,
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											justifyContent: "center",
-											gap: 1.5,
-											p: 4,
-											textAlign: "center",
-										}}
-									>
-										<CircularProgress size={28} />
-										<Typography variant="body2" color="text.secondary">
-											Loading {repoSources.length} repositor
-											{repoSources.length === 1 ? "y" : "ies"}…
-										</Typography>
-									</Box>
+							<ErrorBoundary
+								key={`${view}:${selectedSpec ?? ""}:${selectedChangeKey ?? ""}`}
+							>
+								{!activeRepo ? (
+									reposLoading && repoSources.length > 0 ? (
+										<Box
+											sx={{
+												flex: 1,
+												display: "flex",
+												flexDirection: "column",
+												alignItems: "center",
+												justifyContent: "center",
+												gap: 1.5,
+												p: 4,
+												textAlign: "center",
+											}}
+										>
+											<CircularProgress size={28} />
+											<Typography variant="body2" color="text.secondary">
+												Loading {repoSources.length} repositor
+												{repoSources.length === 1 ? "y" : "ies"}…
+											</Typography>
+										</Box>
+									) : (
+										<Box
+											sx={{
+												flex: 1,
+												display: "flex",
+												flexDirection: "column",
+												alignItems: "center",
+												justifyContent: "center",
+												gap: 2,
+												p: 4,
+												textAlign: "center",
+											}}
+										>
+											<Typography variant="h6" color="text.secondary">
+												{repos.length === 0 && repoSources.length === 0
+													? "No repositories yet"
+													: "No repository selected"}
+											</Typography>
+											<Typography
+												variant="body2"
+												color="text.secondary"
+												sx={{ maxWidth: 420 }}
+											>
+												Add a folder containing an{" "}
+												<Box component="code">openspec/</Box> directory to start
+												browsing its proposals, tasks, and specs.
+											</Typography>
+											<Button
+												variant="contained"
+												startIcon={<CreateNewFolderOutlinedIcon />}
+												onClick={() => pickAndAddRepoSource()}
+											>
+												Add repository
+											</Button>
+										</Box>
+									)
+								) : view === "overview" ? (
+									<OverviewView repo={activeRepo} />
+								) : view === "specs" ? (
+									<SpecsView repo={activeRepo} {...sharedDetailProps} />
+								) : view === "changes" ? (
+									<ChangesView repo={activeRepo} {...sharedDetailProps} />
+								) : view === "schemas" ? (
+									<SchemasView repo={activeRepo} />
+								) : view === "folder" ? (
+									<FolderView repo={activeRepo} {...sharedDetailProps} />
+								) : view === "flow" ? (
+									<FlowView />
+								) : view === "graph" ? (
+									<GraphView />
 								) : (
-									<Box
-										sx={{
-											flex: 1,
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											justifyContent: "center",
-											gap: 2,
-											p: 4,
-											textAlign: "center",
-										}}
-									>
-										<Typography variant="h6" color="text.secondary">
-											{repos.length === 0 && repoSources.length === 0
-												? "No repositories yet"
-												: "No repository selected"}
-										</Typography>
-										<Typography
-											variant="body2"
-											color="text.secondary"
-											sx={{ maxWidth: 420 }}
-										>
-											Add a folder containing an{" "}
-											<Box component="code">openspec/</Box> directory to start
-											browsing its proposals, tasks, and specs.
-										</Typography>
-										<Button
-											variant="contained"
-											startIcon={<CreateNewFolderOutlinedIcon />}
-											onClick={() => pickAndAddRepoSource()}
-										>
-											Add repository
-										</Button>
-									</Box>
-								)
-							) : view === "overview" ? (
-								<OverviewView repo={activeRepo} />
-							) : view === "specs" ? (
-								<SpecsView repo={activeRepo} {...sharedDetailProps} />
-							) : view === "changes" ? (
-								<ChangesView repo={activeRepo} {...sharedDetailProps} />
-							) : view === "schemas" ? (
-								<SchemasView repo={activeRepo} />
-							) : view === "folder" ? (
-								<FolderView repo={activeRepo} />
-							) : view === "flow" ? (
-								<FlowView />
-							) : view === "graph" ? (
-								<GraphView />
-							) : (
-								<TimelineView />
-							)}
+									<TimelineView />
+								)}
+							</ErrorBoundary>
 						</Box>
 						<CommentsPanel
 							open={commentsOpen}

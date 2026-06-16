@@ -88,32 +88,41 @@ export function MarkdownView({
 	useEffect(() => {
 		const container = contentRef.current;
 		if (!container) return;
-		const found = applyHighlights(container, highlights);
-		if (documentId && selectedRepoId) {
-			const orphans: Record<string, boolean> = {};
-			for (const [id, ok] of Object.entries(found)) orphans[id] = !ok;
-			setHighlightOrphans(orphans, {
-				repoId: selectedRepoId,
-				documentId,
-			});
-		}
-
-		if (scrollTarget && documentId && scrollTarget.documentId === documentId) {
-			const key = highlightKey({
-				text: scrollTarget.text,
-				occurrence: scrollTarget.occurrence,
-			});
-			const marks = container.querySelectorAll<HTMLElement>(
-				`mark.user-highlight[data-highlight-key="${CSS.escape(key)}"]`,
-			);
-			if (marks.length > 0) {
-				marks[0].scrollIntoView({ behavior: "smooth", block: "center" });
-				for (const mark of marks) mark.classList.add("flash");
-				window.setTimeout(() => {
-					for (const mark of marks) mark.classList.remove("flash");
-					setScrollTarget(null);
-				}, 550);
+		try {
+			const found = applyHighlights(container, highlights);
+			if (documentId && selectedRepoId) {
+				const orphans: Record<string, boolean> = {};
+				for (const [id, ok] of Object.entries(found)) orphans[id] = !ok;
+				setHighlightOrphans(orphans, {
+					repoId: selectedRepoId,
+					documentId,
+				});
 			}
+
+			if (
+				scrollTarget &&
+				documentId &&
+				scrollTarget.documentId === documentId
+			) {
+				const key = highlightKey({
+					text: scrollTarget.text,
+					occurrence: scrollTarget.occurrence,
+				});
+				const marks = container.querySelectorAll<HTMLElement>(
+					`mark.user-highlight[data-highlight-key="${CSS.escape(key)}"]`,
+				);
+				if (marks.length > 0) {
+					marks[0].scrollIntoView({ behavior: "smooth", block: "center" });
+					for (const mark of marks) mark.classList.add("flash");
+					window.setTimeout(() => {
+						for (const mark of marks) mark.classList.remove("flash");
+						setScrollTarget(null);
+					}, 550);
+				}
+			}
+		} catch {
+			// DOM mutation can race with React reconciliation when the
+			// document switches; the next render's effect will redo this.
 		}
 	});
 
@@ -320,12 +329,19 @@ export function MarkdownView({
 					},
 				}}
 			>
-				<ReactMarkdown
-					remarkPlugins={[remarkGfm]}
-					rehypePlugins={rehypePlugins}
-				>
-					{source}
-				</ReactMarkdown>
+				{/* Keyed wrapper forces a full unmount/remount when the document
+				    changes, so React removes the whole subtree as a single
+				    operation. Without this, React diffs the markdown tree
+				    node-by-node and crashes when our injected <mark> elements
+				    have moved text nodes out of their original parents. */}
+				<Box key={documentId ?? source.slice(0, 40)}>
+					<ReactMarkdown
+						remarkPlugins={[remarkGfm]}
+						rehypePlugins={rehypePlugins}
+					>
+						{source}
+					</ReactMarkdown>
+				</Box>
 			</Box>
 			{pending && (
 				<SelectionPopover

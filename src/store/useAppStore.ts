@@ -37,6 +37,17 @@ export interface FlowViewport {
 	zoom: number;
 }
 
+export interface NavSnapshot {
+	view: AppView;
+	selectedRepoId: string | null;
+	selectedChangeKey: string | null;
+	selectedSpec: string | null;
+	selectedSchema: string | null;
+	selectedFolder: string | null;
+	selectedFolderDoc: string | null;
+	activeTab: TabKey;
+}
+
 interface AppState {
 	repoSources: RepoSource[];
 	repos: Repo[];
@@ -66,6 +77,10 @@ interface AppState {
 
 	selectedSpec: string | null;
 	setSelectedSpec: (slug: string | null) => void;
+
+	/** SpecCapabilityViewer's dropdown selection: "canonical" or `change:<changeKey>`. */
+	specViewerTab: string | null;
+	setSpecViewerTab: (tab: string | null) => void;
 
 	selectedSchema: string | null;
 	setSelectedSchema: (name: string | null) => void;
@@ -104,6 +119,39 @@ interface AppState {
 
 	highlightEars: boolean;
 	toggleHighlightEars: () => void;
+
+	navPast: NavSnapshot[];
+	navFuture: NavSnapshot[];
+	_navRestoring: boolean;
+	pushNavSnapshot: (prev: NavSnapshot) => void;
+	goBack: () => void;
+	goForward: () => void;
+}
+
+export function getNavSnapshot(state: AppState): NavSnapshot {
+	return {
+		view: state.view,
+		selectedRepoId: state.selectedRepoId,
+		selectedChangeKey: state.selectedChangeKey,
+		selectedSpec: state.selectedSpec,
+		selectedSchema: state.selectedSchema,
+		selectedFolder: state.selectedFolder,
+		selectedFolderDoc: state.selectedFolderDoc,
+		activeTab: state.activeTab,
+	};
+}
+
+export function navSnapshotsEqual(a: NavSnapshot, b: NavSnapshot): boolean {
+	return (
+		a.view === b.view &&
+		a.selectedRepoId === b.selectedRepoId &&
+		a.selectedChangeKey === b.selectedChangeKey &&
+		a.selectedSpec === b.selectedSpec &&
+		a.selectedSchema === b.selectedSchema &&
+		a.selectedFolder === b.selectedFolder &&
+		a.selectedFolderDoc === b.selectedFolderDoc &&
+		a.activeTab === b.activeTab
+	);
 }
 
 const ZOOM_MIN = 0.7;
@@ -304,6 +352,9 @@ export const useAppStore = create<AppState>()(
 		selectedSpec: null,
 		setSelectedSpec: (slug) => set({ selectedSpec: slug }),
 
+		specViewerTab: null,
+		setSpecViewerTab: (tab) => set({ specViewerTab: tab }),
+
 		selectedSchema: null,
 		setSelectedSchema: (name) => set({ selectedSchema: name }),
 
@@ -356,5 +407,40 @@ export const useAppStore = create<AppState>()(
 		highlightEars: true,
 		toggleHighlightEars: () =>
 			set((state) => ({ highlightEars: !state.highlightEars })),
+
+		navPast: [],
+		navFuture: [],
+		_navRestoring: false,
+		pushNavSnapshot: (prev) =>
+			set((state) => ({
+				navPast: [...state.navPast, prev],
+				navFuture: [],
+			})),
+		goBack: () => {
+			const state = get();
+			if (state.navPast.length === 0) return;
+			const target = state.navPast[state.navPast.length - 1];
+			const current = getNavSnapshot(state);
+			set({
+				navPast: state.navPast.slice(0, -1),
+				navFuture: [current, ...state.navFuture],
+				_navRestoring: true,
+				...target,
+			});
+			queueMicrotask(() => set({ _navRestoring: false }));
+		},
+		goForward: () => {
+			const state = get();
+			if (state.navFuture.length === 0) return;
+			const target = state.navFuture[0];
+			const current = getNavSnapshot(state);
+			set({
+				navPast: [...state.navPast, current],
+				navFuture: state.navFuture.slice(1),
+				_navRestoring: true,
+				...target,
+			});
+			queueMicrotask(() => set({ _navRestoring: false }));
+		},
 	})),
 );

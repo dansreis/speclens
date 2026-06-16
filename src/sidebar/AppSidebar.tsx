@@ -1,3 +1,5 @@
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
@@ -11,6 +13,7 @@ import {
 	Box,
 	Chip,
 	Divider,
+	IconButton,
 	List,
 	ListItemButton,
 	ListItemIcon,
@@ -87,11 +90,18 @@ export function AppSidebar() {
 	const collapsed = useAppStore((s) => s.sidebarCollapsed);
 	const view = useAppStore((s) => s.view);
 	const setView = useAppStore((s) => s.setView);
+	const goBack = useAppStore((s) => s.goBack);
+	const goForward = useAppStore((s) => s.goForward);
+	const canGoBack = useAppStore((s) => s.navPast.length > 0);
+	const canGoForward = useAppStore((s) => s.navFuture.length > 0);
 	const openFolder = useAppStore((s) => s.openFolder);
 	const selectedFolder = useAppStore((s) => s.selectedFolder);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const selectedSpec = useAppStore((s) => s.selectedSpec);
+	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
+	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
+	const setSelectedSchema = useAppStore((s) => s.setSelectedSchema);
 	const repos = useAppStore((s) => s.repos);
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 	const activeChange = useMemo(() => {
@@ -122,9 +132,12 @@ export function AppSidebar() {
 			icon: item.icon,
 			count: counts[item.id],
 			active: view === item.id,
-			onClick: () => setView(item.id),
+			onClick: () => {
+				if (item.id === "changes") setSelectedChangeKey(null);
+				setView(item.id);
+			},
 		}));
-	}, [activeRepo, view, setView]);
+	}, [activeRepo, view, setView, setSelectedChangeKey]);
 	// Library tabs: Specs and Schemas are special (their views render content
 	// differently from generic markdown). Everything else under openspec/ - any
 	// folder - is auto-discovered from repo.folders and surfaced as a tab.
@@ -142,7 +155,10 @@ export function AppSidebar() {
 				icon: <DescriptionOutlinedIcon />,
 				count: specSet.size,
 				active: view === "specs",
-				onClick: () => setView("specs"),
+				onClick: () => {
+					setSelectedSpec(null);
+					setView("specs");
+				},
 			});
 		}
 		if (activeRepo.schemas.length > 0) {
@@ -152,7 +168,10 @@ export function AppSidebar() {
 				icon: <SchemaOutlinedIcon />,
 				count: activeRepo.schemas.length,
 				active: view === "schemas",
-				onClick: () => setView("schemas"),
+				onClick: () => {
+					setSelectedSchema(null);
+					setView("schemas");
+				},
 			});
 		}
 		for (const folder of activeRepo.folders) {
@@ -166,7 +185,15 @@ export function AppSidebar() {
 			});
 		}
 		return items;
-	}, [activeRepo, view, selectedFolder, setView, openFolder]);
+	}, [
+		activeRepo,
+		view,
+		selectedFolder,
+		setView,
+		openFolder,
+		setSelectedSpec,
+		setSelectedSchema,
+	]);
 	const displaySchema = activeChange?.schema ?? activeRepo?.schema;
 	const hasOverride = !!(
 		activeChange?.configYaml &&
@@ -191,6 +218,43 @@ export function AppSidebar() {
 				overflow: "hidden",
 			}}
 		>
+			<Box
+				sx={{
+					px: 1,
+					pt: 1,
+					pb: 0.5,
+					display: "flex",
+					gap: 0.5,
+					justifyContent: collapsed ? "center" : "flex-start",
+				}}
+			>
+				<Tooltip title="Back (⌘[)" placement="bottom" arrow>
+					<span>
+						<IconButton
+							size="small"
+							onClick={goBack}
+							disabled={!canGoBack}
+							aria-label="Go back"
+							sx={{ color: "text.secondary" }}
+						>
+							<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />
+						</IconButton>
+					</span>
+				</Tooltip>
+				<Tooltip title="Forward (⌘])" placement="bottom" arrow>
+					<span>
+						<IconButton
+							size="small"
+							onClick={goForward}
+							disabled={!canGoForward}
+							aria-label="Go forward"
+							sx={{ color: "text.secondary" }}
+						>
+							<ArrowForwardIosIcon sx={{ fontSize: 14 }} />
+						</IconButton>
+					</span>
+				</Tooltip>
+			</Box>
 			<Box sx={{ p: 1 }}>
 				<RepositorySwitcher collapsed={collapsed} />
 				{!collapsed && activeRepo && displaySchema && (

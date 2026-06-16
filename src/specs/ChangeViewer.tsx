@@ -69,7 +69,19 @@ export function ChangeViewer({
 	const zoomIn = useAppStore((s) => s.zoomIn);
 	const zoomOut = useAppStore((s) => s.zoomOut);
 	const resetZoom = useAppStore((s) => s.resetZoom);
+	const setView = useAppStore((s) => s.setView);
+	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const contentRef = useRef<HTMLDivElement | null>(null);
+
+	const linkedCapabilities = useMemo(
+		() => Object.keys(change.specs),
+		[change.specs],
+	);
+
+	const openCapability = (capability: string) => {
+		setSelectedSpec(capability);
+		setView("specs");
+	};
 
 	const availableDocs = useMemo(
 		() => schema.artifacts.filter((a) => change.documents[a.id] !== undefined),
@@ -200,6 +212,47 @@ export function ChangeViewer({
 					</Box>
 					{change.authorship && (
 						<AttributionLine authorship={change.authorship.rolled} />
+					)}
+					{linkedCapabilities.length > 0 && (
+						<Box
+							sx={{
+								display: "flex",
+								flexWrap: "wrap",
+								alignItems: "center",
+								gap: 0.5,
+								mt: 0.25,
+							}}
+						>
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								sx={{ mr: 0.5 }}
+							>
+								Specs:
+							</Typography>
+							{linkedCapabilities.map((cap) => (
+								<Chip
+									key={cap}
+									label={cap}
+									size="small"
+									variant="outlined"
+									clickable
+									onClick={() => openCapability(cap)}
+									sx={{
+										height: 20,
+										fontSize: "0.6875rem",
+										fontWeight: 500,
+										borderColor: "divider",
+										color: "text.secondary",
+										"&:hover": {
+											borderColor: "primary.main",
+											color: "primary.main",
+											bgcolor: "action.hover",
+										},
+									}}
+								/>
+							))}
+						</Box>
 					)}
 				</Box>
 				<Box

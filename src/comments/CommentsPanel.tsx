@@ -4,6 +4,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -56,11 +57,13 @@ function scopeLabel(s: Scope): string {
 
 function CommentItem({
 	comment,
+	location,
 	onJump,
 	onToggleResolved,
 	onDelete,
 }: {
 	comment: AppComment;
+	location: string | null;
 	onJump: (comment: AppComment) => void;
 	onToggleResolved: (id: string) => void;
 	onDelete: (id: string) => void;
@@ -105,6 +108,14 @@ function CommentItem({
 						</Box>
 					</Tooltip>
 				</Box>
+				{location && (
+					<Tooltip title={location} arrow>
+						<InfoOutlinedIcon
+							fontSize="small"
+							sx={{ color: "text.secondary", flexShrink: 0 }}
+						/>
+					</Tooltip>
+				)}
 				{comment.orphan && (
 					<Tooltip title="Original location or text no longer found" arrow>
 						<WarningAmberIcon
@@ -248,6 +259,11 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
+	const setView = useAppStore((s) => s.setView);
+	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
+	const setSpecViewerTab = useAppStore((s) => s.setSpecViewerTab);
+	const openFolder = useAppStore((s) => s.openFolder);
+	const setSelectedFile = useAppStore((s) => s.setSelectedFile);
 
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 
@@ -284,22 +300,80 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 		[filtered, resolvedTab],
 	);
 
+	const repoNameById = useMemo(() => {
+		const m = new Map<string, string>();
+		for (const r of repos) m.set(r.id, r.name);
+		return m;
+	}, [repos]);
+
+	const locationFor = (c: AppComment): string | null => {
+		if (scope === "document") return null;
+		const doc = c.documentId ?? "repo-level";
+		if (scope === "all") {
+			const repoName = repoNameById.get(c.repoId) ?? c.repoId;
+			return `${repoName} · ${doc}`;
+		}
+		return doc;
+	};
+
 	const handleJump = (comment: AppComment) => {
 		const h = comment.highlight;
-		if (!h || comment.documentKind !== "change" || !comment.documentId) return;
-		const parts = comment.documentId.split("/");
-		const tab = parts[parts.length - 1] as TabKey;
-		const slug = parts.slice(0, -1).join("/");
-		const change = activeRepo?.changes.find((c) => c.slug === slug);
-		if (!change) return;
-		const key = `${change.archived ? "archive/" : ""}${change.slug}`;
-		setSelectedChangeKey(key);
-		setActiveTab(tab);
-		setScrollTarget({
-			documentId: comment.documentId,
-			text: h.text,
-			occurrence: h.occurrence,
-		});
+		if (!h || !comment.documentId || !activeRepo) return;
+		const scrollTo = () =>
+			setScrollTarget({
+				documentId: comment.documentId as string,
+				text: h.text,
+				occurrence: h.occurrence,
+			});
+		// SpecCapabilityViewer documentIds: "spec:<cap>" (canonical) or
+		// "spec:<cap>:<changeKey>" (per-change delta). Handle before the generic
+		// kind branches because the kind is "repo-spec" / "change" but the format
+		// is different from the legacy ones.
+		if (comment.documentId.startsWith("spec:")) {
+			const rest = comment.documentId.slice("spec:".length);
+			const colonIdx = rest.indexOf(":");
+			const cap = colonIdx === -1 ? rest : rest.slice(0, colonIdx);
+			const targetTab =
+				colonIdx === -1 ? "canonical" : `change:${rest.slice(colonIdx + 1)}`;
+			setView("specs");
+			setSelectedSpec(cap);
+			setSpecViewerTab(targetTab);
+			scrollTo();
+			return;
+		}
+		if (comment.documentKind === "change") {
+			const [slug, tab, ...rest] = comment.documentId.split("/");
+			const change = activeRepo.changes.find((c) => c.slug === slug);
+			if (!change || !tab) return;
+			setView("changes");
+			setSelectedChangeKey(
+				`${change.archived ? "archive/" : ""}${change.slug}`,
+			);
+			setActiveTab(tab as TabKey);
+			if (rest.length > 0) setSelectedFile(change.slug, tab, rest.join("/"));
+			scrollTo();
+			return;
+		}
+		if (comment.documentKind === "repo-spec") {
+			const path = comment.documentId.replace(/^repo-doc:/, "");
+			const spec = activeRepo.repoSpecs.find((s) => s.path === path);
+			if (!spec) return;
+			setView("specs");
+			setSelectedSpec(spec.capability);
+			scrollTo();
+			return;
+		}
+		if (comment.documentKind === "folder-doc") {
+			const path = comment.documentId.replace(/^repo-doc:/, "");
+			for (const folder of activeRepo.folders) {
+				const doc = folder.docs.find((d) => d.path === path);
+				if (doc) {
+					openFolder(folder.name, doc.slug);
+					scrollTo();
+					return;
+				}
+			}
+		}
 	};
 
 	const canCompose =
@@ -558,6 +632,7 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 						<CommentItem
 							key={c.id}
 							comment={c}
+							location={locationFor(c)}
 							onJump={handleJump}
 							onToggleResolved={(id) => void toggleResolved(id)}
 							onDelete={(id) => void deleteComment(id)}
