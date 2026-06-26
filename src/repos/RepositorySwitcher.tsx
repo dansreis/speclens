@@ -159,8 +159,8 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 						sx={{
 							display: "flex",
 							flexDirection: "column",
+							flex: 1,
 							minWidth: 0,
-							maxWidth: 220,
 						}}
 					>
 						<Typography

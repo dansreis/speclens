@@ -135,6 +135,9 @@ export function ChangeViewer({
 
 	const activeDoc = availableDocs.find((d) => d.id === tab) ?? availableDocs[0];
 	const tabValue = activeDoc?.id ?? false;
+	const isChecklistTab = activeDoc
+		? isChecklistArtifact(activeDoc, schema)
+		: false;
 
 	const taskProgress = useMemo(() => {
 		if (!activeDoc || !currentSource) return null;
@@ -463,7 +466,7 @@ export function ChangeViewer({
 							/>
 						</Box>
 					)}
-					{fileAuthorship && (
+					{fileAuthorship && !isChecklistTab && (
 						<Box sx={{ mb: 1.5 }}>
 							<AttributionLine authorship={fileAuthorship} size="sm" />
 						</Box>

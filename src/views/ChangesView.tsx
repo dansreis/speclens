@@ -20,7 +20,7 @@ import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
 
-type StatusFilter = "all" | "active" | "archived";
+type StatusFilter = "all" | "active" | "archived" | "archived-incomplete";
 
 function changeKey(c: Change): string {
 	return `${c.archived ? "archive/" : ""}${c.slug}`;
@@ -31,6 +31,12 @@ function progressLabel(change: Change): string | null {
 	const { total, done } = countTaskCompletion(change.tasks);
 	if (total === 0) return null;
 	return `${done}/${total} tasks`;
+}
+
+function hasIncompleteTasks(change: Change): boolean {
+	if (!change.tasks) return false;
+	const { total, done } = countTaskCompletion(change.tasks);
+	return total > 0 && done < total;
 }
 
 interface Props {
@@ -53,6 +59,11 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 		const base = allChanges.filter((c) => {
 			if (status === "active" && c.archived) return false;
 			if (status === "archived" && !c.archived) return false;
+			if (
+				status === "archived-incomplete" &&
+				(!c.archived || !hasIncompleteTasks(c))
+			)
+				return false;
 			if (q && !c.name.toLowerCase().includes(q)) return false;
 			return true;
 		});
@@ -114,6 +125,14 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 					<ToggleButton value="archived" sx={{ textTransform: "none" }}>
 						Archived
 					</ToggleButton>
+					<Tooltip title="Archived changes with incomplete tasks" arrow>
+						<ToggleButton
+							value="archived-incomplete"
+							sx={{ textTransform: "none" }}
+						>
+							Incomplete
+						</ToggleButton>
+					</Tooltip>
 				</ToggleButtonGroup>
 			</Box>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>

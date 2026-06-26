@@ -1,19 +1,14 @@
-import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import SchemaOutlinedIcon from "@mui/icons-material/SchemaOutlined";
-import SettingsApplicationsIcon from "@mui/icons-material/SettingsApplications";
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import WaterfallChartOutlinedIcon from "@mui/icons-material/WaterfallChartOutlined";
 import {
 	Box,
-	Chip,
 	Divider,
-	IconButton,
 	List,
 	ListItemButton,
 	ListItemIcon,
@@ -22,16 +17,10 @@ import {
 	Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { type ReactNode, useMemo, useState } from "react";
-import type { Change } from "../lib/repoLoader";
-import { RepoConfigModal } from "../repos/RepoConfigModal";
+import { type ReactNode, useMemo } from "react";
 import { RepositorySwitcher } from "../repos/RepositorySwitcher";
 import { type AppView, useAppStore } from "../store/useAppStore";
 import { SidebarFooter } from "./SidebarFooter";
-
-function changeKey(c: Change): string {
-	return `${c.archived ? "archive/" : ""}${c.slug}`;
-}
 
 interface NavItem {
 	key: string;
@@ -90,41 +79,18 @@ export function AppSidebar() {
 	const collapsed = useAppStore((s) => s.sidebarCollapsed);
 	const view = useAppStore((s) => s.view);
 	const setView = useAppStore((s) => s.setView);
-	const goBack = useAppStore((s) => s.goBack);
-	const goForward = useAppStore((s) => s.goForward);
-	const canGoBack = useAppStore((s) => s.navPast.length > 0);
-	const canGoForward = useAppStore((s) => s.navFuture.length > 0);
 	const openFolder = useAppStore((s) => s.openFolder);
 	const selectedFolder = useAppStore((s) => s.selectedFolder);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
-	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
-	const selectedSpec = useAppStore((s) => s.selectedSpec);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setSelectedSchema = useAppStore((s) => s.setSelectedSchema);
 	const repos = useAppStore((s) => s.repos);
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
-	const activeChange = useMemo(() => {
-		if (!activeRepo) return null;
-		if (view === "changes" && selectedChangeKey) {
-			return (
-				activeRepo.changes.find((c) => changeKey(c) === selectedChangeKey) ??
-				null
-			);
-		}
-		if (view === "specs" && selectedSpec) {
-			return (
-				activeRepo.changes.find((c) =>
-					Object.keys(c.specs).includes(selectedSpec),
-				) ?? null
-			);
-		}
-		return null;
-	}, [activeRepo, view, selectedChangeKey, selectedSpec]);
 	const resolvedWorkflow = useMemo<ResolvedNavItem[]>(() => {
 		const counts: Partial<Record<AppView, number>> = {};
 		if (activeRepo) {
-			counts.changes = activeRepo.changes.filter((ch) => !ch.archived).length;
+			counts.changes = activeRepo.changes.length;
 		}
 		return workflowNav.map((item) => ({
 			key: item.key,
@@ -194,13 +160,6 @@ export function AppSidebar() {
 		setSelectedSpec,
 		setSelectedSchema,
 	]);
-	const displaySchema = activeChange?.schema ?? activeRepo?.schema;
-	const hasOverride = !!(
-		activeChange?.configYaml &&
-		activeRepo &&
-		activeChange.schema.name !== activeRepo.schema.name
-	);
-	const [configOpen, setConfigOpen] = useState(false);
 	const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
 	return (
@@ -221,87 +180,17 @@ export function AppSidebar() {
 			<Box
 				sx={{
 					px: 1,
-					pt: 1,
-					pb: 0.5,
+					height: 48,
 					display: "flex",
-					gap: 0.5,
-					justifyContent: collapsed ? "center" : "flex-start",
+					alignItems: "center",
+					borderBottom: 1,
+					borderColor: "divider",
 				}}
 			>
-				<Tooltip title="Back (⌘[)" placement="bottom" arrow>
-					<span>
-						<IconButton
-							size="small"
-							onClick={goBack}
-							disabled={!canGoBack}
-							aria-label="Go back"
-							sx={{ color: "text.secondary" }}
-						>
-							<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />
-						</IconButton>
-					</span>
-				</Tooltip>
-				<Tooltip title="Forward (⌘])" placement="bottom" arrow>
-					<span>
-						<IconButton
-							size="small"
-							onClick={goForward}
-							disabled={!canGoForward}
-							aria-label="Go forward"
-							sx={{ color: "text.secondary" }}
-						>
-							<ArrowForwardIosIcon sx={{ fontSize: 14 }} />
-						</IconButton>
-					</span>
-				</Tooltip>
+				<Box sx={{ flex: 1, minWidth: 0 }}>
+					<RepositorySwitcher collapsed={collapsed} />
+				</Box>
 			</Box>
-			<Box sx={{ p: 1 }}>
-				<RepositorySwitcher collapsed={collapsed} />
-				{!collapsed && activeRepo && displaySchema && (
-					<Box sx={{ mt: 0.5, px: 0.5 }}>
-						<Tooltip
-							title={
-								hasOverride
-									? `Change overrides repo schema (${activeRepo.schema.name})`
-									: activeRepo.configYaml
-										? "View openspec/config.yaml"
-										: "Using built-in schema (no config.yaml)"
-							}
-							placement="right"
-							arrow
-						>
-							<Chip
-								icon={<SettingsApplicationsIcon sx={{ fontSize: 14 }} />}
-								label={
-									hasOverride
-										? `${displaySchema.name} · override`
-										: displaySchema.name
-								}
-								size="small"
-								variant="outlined"
-								onClick={() => setConfigOpen(true)}
-								sx={{
-									height: 22,
-									fontSize: "0.6875rem",
-									fontFamily: "ui-monospace, monospace",
-									color: hasOverride ? "warning.main" : "text.secondary",
-									borderColor: hasOverride ? "warning.main" : "divider",
-									"& .MuiChip-icon": {
-										ml: 0.5,
-										color: hasOverride ? "warning.main" : "text.secondary",
-									},
-									"&:hover": {
-										borderColor: "primary.main",
-										color: "primary.main",
-										"& .MuiChip-icon": { color: "primary.main" },
-									},
-								}}
-							/>
-						</Tooltip>
-					</Box>
-				)}
-			</Box>
-			<Divider />
 			<Box sx={{ flex: 1, overflowY: "auto", p: collapsed ? 0.5 : 1 }}>
 				<NavList items={resolvedWorkflow} collapsed={collapsed} />
 				{resolvedLibrary.length > 0 && (
@@ -334,12 +223,6 @@ export function AppSidebar() {
 			<Box sx={{ p: 1 }}>
 				<SidebarFooter collapsed={collapsed} />
 			</Box>
-			<RepoConfigModal
-				open={configOpen}
-				repo={activeRepo ?? null}
-				change={activeChange}
-				onClose={() => setConfigOpen(false)}
-			/>
 		</Box>
 	);
 }

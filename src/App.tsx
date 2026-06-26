@@ -1,3 +1,5 @@
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutlined";
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import SearchIcon from "@mui/icons-material/Search";
@@ -86,6 +88,8 @@ function App() {
 	const selectedFolderDoc = useAppStore((s) => s.selectedFolderDoc);
 	const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
 	const toggleSidebarCollapsed = useAppStore((s) => s.toggleSidebarCollapsed);
+	const canGoBack = useAppStore((s) => s.navPast.length > 0);
+	const canGoForward = useAppStore((s) => s.navFuture.length > 0);
 	const zoomIn = useAppStore((s) => s.zoomIn);
 	const zoomOut = useAppStore((s) => s.zoomOut);
 	const resetZoom = useAppStore((s) => s.resetZoom);
@@ -270,7 +274,7 @@ function App() {
 							py: 0.5,
 							borderBottom: 1,
 							borderColor: "divider",
-							minHeight: 44,
+							height: 48,
 						}}
 					>
 						<Tooltip
@@ -289,6 +293,34 @@ function App() {
 								<MenuOpenIcon fontSize="small" />
 							</IconButton>
 						</Tooltip>
+						<Box sx={{ display: "flex", alignItems: "center" }}>
+							<Tooltip title="Back (⌘[)">
+								<span>
+									<IconButton
+										onClick={() => useAppStore.getState().goBack()}
+										disabled={!canGoBack}
+										aria-label="Go back"
+										size="small"
+										sx={{ color: "text.secondary" }}
+									>
+										<ArrowBackIosNewIcon sx={{ fontSize: 16 }} />
+									</IconButton>
+								</span>
+							</Tooltip>
+							<Tooltip title="Forward (⌘])">
+								<span>
+									<IconButton
+										onClick={() => useAppStore.getState().goForward()}
+										disabled={!canGoForward}
+										aria-label="Go forward"
+										size="small"
+										sx={{ color: "text.secondary" }}
+									>
+										<ArrowForwardIosIcon sx={{ fontSize: 16 }} />
+									</IconButton>
+								</span>
+							</Tooltip>
+						</Box>
 						<Breadcrumbs activeChange={activeChange} />
 						<Box sx={{ flex: 1 }} />
 						<ButtonBase
