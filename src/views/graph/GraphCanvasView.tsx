@@ -154,23 +154,24 @@ type LayoutOverridesProp = ComponentProps<
 // only models the forceDirected family, though the factory forwards these keys.
 const SPREAD_OVERRIDES = {
 	adjustSizes: true,
-	// High scalingRatio blows the nodes far apart so labels (wider than the
-	// circles) have room and stop overlapping; more iterations settle it.
-	scalingRatio: 800,
-	gravity: 18,
+	// `adjustSizes` already prevents circle overlap; a moderate scalingRatio plus
+	// higher gravity (pulls nodes inward) keeps the graph compact without letting
+	// labels collide.
+	scalingRatio: 320,
+	gravity: 28,
 	iterations: 250,
 	barnesHutOptimize: true,
 } as unknown as LayoutOverridesProp;
 
 // "grouped": forceDirected2d enables clustering (capabilities vs changes), but
-// has no radius collision — so we lean on strong repulsion + long links to keep
-// nodes apart, and a high clusterStrength to push the two clusters off each
-// other so changes and capabilities don't bleed together.
+// has no radius collision — so we use moderate repulsion + link distance to keep
+// nodes apart, and clusterStrength to push the two clusters off each other so
+// changes and capabilities don't bleed together.
 const GROUPED_OVERRIDES: LayoutOverridesProp = {
-	nodeStrength: -2500,
-	linkDistance: 220,
-	clusterStrength: 2.5,
-	nodeLevelRatio: 8,
+	nodeStrength: -1100,
+	linkDistance: 120,
+	clusterStrength: 1.5,
+	nodeLevelRatio: 5,
 };
 
 // Both hoisted to stable references: reagraph keys its layout effect on
