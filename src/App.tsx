@@ -457,7 +457,7 @@ function App() {
 								) : view === "graph" ? (
 									<GraphView repo={activeRepo} />
 								) : (
-									<TimelineView />
+									<TimelineView repo={activeRepo} />
 								)}
 							</ErrorBoundary>
 						</Box>
