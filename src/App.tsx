@@ -455,7 +455,7 @@ function App() {
 								) : view === "flow" ? (
 									<FlowView />
 								) : view === "graph" ? (
-									<GraphView />
+									<GraphView repo={activeRepo} />
 								) : (
 									<TimelineView />
 								)}
