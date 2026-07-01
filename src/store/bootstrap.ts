@@ -67,6 +67,10 @@ export function bootstrap(): Promise<void> {
 		useAppStore.setState({
 			...patch,
 			repoSources: sources.map((s) => ({ path: s.path, missing: false })),
+			// Enter the loading state up front (before the App effect kicks off
+			// reloadAllSources) so the splash covers the gap with no flash of the
+			// empty "no project" state. No sources → nothing to load.
+			reposLoading: sources.length > 0,
 		});
 
 		// Reconcile: a comment/cache row whose repo is no longer a source can only

@@ -19,8 +19,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { useDocumentOrphans } from "./lib/orphanDetection";
+import { useMinDelay } from "./lib/useMinDelay";
 import { useRepoSyncWatcher } from "./lib/useRepoSyncWatcher";
 import { pickAndAddRepoSource } from "./repos/addRepo";
+import { SplashScreen } from "./SplashScreen";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { bootstrap } from "./store/bootstrap";
@@ -63,18 +65,7 @@ export function HydrationGate({ children }: { children: React.ReactNode }) {
 		};
 	}, []);
 	if (!ready) {
-		return (
-			<Box
-				sx={{
-					height: "100vh",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-				}}
-			>
-				<CircularProgress size={32} />
-			</Box>
-		);
+		return <SplashScreen />;
 	}
 	return <>{children}</>;
 }
@@ -100,6 +91,10 @@ function App() {
 	const blockingLoad = useAppStore((s) => s.blockingLoad);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 	const allComments = useCommentsStore((s) => s.comments);
+
+	// Show the branded splash for at least 2s on cold start, even if loading is
+	// instant. Measured from launch, so a slow load doesn't stack extra delay.
+	const minSplashElapsed = useMinDelay(2000);
 
 	useRepoSyncWatcher();
 	useDocumentOrphans(allComments, repos);
@@ -210,6 +205,19 @@ function App() {
 		commentsOpen,
 		onToggleComments: () => setCommentsOpen((o) => !o),
 	};
+
+	// Keep the branded splash up through the initial repository load (repos not
+	// yet populated) so the empty "no project" state never flashes before content,
+	// and for a minimum duration so it doesn't flash by on fast starts. Subsequent
+	// reloads keep repos populated, so this only triggers on cold start.
+	if (!minSplashElapsed || (reposLoading && repos.length === 0)) {
+		return (
+			<ThemeProvider theme={theme}>
+				<CssBaseline />
+				<SplashScreen />
+			</ThemeProvider>
+		);
+	}
 
 	return (
 		<ThemeProvider theme={theme}>

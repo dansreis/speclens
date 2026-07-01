@@ -148,20 +148,28 @@ export async function sourcesDelete(path: string): Promise<void> {
 export async function sourcesReplaceAll(rows: SourceRow[]): Promise<void> {
 	return serialize(async () => {
 		const db = await getDb();
-		await db.execute("BEGIN");
-		try {
-			await db.execute("DELETE FROM repo_sources");
-			for (const r of rows) {
-				await db.execute(
-					"INSERT INTO repo_sources (path, missing, position) VALUES ($1, $2, $3)",
-					[r.path, r.missing ? 1 : 0, r.position],
-				);
-			}
-			await db.execute("COMMIT");
-		} catch (e) {
-			await db.execute("ROLLBACK").catch(() => {});
-			throw e;
+		// No manual BEGIN/COMMIT: the Tauri SQL plugin runs each `execute` on a
+		// pooled connection, so a transaction spanning separate execute calls is
+		// unreliable (BEGIN/COMMIT can fail and silently drop the writes, or the
+		// DELETE auto-commits and wipes the table). Instead upsert every current
+		// row, then delete rows no longer present. Upsert-before-delete means the
+		// table is never transiently emptied.
+		for (const r of rows) {
+			await db.execute(
+				`INSERT INTO repo_sources (path, missing, position) VALUES ($1, $2, $3)
+				 ON CONFLICT(path) DO UPDATE SET missing = excluded.missing, position = excluded.position`,
+				[r.path, r.missing ? 1 : 0, r.position],
+			);
 		}
+		if (rows.length === 0) {
+			await db.execute("DELETE FROM repo_sources");
+			return;
+		}
+		const placeholders = rows.map((_, i) => `$${i + 1}`).join(", ");
+		await db.execute(
+			`DELETE FROM repo_sources WHERE path NOT IN (${placeholders})`,
+			rows.map((r) => r.path),
+		);
 	});
 }
 
