@@ -1,12 +1,14 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { sourcesDelete } from "../lib/db";
 import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
 import {
 	getRepoSignature,
 	loadRepoFromPath,
 	type Repo,
 } from "../lib/repoLoader";
+import { useCommentsStore } from "./useCommentsStore";
 
 export type TabKey = string;
 
@@ -226,7 +228,13 @@ export const useAppStore = create<AppState>()(
 		},
 		removeRepoSource: (path) => {
 			const { selectedRepoId, staleRepos, loadedSignatures } = get();
+			// Removing a repo tears down all of its persisted state together, so
+			// no orphaned cache or comments can be left behind regardless of caller.
+			// sourcesDelete is explicit because the write-through subscription skips
+			// empty lists (so removing the very last repo still commits).
+			void sourcesDelete(path);
 			void cacheDelete(path);
+			void useCommentsStore.getState().deleteCommentsForRepo(path);
 			const { [path]: _removedStale, ...restStale } = staleRepos;
 			const { [path]: _removedSig, ...restSigs } = loadedSignatures;
 			set({
@@ -262,12 +270,33 @@ export const useAppStore = create<AppState>()(
 					updatedSources.push({ path: source.path, missing: true });
 				}
 			}
+			// Never leave selectedRepoId pointing at a repo that isn't loaded: a
+			// stale selection (e.g. persisted from a repo that was later removed)
+			// would let new comments be created against a ghost repo id. Reset to
+			// the first loaded repo, mirroring setSelectedRepoId's atomic reset.
+			const loadedIds = new Set(loadedRepos.map((r) => r.id));
+			const currentSel = get().selectedRepoId;
+			const selectionValid = currentSel !== null && loadedIds.has(currentSel);
+			const nextSel = selectionValid
+				? currentSel
+				: (loadedRepos[0]?.id ?? null);
 			set({
 				repoSources: updatedSources,
 				repos: loadedRepos.sort((a, b) => a.name.localeCompare(b.name)),
 				reposLoading: false,
 				staleRepos: {},
 				loadedSignatures: sigs,
+				...(selectionValid
+					? {}
+					: {
+							selectedRepoId: nextSel,
+							selectedChangeKey: null,
+							selectedSpec: null,
+							selectedSchema: null,
+							selectedFolder: null,
+							selectedFolderDoc: null,
+							activeTab: "proposal",
+						}),
 			});
 		},
 		reloadRepo: async (path) => {

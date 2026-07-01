@@ -1,13 +1,25 @@
 import { keyframes } from "@emotion/react";
-import { Box } from "@mui/material";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import {
+	Avatar,
+	Box,
+	Fade,
+	IconButton,
+	Paper,
+	Popper,
+	Tooltip,
+	Typography,
+} from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { SelectionPopover } from "../comments/SelectionPopover";
-import type { DocumentKind } from "../lib/comments";
+import type { AppComment, DocumentKind } from "../lib/comments";
 import { rehypeEarsKeywords } from "../lib/earsKeywords";
 import {
 	applyHighlights,
@@ -15,6 +27,7 @@ import {
 	type HighlightTarget,
 	highlightKey,
 } from "../lib/highlight";
+import { formatRelativeTime } from "../lib/relativeTime";
 import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
@@ -52,6 +65,8 @@ export function MarkdownView({
 	const [pending, setPending] = useState<PendingSelection | null>(null);
 	const comments = useCommentsStore((s) => s.comments);
 	const addComment = useCommentsStore((s) => s.addComment);
+	const deleteComment = useCommentsStore((s) => s.deleteComment);
+	const toggleResolved = useCommentsStore((s) => s.toggleResolved);
 	const setHighlightOrphans = useCommentsStore((s) => s.setHighlightOrphans);
 	const scrollTarget = useAppStore((s) => s.scrollTarget);
 	const setScrollTarget = useAppStore((s) => s.setScrollTarget);
@@ -69,25 +84,128 @@ export function MarkdownView({
 		[highlightEars],
 	);
 
-	const highlights: HighlightTarget[] =
-		documentId && selectedRepoId
-			? comments
-					.filter(
+	// Resolved comments are intentionally excluded: resolving a comment removes
+	// its highlight from the document (and, since it's no longer rendered, stops
+	// it from being flagged as an orphan by the applyHighlights pass below).
+	const commentsForDoc = useMemo(
+		() =>
+			documentId && selectedRepoId
+				? comments.filter(
 						(c) =>
 							c.highlight &&
+							!c.resolved &&
 							c.repoId === selectedRepoId &&
 							c.documentId === documentId,
 					)
-					.map((c) => ({
-						id: c.id,
-						text: c.highlight?.text ?? "",
-						occurrence: c.highlight?.occurrence ?? 1,
-					}))
-			: [];
+				: [],
+		[comments, documentId, selectedRepoId],
+	);
 
+	const highlights: HighlightTarget[] = useMemo(
+		() =>
+			commentsForDoc.map((c) => ({
+				id: c.id,
+				text: c.highlight?.text ?? "",
+				occurrence: c.highlight?.occurrence ?? 1,
+			})),
+		[commentsForDoc],
+	);
+
+	// highlightKey (text|occurrence) → the comment(s) sharing that highlight,
+	// used to resolve which comment a hovered <mark> belongs to.
+	const commentsByKey = useMemo(() => {
+		const map = new Map<string, AppComment[]>();
+		for (const c of commentsForDoc) {
+			if (!c.highlight) continue;
+			const key = highlightKey({
+				text: c.highlight.text,
+				occurrence: c.highlight.occurrence,
+			});
+			const arr = map.get(key);
+			if (arr) arr.push(c);
+			else map.set(key, [c]);
+		}
+		return map;
+	}, [commentsForDoc]);
+	const commentsByKeyRef = useRef(commentsByKey);
+	commentsByKeyRef.current = commentsByKey;
+
+	const [hover, setHover] = useState<{
+		key: string;
+		comments: AppComment[];
+	} | null>(null);
+	const hideTimer = useRef<number | null>(null);
+
+	// The render-time applyHighlights effect rebuilds every <mark> on each
+	// render, so we can't anchor the Popper to a captured element (it gets
+	// detached → reports a 0,0 rect). Anchor to a virtual element that re-queries
+	// the live mark for the hovered key at measure time instead.
+	const anchorEl = useMemo(() => {
+		if (!hover) return null;
+		return {
+			getBoundingClientRect: () => {
+				const container = contentRef.current;
+				const mark = container?.querySelector<HTMLElement>(
+					`mark.user-highlight[data-highlight-key="${CSS.escape(hover.key)}"]`,
+				);
+				return (mark ?? container)?.getBoundingClientRect() ?? new DOMRect();
+			},
+		};
+	}, [hover]);
+
+	const clearHide = useCallback(() => {
+		if (hideTimer.current !== null) {
+			window.clearTimeout(hideTimer.current);
+			hideTimer.current = null;
+		}
+	}, []);
+	const scheduleHide = useCallback(() => {
+		clearHide();
+		// Generous grace period so the cursor can travel from the highlight up
+		// into the popover (crossing non-highlight content) without it closing.
+		hideTimer.current = window.setTimeout(() => setHover(null), 450);
+	}, [clearHide]);
+
+	const handleDelete = useCallback(
+		(id: string) => {
+			if (!window.confirm("Delete this comment?")) return;
+			void deleteComment(id);
+			setHover((prev) => {
+				if (!prev) return null;
+				const remaining = prev.comments.filter((c) => c.id !== id);
+				return remaining.length > 0 ? { ...prev, comments: remaining } : null;
+			});
+		},
+		[deleteComment],
+	);
+
+	const handleToggleResolved = useCallback(
+		(id: string) => {
+			void toggleResolved(id);
+			// The popover only shows unresolved comments, so resolving one removes
+			// it (and its highlight). Drop it from the popover; close if it was the
+			// last one so we don't dangle over a highlight that's about to vanish.
+			setHover((prev) => {
+				if (!prev) return null;
+				const remaining = prev.comments.filter((c) => c.id !== id);
+				return remaining.length > 0 ? { ...prev, comments: remaining } : null;
+			});
+		},
+		[toggleResolved],
+	);
+
+	// Re-run only when the rendered DOM or the highlight targets/scroll intent
+	// change — crucially NOT on every render. Hover/selection state changes must
+	// not re-trigger the clear+rewrap DOM surgery below, which otherwise reflows
+	// code blocks and collapses an in-progress text selection before a comment can
+	// be added. `source` and `highlightEars` are read here because they change the
+	// rendered DOM shape (content / EARS keyword spans), so highlights must re-sync.
 	useEffect(() => {
 		const container = contentRef.current;
 		if (!container) return;
+		// Read so they register as effect deps (see comment above).
+		void source;
+		void highlightEars;
 		try {
 			const found = applyHighlights(container, highlights);
 			if (documentId && selectedRepoId) {
@@ -124,7 +242,16 @@ export function MarkdownView({
 			// DOM mutation can race with React reconciliation when the
 			// document switches; the next render's effect will redo this.
 		}
-	});
+	}, [
+		highlights,
+		documentId,
+		selectedRepoId,
+		scrollTarget,
+		source,
+		highlightEars,
+		setHighlightOrphans,
+		setScrollTarget,
+	]);
 
 	useEffect(() => {
 		const container = contentRef.current;
@@ -166,6 +293,52 @@ export function MarkdownView({
 			document.removeEventListener("mousedown", onDocMouseDown);
 		};
 	}, [documentId]);
+
+	// Open the comment popover when hovering a highlighted <mark>. Marks are
+	// injected by DOM mutation (outside React), so we listen via delegation.
+	useEffect(() => {
+		const container = contentRef.current;
+		if (!container) return;
+		const onOver = (e: MouseEvent) => {
+			const target = e.target as HTMLElement | null;
+			const mark = target?.closest<HTMLElement>("mark.user-highlight");
+			if (!mark || !container.contains(mark)) return;
+			const key = mark.dataset.highlightKey;
+			const cs = key ? commentsByKeyRef.current.get(key) : undefined;
+			if (cs && cs.length > 0 && key) {
+				clearHide();
+				setHover({ key, comments: cs });
+			}
+		};
+		container.addEventListener("mouseover", onOver);
+		return () => {
+			container.removeEventListener("mouseover", onOver);
+			clearHide();
+		};
+	}, [clearHide]);
+
+	// While the popover is open, keep it open as long as the pointer is over the
+	// originating highlight or the popover (its bridges included); only schedule a
+	// hide when the pointer is over neither. Document-level so it also covers the
+	// portaled popover. This avoids the fragile "schedule hide on every mouseover"
+	// race that made the resolve/delete icons hard to reach.
+	useEffect(() => {
+		if (!hover) return;
+		const markSel = `mark.user-highlight[data-highlight-key="${CSS.escape(hover.key)}"]`;
+		const onDocOver = (e: MouseEvent) => {
+			const t = e.target as HTMLElement | null;
+			if (
+				t?.closest('[data-comment-hover-popover="true"]') ||
+				t?.closest(markSel)
+			) {
+				clearHide();
+			} else {
+				scheduleHide();
+			}
+		};
+		document.addEventListener("mouseover", onDocOver);
+		return () => document.removeEventListener("mouseover", onDocOver);
+	}, [hover, clearHide, scheduleHide]);
 
 	const handleSubmit = (body: string) => {
 		if (!pending || !documentId || !selectedRepoId) return;
@@ -280,6 +453,11 @@ export function MarkdownView({
 						borderRadius: "2px",
 						px: "1px",
 						color: "inherit",
+						cursor: "help",
+						transition: "background-color 150ms",
+					},
+					"& mark.user-highlight:hover": {
+						bgcolor: "rgba(253, 224, 71, 0.7)",
 					},
 					"& mark.user-highlight.flash": {
 						animation: `${flashAnim} 0.225s ease-in-out 2`,
@@ -351,6 +529,132 @@ export function MarkdownView({
 					onCancel={() => setPending(null)}
 				/>
 			)}
+			<Popper
+				open={Boolean(hover)}
+				anchorEl={anchorEl}
+				placement="top"
+				transition
+				sx={{ zIndex: (t) => t.zIndex.tooltip }}
+				modifiers={[{ name: "offset", options: { offset: [0, 4] } }]}
+			>
+				{({ TransitionProps }) => (
+					<Fade {...TransitionProps} timeout={120}>
+						<Paper
+							elevation={4}
+							data-comment-hover-popover="true"
+							sx={{
+								position: "relative",
+								maxWidth: 320,
+								maxHeight: 320,
+								overflowY: "auto",
+								p: 0,
+								// Transparent bridges over the offset gap to the highlight so
+								// the pointer never crosses a dead zone that closes the popover.
+								// One on each side because the Popper flips above/below the
+								// highlight depending on viewport room. `position: relative`
+								// above anchors these to the Paper itself.
+								"&::before, &::after": {
+									content: '""',
+									position: "absolute",
+									left: 0,
+									right: 0,
+									height: 8,
+								},
+								"&::before": { top: "100%" },
+								"&::after": { bottom: "100%" },
+							}}
+						>
+							{hover?.comments.map((c, i) => (
+								<Box
+									key={c.id}
+									sx={{
+										p: 1.5,
+										borderTop: i === 0 ? 0 : 1,
+										borderColor: "divider",
+										opacity: c.resolved ? 0.6 : 1,
+									}}
+								>
+									<Box
+										sx={{
+											display: "flex",
+											alignItems: "center",
+											gap: 1,
+											mb: 0.75,
+										}}
+									>
+										<Avatar
+											sx={{
+												width: 22,
+												height: 22,
+												fontSize: "0.7rem",
+												bgcolor: c.resolved ? "text.disabled" : "primary.main",
+											}}
+										>
+											{c.initials}
+										</Avatar>
+										<Typography
+											variant="caption"
+											sx={{ fontWeight: 600, lineHeight: 1.2 }}
+										>
+											{c.author}
+										</Typography>
+										<Typography
+											variant="caption"
+											sx={{ color: "text.secondary", ml: "auto" }}
+										>
+											{formatRelativeTime(c.timestamp)}
+										</Typography>
+										<Tooltip
+											title={c.resolved ? "Mark unresolved" : "Resolve"}
+											arrow
+										>
+											<IconButton
+												size="small"
+												onClick={() => handleToggleResolved(c.id)}
+												aria-label={
+													c.resolved ? "Mark unresolved" : "Mark resolved"
+												}
+												sx={{
+													color: c.resolved ? "success.main" : "text.secondary",
+													p: 0.25,
+												}}
+											>
+												{c.resolved ? (
+													<CheckCircleIcon sx={{ fontSize: "1rem" }} />
+												) : (
+													<CheckCircleOutlineIcon sx={{ fontSize: "1rem" }} />
+												)}
+											</IconButton>
+										</Tooltip>
+										<Tooltip title="Delete" arrow>
+											<IconButton
+												size="small"
+												onClick={() => handleDelete(c.id)}
+												aria-label="Delete comment"
+												sx={{ color: "error.main", p: 0.25 }}
+											>
+												<DeleteOutlineIcon sx={{ fontSize: "1rem" }} />
+											</IconButton>
+										</Tooltip>
+									</Box>
+									<Typography
+										variant="body2"
+										sx={{
+											lineHeight: 1.5,
+											textDecoration: c.resolved ? "line-through" : "none",
+											textDecorationColor: "text.disabled",
+											whiteSpace: "pre-wrap",
+											wordBreak: "break-word",
+										}}
+									>
+										{c.body}
+									</Typography>
+								</Box>
+							))}
+						</Paper>
+					</Fade>
+				)}
+			</Popper>
 		</>
 	);
 }

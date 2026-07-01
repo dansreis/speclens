@@ -285,3 +285,36 @@ export async function commentsCountByRepo(repoId: string): Promise<number> {
 	);
 	return rows[0]?.n ?? 0;
 }
+
+// ───── reconciliation / GC ─────
+
+/**
+ * Delete every `comments` and `repo_cache` row whose repo is not one of
+ * `validPaths` (the current `repo_sources` list). Removing a repo already
+ * cleans up its data, so anything else is dangling from an incomplete removal;
+ * running this on startup keeps the three tables self-consistent. Returns how
+ * many rows were pruned from each table.
+ */
+export async function pruneOrphanedRepoData(
+	validPaths: string[],
+): Promise<{ comments: number; cache: number }> {
+	return serialize(async () => {
+		const db = await getDb();
+		const prune = async (table: string, column: string): Promise<number> => {
+			let res: { rowsAffected: number };
+			if (validPaths.length === 0) {
+				res = await db.execute(`DELETE FROM ${table}`);
+			} else {
+				const placeholders = validPaths.map((_, i) => `$${i + 1}`).join(", ");
+				res = await db.execute(
+					`DELETE FROM ${table} WHERE ${column} NOT IN (${placeholders})`,
+					validPaths,
+				);
+			}
+			return res.rowsAffected;
+		};
+		const comments = await prune("comments", "repo_id");
+		const cache = await prune("repo_cache", "path");
+		return { comments, cache };
+	});
+}

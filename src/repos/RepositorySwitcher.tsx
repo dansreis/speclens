@@ -58,9 +58,6 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 	const repoSources = useAppStore((s) => s.repoSources);
 	const removeRepoSource = useAppStore((s) => s.removeRepoSource);
 	const allComments = useCommentsStore((s) => s.comments);
-	const deleteCommentsForRepo = useCommentsStore(
-		(s) => s.deleteCommentsForRepo,
-	);
 	const reloadRepo = useAppStore((s) => s.reloadRepo);
 	const staleRepos = useAppStore((s) => s.staleRepos);
 	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -433,9 +430,8 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 						variant="contained"
 						onClick={() => {
 							if (pendingDelete) {
-								const path = pendingDelete.path;
-								void deleteCommentsForRepo(path);
-								removeRepoSource(path);
+								// removeRepoSource also deletes this repo's comments + cache.
+								removeRepoSource(pendingDelete.path);
 							}
 							setPendingDelete(null);
 						}}

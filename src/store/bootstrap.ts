@@ -3,6 +3,7 @@ import {
 	commentsAll,
 	kvGetAll,
 	kvSet,
+	pruneOrphanedRepoData,
 	sourcesAll,
 	sourcesReplaceAll,
 } from "../lib/db";
@@ -68,8 +69,16 @@ export function bootstrap(): Promise<void> {
 			repoSources: sources.map((s) => ({ path: s.path, missing: false })),
 		});
 
-		hydrateCommentsFromRows(commentRows);
+		// Reconcile: a comment/cache row whose repo is no longer a source can only
+		// exist from an incomplete removal. Drop those from the UI immediately and
+		// prune the DB in the background so the tables stay self-consistent. A repo
+		// that's merely unreachable stays in repo_sources (missing: true), so its
+		// comments are preserved.
+		const validPaths = new Set(sources.map((s) => s.path));
+		const liveComments = commentRows.filter((c) => validPaths.has(c.repo_id));
+		hydrateCommentsFromRows(liveComments);
 		useCommentsStore.setState({ loaded: true });
+		void pruneOrphanedRepoData(sources.map((s) => s.path));
 
 		attachWriteThrough();
 	})();
@@ -106,6 +115,11 @@ function attachWriteThrough(): void {
 	useAppStore.subscribe(
 		(s) => s.repoSources,
 		(sources) => {
+			// Guard against catastrophic wipes: an empty in-memory list can appear
+			// transiently (store recreated by HMR, a mid-load reset) and must never
+			// bulk-overwrite a populated source list. Removing the last repo persists
+			// via removeRepoSource's explicit sourcesDelete instead.
+			if (sources.length === 0) return;
 			void sourcesReplaceAll(
 				sources.map((s, i) => ({
 					path: s.path,
