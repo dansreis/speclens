@@ -217,6 +217,67 @@ export function OverviewView({ repo }: Props) {
 	const kindLabel = (kind: ActivityKind): string =>
 		typeof kind === "string" ? kind : kind.folder;
 
+	// Repo loaded but nothing SpecLens can read — usually a non-standard layout
+	// (e.g. change artifacts filed under specs/, or missing spec.md files).
+	const isEmpty =
+		!!repo &&
+		repo.changes.length === 0 &&
+		repo.repoSpecs.length === 0 &&
+		repo.folders.length === 0;
+
+	if (isEmpty) {
+		return (
+			<Box sx={{ p: 4, maxWidth: 640 }}>
+				<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
+					{repo?.name ?? "Overview"}
+				</Typography>
+				<Typography color="text.secondary" sx={{ mb: 1.5 }}>
+					This project loaded, but doesn't contain any OpenSpec content SpecLens
+					can read.
+				</Typography>
+				<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+					SpecLens expects the standard OpenSpec layout:
+				</Typography>
+				<Box
+					component="pre"
+					sx={{
+						fontFamily: "monospace",
+						fontSize: "0.8125rem",
+						bgcolor: "action.hover",
+						p: 2,
+						borderRadius: 1,
+						overflowX: "auto",
+						color: "text.secondary",
+						m: 0,
+					}}
+				>
+					{`openspec/
+├── specs/
+│   └── <capability>/
+│       └── spec.md          # source-of-truth spec
+└── changes/
+    └── <change-name>/
+        ├── proposal.md
+        ├── tasks.md
+        └── specs/
+            └── <capability>/
+                └── spec.md  # delta spec`}
+				</Box>
+				<Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+					Files organized differently (e.g. proposals under{" "}
+					<Box component="code" sx={{ fontFamily: "monospace" }}>
+						specs/
+					</Box>
+					, or capabilities without a{" "}
+					<Box component="code" sx={{ fontFamily: "monospace" }}>
+						spec.md
+					</Box>
+					) won't appear.
+				</Typography>
+			</Box>
+		);
+	}
+
 	return (
 		<Box sx={{ p: 4 }}>
 			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>

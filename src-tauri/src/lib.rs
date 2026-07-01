@@ -170,6 +170,32 @@ async fn repo_signature(path: String) -> Result<String, String> {
     Ok(compute_signature(&project_root))
 }
 
+/// Resolves the folder the user picked to the actual project root. A project
+/// root is the folder that *contains* an `openspec/` directory. If the user
+/// instead picked the `openspec/` directory itself, return its parent so
+/// `<root>/openspec` resolves correctly. Otherwise return the path unchanged
+/// and let `load_repo` surface any error.
+#[tauri::command]
+fn resolve_repo_root(path: String) -> String {
+    let p = PathBuf::from(&path);
+    // Already a valid root: it contains an openspec/ subdirectory.
+    if p.join("openspec").is_dir() {
+        return path;
+    }
+    // Picked the openspec/ dir itself: named "openspec" and holding the usual
+    // OpenSpec contents. Use its parent so <parent>/openspec == the picked dir.
+    let is_openspec_dir = p.file_name().map(|n| n == "openspec").unwrap_or(false)
+        && (p.join("changes").is_dir()
+            || p.join("specs").is_dir()
+            || p.join("config.yaml").is_file());
+    if is_openspec_dir {
+        if let Some(parent) = p.parent() {
+            return parent.to_string_lossy().into_owned();
+        }
+    }
+    path
+}
+
 /// A fingerprint that changes iff the project's loaded content would change.
 ///
 /// Git-backed: `git:<HEAD-sha>:<hash of (path, content) for every tracked +
@@ -397,7 +423,11 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![load_repo, repo_signature])
+        .invoke_handler(tauri::generate_handler![
+            load_repo,
+            repo_signature,
+            resolve_repo_root
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

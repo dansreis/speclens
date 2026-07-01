@@ -79,8 +79,17 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 		setAnchorEl(e.currentTarget);
 	const handleClose = () => setAnchorEl(null);
 	const handleSelect = (id: string) => {
-		setSelectedRepoId(id);
+		if (id === selectedRepoId) {
+			handleClose();
+			return;
+		}
+		// Close the dropdown first, then defer the repo switch by a frame. Switching
+		// remounts the whole content subtree (the ErrorBoundary is keyed on the
+		// view/selection) and re-renders markdown synchronously; running that on the
+		// same tick makes the closing dropdown appear to hang. Deferring lets the
+		// menu close paint before the heavy render.
 		handleClose();
+		requestAnimationFrame(() => setSelectedRepoId(id));
 	};
 	const handleAdd = async () => {
 		handleClose();

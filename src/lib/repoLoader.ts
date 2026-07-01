@@ -132,6 +132,15 @@ export async function getRepoSignature(path: string): Promise<string> {
 	return await invoke<string>("repo_signature", { path });
 }
 
+/**
+ * Normalizes a user-picked folder to the actual project root (the folder that
+ * contains `openspec/`). If they picked the `openspec/` directory itself, this
+ * returns its parent; otherwise the path is returned unchanged.
+ */
+export async function resolveRepoRoot(path: string): Promise<string> {
+	return await invoke<string>("resolve_repo_root", { path });
+}
+
 function slugToName(slug: string): string {
 	return slug
 		.split("-")

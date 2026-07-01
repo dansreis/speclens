@@ -200,12 +200,48 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 			</Box>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
 				{filtered.length === 0 ? (
-					<Typography
-						color="text.secondary"
-						sx={{ py: 4, textAlign: "center" }}
-					>
-						No specs match this filter.
-					</Typography>
+					rows.length === 0 ? (
+						<Box
+							sx={{
+								py: 6,
+								px: 3,
+								textAlign: "center",
+								maxWidth: 560,
+								mx: "auto",
+							}}
+						>
+							<Typography color="text.secondary" sx={{ mb: 1 }}>
+								No capability specs found in this project.
+							</Typography>
+							<Typography variant="body2" color="text.secondary">
+								SpecLens reads the standard OpenSpec layout: source-of-truth
+								specs at{" "}
+								<Box component="code" sx={{ fontFamily: "monospace" }}>
+									openspec/specs/&lt;capability&gt;/spec.md
+								</Box>
+								, plus per-change deltas at{" "}
+								<Box component="code" sx={{ fontFamily: "monospace" }}>
+									openspec/changes/&lt;name&gt;/specs/&lt;capability&gt;/spec.md
+								</Box>
+								. Folders under{" "}
+								<Box component="code" sx={{ fontFamily: "monospace" }}>
+									specs/
+								</Box>{" "}
+								without a{" "}
+								<Box component="code" sx={{ fontFamily: "monospace" }}>
+									spec.md
+								</Box>{" "}
+								aren't shown here.
+							</Typography>
+						</Box>
+					) : (
+						<Typography
+							color="text.secondary"
+							sx={{ py: 4, textAlign: "center" }}
+						>
+							No specs match this filter.
+						</Typography>
+					)
 				) : (
 					filtered.map((row) => (
 						<ButtonBase
