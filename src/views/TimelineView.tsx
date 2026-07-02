@@ -7,6 +7,7 @@ import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useMemo, useState } from "react";
 import type { Change, Repo } from "../lib/repoLoader";
+import { stripDatePrefix } from "../lib/stripDatePrefix";
 import { useAppStore } from "../store/useAppStore";
 
 const COLORS = {
@@ -552,7 +553,7 @@ function ChangeRow({
 						whiteSpace: "nowrap",
 					}}
 				>
-					{row.change.name}
+					{stripDatePrefix(row.change.name)}
 				</Typography>
 				{capCount > 0 && (
 					<Typography
