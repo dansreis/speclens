@@ -469,6 +469,38 @@ function ChangeRow({
 	const author = row.change.authorship?.rolled.createdBy.name;
 	const capCount = row.caps.length;
 
+	// Shared hover card: attached to both the sticky name label (so hovering the
+	// truncated, date-stripped change name reveals the full name + info) and the
+	// track bar, mirroring the flow/graph tooltips.
+	const infoTitle = (
+		<Box sx={{ py: 0.5 }}>
+			<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+				{row.change.name}
+			</Typography>
+			<Typography variant="caption" component="div">
+				{row.change.archived ? "Archived" : "Active"} · {days} day
+				{days === 1 ? "" : "s"}
+			</Typography>
+			<Typography variant="caption" component="div">
+				Created {dateFmt.format(row.start)}
+			</Typography>
+			<Typography variant="caption" component="div">
+				{row.change.archived ? "Archived" : "Last edit"}{" "}
+				{dateFmt.format(row.end)}
+			</Typography>
+			{capCount > 0 && (
+				<Typography variant="caption" component="div">
+					{capCount} capabilit{capCount === 1 ? "y" : "ies"}
+				</Typography>
+			)}
+			{author && (
+				<Typography variant="caption" component="div">
+					By {author}
+				</Typography>
+			)}
+		</Box>
+	);
+
 	return (
 		<Box
 			onClick={onOpen}
@@ -543,18 +575,20 @@ function ChangeRow({
 						mr: 1,
 					}}
 				/>
-				<Typography
-					variant="body2"
-					sx={{
-						fontWeight: selected ? 600 : 400,
-						color: selected ? "primary.main" : "text.primary",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-					}}
-				>
-					{stripDatePrefix(row.change.name)}
-				</Typography>
+				<Tooltip arrow placement="top" title={infoTitle}>
+					<Typography
+						variant="body2"
+						sx={{
+							fontWeight: selected ? 600 : 400,
+							color: selected ? "primary.main" : "text.primary",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+						}}
+					>
+						{stripDatePrefix(row.change.name)}
+					</Typography>
+				</Tooltip>
 				{capCount > 0 && (
 					<Typography
 						variant="caption"
@@ -584,38 +618,7 @@ function ChangeRow({
 					backgroundImage: gridBg,
 				})}
 			>
-				<Tooltip
-					arrow
-					placement="top"
-					title={
-						<Box sx={{ py: 0.5 }}>
-							<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-								{row.change.name}
-							</Typography>
-							<Typography variant="caption" component="div">
-								{row.change.archived ? "Archived" : "Active"} · {days} day
-								{days === 1 ? "" : "s"}
-							</Typography>
-							<Typography variant="caption" component="div">
-								Created {dateFmt.format(row.start)}
-							</Typography>
-							<Typography variant="caption" component="div">
-								{row.change.archived ? "Archived" : "Last edit"}{" "}
-								{dateFmt.format(row.end)}
-							</Typography>
-							{capCount > 0 && (
-								<Typography variant="caption" component="div">
-									{capCount} capabilit{capCount === 1 ? "y" : "ies"}
-								</Typography>
-							)}
-							{author && (
-								<Typography variant="caption" component="div">
-									By {author}
-								</Typography>
-							)}
-						</Box>
-					}
-				>
+				<Tooltip arrow placement="top" title={infoTitle}>
 					<Box
 						sx={{
 							position: "absolute",
