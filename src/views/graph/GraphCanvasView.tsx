@@ -10,6 +10,7 @@ import {
 	useSelection,
 } from "reagraph";
 import type { Person, Repo } from "../../lib/repoLoader";
+import { stripDatePrefix } from "../../lib/stripDatePrefix";
 import { useAppStore } from "../../store/useAppStore";
 
 // Rendered node radius range. Also fed into the force layouts as collision
@@ -40,14 +41,6 @@ const LABEL_MAX = 24;
 function truncateLabel(text: string): string {
 	if (text.length <= LABEL_MAX) return text;
 	return `${text.slice(0, LABEL_MAX - 1).trimEnd()}…`;
-}
-
-// Date-prefixed change slugs ("2026-06-15-add-search") title-case into names
-// starting with "2026 06 15 " — dead weight on a cramped canvas label. Strip it
-// here only; the hover card and the changes sidebar keep the full name.
-function stripDatePrefix(name: string): string {
-	const stripped = name.replace(/^\d{4}[-. ]\d{1,2}[-. ]\d{1,2}[-. ]+/, "");
-	return stripped || name;
 }
 
 interface NodeData {

@@ -36,6 +36,7 @@ import {
 	type LifecycleState,
 } from "../lib/changeFlow";
 import { formatRelativeTime } from "../lib/relativeTime";
+import { stripDatePrefix } from "../lib/stripDatePrefix";
 import { useAppStore } from "../store/useAppStore";
 
 // WKWebView rasterizes the composited flow viewport at ~1x and bitmap-scales
@@ -240,7 +241,7 @@ function ChangeNode({ data }: NodeProps<ChangeNodeType>) {
 					lineHeight: 1,
 				}}
 			>
-				{truncate(change.slug)}
+				{truncate(stripDatePrefix(change.slug))}
 			</Box>
 		</Box>
 	);
