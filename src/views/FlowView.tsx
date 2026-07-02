@@ -26,7 +26,7 @@ import {
 } from "@mui/material";
 import { alpha, type Theme } from "@mui/material/styles";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	buildFlow,
 	type DeltaOp,
@@ -38,24 +38,36 @@ import {
 import { formatRelativeTime } from "../lib/relativeTime";
 import { useAppStore } from "../store/useAppStore";
 
-const LABEL_W = 200;
-const CHART_L = LABEL_W + 40;
-const COL_GAP = 58;
-const PILL_TOP = 130;
-const PILL_SIZE = 14;
-const LANE_TOP = 180;
-const LANE_GAP = 42;
-const DOT_R = 6;
-const TIME_AXIS_GAP = 40;
-const LABEL_OVERHANG_RIGHT = 120;
-const LABEL_OVERHANG_TOP = 110;
+// WKWebView rasterizes the composited flow viewport at ~1x and bitmap-scales
+// it on zoom (WebKit bug 27684) - it never re-paints at the new scale, so any
+// displayed scale > 1 stays blurry. Workaround: "render big, scale down".
+// Every layout constant, font size, and stroke width below is multiplied by
+// SS, and the zoom range is divided by SS, so the displayed scale never
+// exceeds 1 and WebKit only ever minifies the raster (which stays crisp).
+const SS = 4;
 
-// Marginal uniform padding, high maxZoom - the chart fills the canvas as much
-// as possible, centered. Lower padding → tighter fit. Raise maxZoom → small
-// repos can grow further.
+const LABEL_W = 200 * SS;
+const CHART_L = LABEL_W + 40 * SS;
+const COL_GAP = 58 * SS;
+const PILL_TOP = 130 * SS;
+const PILL_SIZE = 14 * SS;
+const LANE_TOP = 180 * SS;
+const LANE_GAP = 42 * SS;
+const DOT_R = 6 * SS;
+const TIME_AXIS_GAP = 40 * SS;
+const LABEL_OVERHANG_RIGHT = 120 * SS;
+const LABEL_OVERHANG_TOP = 110 * SS;
+
+// Marginal uniform padding, maxZoom at the crispness ceiling - the chart
+// fills the canvas as much as possible, centered. Lower padding → tighter
+// fit. FIT_VIEW_MAX_ZOOM is capped at 1 (= SS× the base design size): any
+// higher would bitmap-upscale and blur again; raise SS to let small repos
+// grow further.
 const FIT_VIEW_PADDING = 0.02;
-const FIT_VIEW_MAX_ZOOM = 10;
+const FIT_VIEW_MAX_ZOOM = 1;
 const FIT_VIEW_BUTTON_DURATION = 300;
+const MIN_ZOOM = 0.05 / SS;
+const MAX_ZOOM = 3 / SS;
 
 const OP_PALETTE: Record<
 	DeltaOp,
@@ -193,8 +205,8 @@ function ChangeNode({ data }: NodeProps<ChangeNodeType>) {
 					position: "absolute",
 					inset: 0,
 					bgcolor: col.fill,
-					border: `0.75px ${col.dash ? "dashed" : "solid"} ${col.stroke}`,
-					borderRadius: "3px",
+					border: `${0.75 * SS}px ${col.dash ? "dashed" : "solid"} ${col.stroke}`,
+					borderRadius: `${3 * SS}px`,
 					overflow: "hidden",
 				}}
 			>
@@ -217,10 +229,10 @@ function ChangeNode({ data }: NodeProps<ChangeNodeType>) {
 				sx={{
 					position: "absolute",
 					left: PILL_SIZE / 2,
-					bottom: "calc(100% + 4px)",
+					bottom: `calc(100% + ${4 * SS}px)`,
 					transform: "rotate(-42deg)",
 					transformOrigin: "0 100%",
-					fontSize: 11,
+					fontSize: 11 * SS,
 					color: "text.secondary",
 					whiteSpace: "nowrap",
 					pointerEvents: "none",
@@ -260,7 +272,7 @@ function DotNode({ data }: NodeProps<DotNodeType>) {
 				height: DOT_R * 2,
 				borderRadius: "50%",
 				bgcolor: col.fill,
-				border: `1px solid ${col.stroke}`,
+				border: `${SS}px solid ${col.stroke}`,
 				cursor: "pointer",
 				outline: "none",
 				position: "relative",
@@ -298,12 +310,12 @@ function LaneLabelNode({ data }: NodeProps<LaneLabelNodeType>) {
 		<Box
 			sx={{
 				width: LABEL_W,
-				height: 20,
+				height: 20 * SS,
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "flex-end",
-				pr: "14px",
-				fontSize: 12,
+				pr: `${14 * SS}px`,
+				fontSize: 12 * SS,
 				color: "text.primary",
 				pointerEvents: "none",
 				userSelect: "none",
@@ -318,12 +330,12 @@ function TimeLabelNode() {
 	return (
 		<Box
 			sx={{
-				width: 36,
-				height: 18,
+				width: 36 * SS,
+				height: 18 * SS,
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "flex-end",
-				fontSize: 12,
+				fontSize: 12 * SS,
 				color: "text.secondary",
 				pointerEvents: "none",
 				userSelect: "none",
@@ -415,10 +427,10 @@ function buildGraph(
 		nodes.push({
 			id: `lane-${lane.capability}`,
 			type: "laneLabel",
-			position: { x: 0, y: laneY(j) - 10 },
+			position: { x: 0, y: laneY(j) - 10 * SS },
 			data: { capability: lane.capability },
 			width: LABEL_W,
-			height: 20,
+			height: 20 * SS,
 			draggable: false,
 			selectable: false,
 		});
@@ -458,17 +470,17 @@ function buildGraph(
 	nodes.push({
 		id: "timeLabel",
 		type: "timeLabel",
-		position: { x: LABEL_W - 50, y: timeAxisY - 9 },
+		position: { x: LABEL_W - 50 * SS, y: timeAxisY - 9 * SS },
 		data: {},
-		width: 36,
-		height: 18,
+		width: 36 * SS,
+		height: 18 * SS,
 		draggable: false,
 		selectable: false,
 	});
 	nodes.push({
 		id: "timeEnd",
 		type: "spacer",
-		position: { x: chartR + 30, y: timeAxisY },
+		position: { x: chartR + 30 * SS, y: timeAxisY },
 		data: {},
 		width: 1,
 		height: 1,
@@ -484,13 +496,13 @@ function buildGraph(
 		type: "straight",
 		markerEnd: {
 			type: MarkerType.ArrowClosed,
-			width: 14,
-			height: 14,
+			width: 14 * SS,
+			height: 14 * SS,
 			color: theme.palette.text.secondary,
 		},
 		style: {
 			stroke: theme.palette.text.secondary,
-			strokeWidth: 1.5,
+			strokeWidth: 1.5 * SS,
 		},
 		selectable: false,
 		focusable: false,
@@ -541,7 +553,7 @@ function buildGraph(
 			type: "straight",
 			style: {
 				stroke: theme.palette.divider,
-				strokeWidth: 1.5,
+				strokeWidth: 1.5 * SS,
 				opacity: 0.7,
 			},
 			selectable: false,
@@ -572,9 +584,9 @@ function buildGraph(
 			type: "straight",
 			style: {
 				stroke: theme.palette.text.secondary,
-				strokeWidth: 0.75,
+				strokeWidth: 0.75 * SS,
 				opacity: 0.35,
-				...(dashed ? { strokeDasharray: "3 2" } : {}),
+				...(dashed ? { strokeDasharray: `${3 * SS} ${2 * SS}` } : {}),
 			},
 			selectable: false,
 			focusable: false,
@@ -610,7 +622,13 @@ export function FlowView() {
 	// Read the stored viewport via getState (not the hook) so pan/zoom updates
 	// don't re-render this whole view. ReactFlow only consumes defaultViewport
 	// on mount, and ReactFlow remounts (key={repo.id}) whenever the repo changes.
-	const initialViewport = useAppStore.getState().flowViewport;
+	// A zoom above FIT_VIEW_MAX_ZOOM can only come from a stale viewport saved
+	// under a different SS factor - discard it and fall back to fitView.
+	const storedViewport = useAppStore.getState().flowViewport;
+	const initialViewport =
+		storedViewport && storedViewport.zoom <= FIT_VIEW_MAX_ZOOM
+			? storedViewport
+			: null;
 
 	const graph = useMemo(() => {
 		if (!flow) return { nodes: [], edges: [] };
@@ -664,6 +682,26 @@ export function FlowView() {
 	const handleNodeMouseLeave = useCallback(() => {
 		setHover(null);
 	}, []);
+
+	// Promote the viewport to its own layer only while a pan/zoom is in flight
+	// so gesture frames stay compositor-only (xyflow discussion #4617), and
+	// release the hint on move-end. Note this does NOT fix zoom blur - WKWebView
+	// never re-rasterizes at scale > 1; the SS supersampling above handles that.
+	const flowWrapperRef = useRef<HTMLDivElement>(null);
+	const setViewportWillChange = useCallback((active: boolean) => {
+		const viewport = flowWrapperRef.current?.querySelector<HTMLElement>(
+			".react-flow__viewport",
+		);
+		if (viewport) viewport.style.willChange = active ? "transform" : "auto";
+	}, []);
+	const handleMoveStart = useCallback(
+		() => setViewportWillChange(true),
+		[setViewportWillChange],
+	);
+	const handleMoveEnd = useCallback(
+		() => setViewportWillChange(false),
+		[setViewportWillChange],
+	);
 
 	if (!repo) {
 		return <Placeholder text="No repository available." />;
@@ -749,6 +787,7 @@ export function FlowView() {
 				<LegendPanel theme={theme} />
 			</Box>
 			<Box
+				ref={flowWrapperRef}
 				sx={{
 					flex: 1,
 					minHeight: 0,
@@ -797,9 +836,11 @@ export function FlowView() {
 									maxZoom: FIT_VIEW_MAX_ZOOM,
 								},
 							})}
+					onMoveStart={handleMoveStart}
+					onMoveEnd={handleMoveEnd}
 					onViewportChange={setFlowViewport}
-					minZoom={0.05}
-					maxZoom={3}
+					minZoom={MIN_ZOOM}
+					maxZoom={MAX_ZOOM}
 					nodesDraggable={false}
 					nodesConnectable={false}
 					elementsSelectable={false}
@@ -815,8 +856,8 @@ export function FlowView() {
 				>
 					<Background
 						color={alpha(theme.palette.text.primary, 0.18)}
-						gap={28}
-						size={1}
+						gap={28 * SS}
+						size={SS}
 					/>
 					<Controls
 						showInteractive={false}
