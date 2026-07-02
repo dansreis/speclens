@@ -30,8 +30,6 @@ import {
 import { type TabKey, useAppStore } from "../store/useAppStore";
 import { useCommentsStore, withOrphans } from "../store/useCommentsStore";
 
-const PANEL_WIDTH = 340;
-
 type Scope = "document" | "repo" | "orphans" | "all";
 type ResolvedTab = "unresolved" | "resolved";
 
@@ -264,6 +262,7 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 	const setSpecViewerTab = useAppStore((s) => s.setSpecViewerTab);
 	const openFolder = useAppStore((s) => s.openFolder);
 	const setSelectedFile = useAppStore((s) => s.setSelectedFile);
+	const panelWidth = useAppStore((s) => s.settings.commentsPanelWidth);
 
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
 
@@ -414,7 +413,7 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 
 	const pinnedSx = {
 		position: "relative" as const,
-		width: open ? PANEL_WIDTH : 0,
+		width: open ? panelWidth : 0,
 		flexShrink: 0,
 		transition: "width 200ms ease-in-out",
 	};
@@ -423,7 +422,7 @@ export function CommentsPanel({ open, pinned, onClose, onTogglePin }: Props) {
 		top: 0,
 		right: 0,
 		bottom: 0,
-		width: PANEL_WIDTH,
+		width: panelWidth,
 		transform: open ? "translateX(0)" : "translateX(100%)",
 		transition: "transform 200ms ease-in-out",
 		zIndex: 10,

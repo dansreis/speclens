@@ -1,23 +1,59 @@
+import CheckIcon from "@mui/icons-material/Check";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
 	Box,
+	Button,
 	Dialog,
+	DialogActions,
 	DialogContent,
 	DialogTitle,
+	Divider,
 	FormControlLabel,
 	IconButton,
+	Slider,
 	Stack,
 	Switch,
 	Tooltip,
 	Typography,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useState } from "react";
-import { useAppStore } from "../store/useAppStore";
+import { HIGHLIGHT_COLORS, useAppStore } from "../store/useAppStore";
 
 interface Props {
 	collapsed?: boolean;
+}
+
+/** One labelled setting row: title + optional caption above its control. */
+function SettingRow({
+	title,
+	caption,
+	children,
+}: {
+	title: string;
+	caption?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<Box>
+			<Typography variant="body2" sx={{ fontWeight: 500 }}>
+				{title}
+			</Typography>
+			{caption && (
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					sx={{ display: "block", mb: 1 }}
+				>
+					{caption}
+				</Typography>
+			)}
+			<Box sx={{ mt: caption ? 0 : 1 }}>{children}</Box>
+		</Box>
+	);
 }
 
 export function SidebarFooter({ collapsed = false }: Props) {
@@ -25,7 +61,16 @@ export function SidebarFooter({ collapsed = false }: Props) {
 	const toggleThemeMode = useAppStore((s) => s.toggleThemeMode);
 	const highlightEars = useAppStore((s) => s.highlightEars);
 	const toggleHighlightEars = useAppStore((s) => s.toggleHighlightEars);
+	const settings = useAppStore((s) => s.settings);
+	const setSetting = useAppStore((s) => s.setSetting);
+	const resetSettings = useAppStore((s) => s.resetSettings);
 	const [settingsOpen, setSettingsOpen] = useState(false);
+
+	const handleReset = () => {
+		resetSettings();
+		// highlightEars is a separate top-level field; its default is `true`.
+		if (!highlightEars) toggleHighlightEars();
+	};
 
 	const settingsBtn = (
 		<Tooltip title="Settings" placement={collapsed ? "right" : "top"} arrow>
@@ -84,17 +129,103 @@ export function SidebarFooter({ collapsed = false }: Props) {
 			>
 				<DialogTitle>Settings</DialogTitle>
 				<DialogContent dividers>
-					<Stack spacing={2}>
+					<Stack spacing={3} divider={<Divider flexItem />}>
+						<SettingRow
+							title="Reading speed"
+							caption={`Words per minute used to estimate reading time. Currently ${settings.readingWpm} wpm.`}
+						>
+							<Slider
+								value={settings.readingWpm}
+								onChange={(_, v) => setSetting("readingWpm", v as number)}
+								min={100}
+								max={500}
+								step={25}
+								marks={[
+									{ value: 100, label: "100" },
+									{ value: 300, label: "300" },
+									{ value: 500, label: "500" },
+								]}
+								valueLabelDisplay="auto"
+								size="small"
+							/>
+						</SettingRow>
+
+						<SettingRow
+							title="Highlight color"
+							caption="Color used for comment highlights in the document."
+						>
+							<Stack direction="row" spacing={1.5}>
+								{HIGHLIGHT_COLORS.map((color) => {
+									const selected = settings.highlightColor === color;
+									return (
+										<Box
+											key={color}
+											component="button"
+											type="button"
+											aria-label={`Highlight color ${color}`}
+											aria-pressed={selected}
+											onClick={() => setSetting("highlightColor", color)}
+											sx={{
+												width: 28,
+												height: 28,
+												p: 0,
+												borderRadius: "50%",
+												cursor: "pointer",
+												bgcolor: alpha(color, 0.85),
+												border: 2,
+												borderColor: selected ? "text.primary" : "transparent",
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "center",
+												transition: "transform 100ms",
+												"&:hover": { transform: "scale(1.1)" },
+											}}
+										>
+											{selected && (
+												<CheckIcon
+													sx={{ fontSize: 16, color: "rgba(0,0,0,0.7)" }}
+												/>
+											)}
+										</Box>
+									);
+								})}
+							</Stack>
+						</SettingRow>
+
+						<SettingRow
+							title="Comments panel width"
+							caption={`Width of the comments panel. Currently ${settings.commentsPanelWidth}px.`}
+						>
+							<Slider
+								value={settings.commentsPanelWidth}
+								onChange={(_, v) =>
+									setSetting("commentsPanelWidth", v as number)
+								}
+								min={240}
+								max={640}
+								step={20}
+								marks={[
+									{ value: 240, label: "240" },
+									{ value: 440, label: "440" },
+									{ value: 640, label: "640" },
+								]}
+								valueLabelDisplay="auto"
+								size="small"
+							/>
+						</SettingRow>
+
 						<FormControlLabel
+							sx={{ ml: 0, alignItems: "flex-start" }}
 							control={
 								<Switch
 									checked={highlightEars}
 									onChange={toggleHighlightEars}
+									sx={{ mt: -0.5 }}
 								/>
 							}
 							label={
 								<Box>
-									<Typography variant="body2">
+									<Typography variant="body2" sx={{ fontWeight: 500 }}>
 										Highlight EARS keywords
 									</Typography>
 									<Typography variant="caption" color="text.secondary">
@@ -104,11 +235,19 @@ export function SidebarFooter({ collapsed = false }: Props) {
 								</Box>
 							}
 						/>
-						<Typography variant="caption" color="text.secondary">
-							More options planned - see <code>TODO.md</code>.
-						</Typography>
 					</Stack>
 				</DialogContent>
+				<DialogActions sx={{ justifyContent: "space-between", px: 3 }}>
+					<Button
+						onClick={handleReset}
+						startIcon={<RestartAltIcon />}
+						color="inherit"
+						size="small"
+					>
+						Reset to defaults
+					</Button>
+					<Button onClick={() => setSettingsOpen(false)}>Done</Button>
+				</DialogActions>
 			</Dialog>
 		</>
 	);

@@ -12,7 +12,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import { alpha, darken } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -32,14 +32,17 @@ import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
 
-const flashAnim = keyframes`
+// Flash keyframes depend on the user-chosen highlight color, so they're built
+// per-color rather than at module scope. The blink still fades the fill to
+// transparent at 50% and pulses a darker inset ring so the mark reads on any hue.
+const makeFlashAnim = (color: string) => keyframes`
   0%, 100% {
-    background-color: rgba(253, 224, 71, 0.85);
+    background-color: ${alpha(color, 0.85)};
     box-shadow: inset 0 0 0 0 transparent;
   }
   50% {
     background-color: transparent;
-    box-shadow: inset 0 0 0 2px rgba(253, 189, 24, 1);
+    box-shadow: inset 0 0 0 2px ${darken(color, 0.25)};
   }
 `;
 
@@ -73,6 +76,11 @@ export function MarkdownView({
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const markdownZoom = useAppStore((s) => s.markdownZoom);
 	const highlightEars = useAppStore((s) => s.highlightEars);
+	const highlightColor = useAppStore((s) => s.settings.highlightColor);
+	const flashAnim = useMemo(
+		() => makeFlashAnim(highlightColor),
+		[highlightColor],
+	);
 
 	useCurrentDocument(documentId ?? null);
 
@@ -449,7 +457,7 @@ export function MarkdownView({
 					},
 					"& summary": { cursor: "pointer", fontWeight: 600 },
 					"& mark.user-highlight": {
-						bgcolor: "rgba(253, 224, 71, 0.45)",
+						bgcolor: alpha(highlightColor, 0.45),
 						borderRadius: "2px",
 						px: "1px",
 						color: "inherit",
@@ -457,7 +465,7 @@ export function MarkdownView({
 						transition: "background-color 150ms",
 					},
 					"& mark.user-highlight:hover": {
-						bgcolor: "rgba(253, 224, 71, 0.7)",
+						bgcolor: alpha(highlightColor, 0.7),
 					},
 					"& mark.user-highlight.flash": {
 						animation: `${flashAnim} 0.225s ease-in-out 2`,

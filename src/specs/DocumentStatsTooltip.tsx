@@ -1,6 +1,7 @@
 import { Box, Divider, Typography } from "@mui/material";
 import type { StatsSection } from "../lib/documentSource";
 import { computeDocumentStats } from "../lib/documentStats";
+import { useAppStore } from "../store/useAppStore";
 
 function StatRow({ label, value }: { label: string; value: string }) {
 	return (
@@ -34,7 +35,8 @@ function StatRow({ label, value }: { label: string; value: string }) {
 }
 
 function SectionBlock({ section }: { section: StatsSection }) {
-	const stats = computeDocumentStats(section.source);
+	const readingWpm = useAppStore((s) => s.settings.readingWpm);
+	const stats = computeDocumentStats(section.source, readingWpm);
 	return (
 		<Box>
 			<Typography

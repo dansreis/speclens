@@ -1,6 +1,6 @@
 import { extractHeadings } from "./extractHeadings";
 
-const WORDS_PER_MINUTE = 200;
+const DEFAULT_WORDS_PER_MINUTE = 200;
 
 export interface DocumentStats {
 	words: number;
@@ -11,7 +11,10 @@ export interface DocumentStats {
 	readingTimeMinutes: number;
 }
 
-export function computeDocumentStats(source: string): DocumentStats {
+export function computeDocumentStats(
+	source: string,
+	wordsPerMinute: number = DEFAULT_WORDS_PER_MINUTE,
+): DocumentStats {
 	const words = source.trim().split(/\s+/).filter(Boolean).length;
 	const characters = source.length;
 	const paragraphs = source
@@ -19,7 +22,7 @@ export function computeDocumentStats(source: string): DocumentStats {
 		.filter((b) => b.trim().length > 0).length;
 	const sentences = (source.match(/[.!?]+/g) ?? []).length;
 	const headings = extractHeadings(source).length;
-	const readingTimeMinutes = Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+	const readingTimeMinutes = Math.max(1, Math.ceil(words / wordsPerMinute));
 
 	return {
 		words,

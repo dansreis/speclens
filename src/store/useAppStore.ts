@@ -17,6 +17,62 @@ export interface RepoSource {
 	missing: boolean;
 }
 
+/**
+ * User-configurable reader preferences. Persisted as a single JSON blob under
+ * the `"settings"` kv key (see store/bootstrap.ts) rather than one field each,
+ * so adding a new preference only means extending this type + DEFAULT_SETTINGS
+ * and reading it where the value is consumed - no new subscription/hydration.
+ */
+export interface AppSettings {
+	/** Words-per-minute used for the reading-time stat. */
+	readingWpm: number;
+	/** Base color for user-comment highlights (hex); alphas derived at render. */
+	highlightColor: string;
+	/** Width of the comments panel in px. */
+	commentsPanelWidth: number;
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+	readingWpm: 200,
+	highlightColor: "#fde047",
+	commentsPanelWidth: 340,
+};
+
+/** Preset highlight colors offered in the settings dialog. */
+export const HIGHLIGHT_COLORS = [
+	"#fde047", // yellow (default)
+	"#86efac", // green
+	"#7dd3fc", // blue
+	"#f9a8d4", // pink
+	"#fdba74", // orange
+	"#c4b5fd", // purple
+] as const;
+
+/** Merge stored settings over defaults, keeping only well-typed known fields. */
+export function sanitizeSettings(raw: unknown): AppSettings {
+	if (!raw || typeof raw !== "object") return DEFAULT_SETTINGS;
+	const r = raw as Record<string, unknown>;
+	return {
+		readingWpm:
+			typeof r.readingWpm === "number" &&
+			r.readingWpm >= 50 &&
+			r.readingWpm <= 1000
+				? r.readingWpm
+				: DEFAULT_SETTINGS.readingWpm,
+		highlightColor:
+			typeof r.highlightColor === "string" &&
+			/^#[0-9a-fA-F]{6}$/.test(r.highlightColor)
+				? r.highlightColor
+				: DEFAULT_SETTINGS.highlightColor,
+		commentsPanelWidth:
+			typeof r.commentsPanelWidth === "number" &&
+			r.commentsPanelWidth >= 240 &&
+			r.commentsPanelWidth <= 640
+				? r.commentsPanelWidth
+				: DEFAULT_SETTINGS.commentsPanelWidth,
+	};
+}
+
 export type AppView =
 	| "overview"
 	| "specs"
@@ -121,6 +177,13 @@ interface AppState {
 
 	highlightEars: boolean;
 	toggleHighlightEars: () => void;
+
+	settings: AppSettings;
+	setSetting: <K extends keyof AppSettings>(
+		key: K,
+		value: AppSettings[K],
+	) => void;
+	resetSettings: () => void;
 
 	navPast: NavSnapshot[];
 	navFuture: NavSnapshot[];
@@ -436,6 +499,11 @@ export const useAppStore = create<AppState>()(
 		highlightEars: true,
 		toggleHighlightEars: () =>
 			set((state) => ({ highlightEars: !state.highlightEars })),
+
+		settings: DEFAULT_SETTINGS,
+		setSetting: (key, value) =>
+			set((state) => ({ settings: { ...state.settings, [key]: value } })),
+		resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
 
 		navPast: [],
 		navFuture: [],

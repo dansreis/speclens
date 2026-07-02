@@ -26,7 +26,6 @@ import { useAppStore } from "../store/useAppStore";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const RECENT_ARCHIVED_LIMIT = 10;
-const WORDS_PER_MINUTE = 200;
 
 function changeKey(c: Change): string {
 	return `${c.archived ? "archive/" : ""}${c.slug}`;
@@ -63,6 +62,7 @@ export function OverviewView({ repo }: Props) {
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const openFolder = useAppStore((s) => s.openFolder);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const readingWpm = useAppStore((s) => s.settings.readingWpm);
 	const [configOpen, setConfigOpen] = useState(false);
 	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
 		"summary",
@@ -122,7 +122,7 @@ export function OverviewView({ repo }: Props) {
 		}
 		const totalReadingTime =
 			totalWords > 0
-				? formatMinutes(Math.max(1, Math.ceil(totalWords / WORDS_PER_MINUTE)))
+				? formatMinutes(Math.max(1, Math.ceil(totalWords / readingWpm)))
 				: "n/a";
 		return {
 			specs,
@@ -134,7 +134,7 @@ export function OverviewView({ repo }: Props) {
 			capabilitiesInMotion,
 			totalReadingTime,
 		};
-	}, [repo]);
+	}, [repo, readingWpm]);
 
 	const activeChanges = useMemo(() => {
 		if (!repo) return [];
@@ -361,7 +361,7 @@ export function OverviewView({ repo }: Props) {
 						<StatCard
 							value={stats.totalReadingTime}
 							label="Total reading time"
-							help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${WORDS_PER_MINUTE} words per minute.`}
+							help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${readingWpm} words per minute.`}
 						/>
 					</Box>
 					{repo?.config?.context && (

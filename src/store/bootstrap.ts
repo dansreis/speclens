@@ -7,7 +7,7 @@ import {
 	sourcesAll,
 	sourcesReplaceAll,
 } from "../lib/db";
-import { useAppStore } from "./useAppStore";
+import { type AppSettings, sanitizeSettings, useAppStore } from "./useAppStore";
 import { hydrateCommentsFromRows, useCommentsStore } from "./useCommentsStore";
 
 let bootstrapPromise: Promise<void> | null = null;
@@ -18,6 +18,7 @@ const KV_KEYS = [
 	"selectedRepoId",
 	"markdownZoom",
 	"highlightEars",
+	"settings",
 ] as const;
 type KvKey = (typeof KV_KEYS)[number];
 
@@ -47,6 +48,7 @@ export function bootstrap(): Promise<void> {
 			selectedRepoId: string | null;
 			markdownZoom: number;
 			highlightEars: boolean;
+			settings: AppSettings;
 		}> = {};
 		if (kv.themeMode === "light" || kv.themeMode === "dark") {
 			patch.themeMode = kv.themeMode;
@@ -62,6 +64,9 @@ export function bootstrap(): Promise<void> {
 		}
 		if (typeof kv.highlightEars === "boolean") {
 			patch.highlightEars = kv.highlightEars;
+		}
+		if (kv.settings !== undefined) {
+			patch.settings = sanitizeSettings(kv.settings);
 		}
 
 		useAppStore.setState({
@@ -93,7 +98,16 @@ function attachWriteThrough(): void {
 	const writeKv = (key: KvKey, value: unknown) => {
 		void kvSet(key, value);
 	};
-	const writeKvDebounced = debounce(writeKv, 200);
+	// Per-key debounce instances: sharing one timer across keys would let a
+	// later key's write cancel an earlier key's pending write within the window.
+	const writeZoomDebounced = debounce(
+		(v: unknown) => writeKv("markdownZoom", v),
+		200,
+	);
+	const writeSettingsDebounced = debounce(
+		(v: unknown) => writeKv("settings", v),
+		200,
+	);
 
 	useAppStore.subscribe(
 		(s) => s.themeMode,
@@ -109,11 +123,15 @@ function attachWriteThrough(): void {
 	);
 	useAppStore.subscribe(
 		(s) => s.markdownZoom,
-		(v) => writeKvDebounced("markdownZoom", v),
+		(v) => writeZoomDebounced(v),
 	);
 	useAppStore.subscribe(
 		(s) => s.highlightEars,
 		(v) => writeKv("highlightEars", v),
+	);
+	useAppStore.subscribe(
+		(s) => s.settings,
+		(v) => writeSettingsDebounced(v),
 	);
 
 	useAppStore.subscribe(
