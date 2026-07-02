@@ -12,6 +12,17 @@ import {
 import type { Person, Repo } from "../../lib/repoLoader";
 import { useAppStore } from "../../store/useAppStore";
 
+// Rendered node radius range. Also fed into the force layouts as collision
+// radii via each node's `size` (assigned at the end of buildGraph).
+const MIN_NODE_SIZE = 4;
+const MAX_NODE_SIZE = 12;
+// Nodes enter the physics at this multiple of their drawn radius, so collision
+// resolution leaves air (and label room) between circles instead of letting them
+// kiss. Rendering isn't affected: sizingType="default" min-max rescales the
+// observed sizes back into [MIN_NODE_SIZE, MAX_NODE_SIZE], exactly undoing the
+// multiplier. Raise for more separation.
+const NODE_SPACING = 2;
+
 const COLORS = {
 	cap: "#2563eb", // existing capability (has a repo spec)
 	capProposed: "#f59e0b", // capability introduced by a change, no repo spec yet
@@ -22,8 +33,26 @@ const COLORS = {
 
 type NodeType = "capability" | "change" | "person";
 
+// reagraph only ellipsizes node labels past 75 chars and exposes no way to lower
+// that, so long names are shortened here. The full name lives in NodeData for the
+// hover card.
+const LABEL_MAX = 24;
+function truncateLabel(text: string): string {
+	if (text.length <= LABEL_MAX) return text;
+	return `${text.slice(0, LABEL_MAX - 1).trimEnd()}…`;
+}
+
+// Date-prefixed change slugs ("2026-06-15-add-search") title-case into names
+// starting with "2026 06 15 " — dead weight on a cramped canvas label. Strip it
+// here only; the hover card and the changes sidebar keep the full name.
+function stripDatePrefix(name: string): string {
+	const stripped = name.replace(/^\d{4}[-. ]\d{1,2}[-. ]\d{1,2}[-. ]+/, "");
+	return stripped || name;
+}
+
 interface NodeData {
 	type: NodeType;
+	fullLabel: string;
 	// capability
 	cap?: string;
 	proposed?: boolean;
@@ -80,10 +109,11 @@ function buildGraph(
 		const proposed = !repoCaps.has(cap);
 		nodes.push({
 			id: `cap:${cap}`,
-			label: cap,
+			label: truncateLabel(cap),
 			fill: proposed ? COLORS.capProposed : COLORS.cap,
 			data: {
 				type: "capability",
+				fullLabel: cap,
 				cap,
 				proposed,
 				relatedCount: capChangeCount.get(cap) ?? 0,
@@ -99,10 +129,11 @@ function buildGraph(
 		seenPerson.add(id);
 		nodes.push({
 			id,
-			label: p.name,
+			label: truncateLabel(p.name),
 			fill: COLORS.person,
 			data: {
 				type: "person",
+				fullLabel: p.name,
 				email: p.email,
 				relatedCount: personChangeCount.get(id) ?? 0,
 			} satisfies NodeData,
@@ -114,10 +145,11 @@ function buildGraph(
 		const id = `chg:${key}`;
 		nodes.push({
 			id,
-			label: change.name,
+			label: truncateLabel(stripDatePrefix(change.name)),
 			fill: change.archived ? COLORS.changeArchived : COLORS.change,
 			data: {
 				type: "change",
+				fullLabel: change.name,
 				key,
 				archived: change.archived,
 				relatedCount: Object.keys(change.specs).length,
@@ -140,6 +172,27 @@ function buildGraph(
 		}
 	}
 
+	// The force layouts read collision radii from each node's `size` attribute at
+	// layout time, while sizingType-based sizing happens AFTER layout — leaving
+	// every node a radius-1 physics body under circles drawn at 4–12, so they
+	// overlapped. Assign degree-scaled sizes here, inflated by NODE_SPACING so
+	// circles keep clear air between them; sizingType="default" rescales back to
+	// the drawn range, keeping physics and pixels in proportion.
+	const degrees = nodes.map((n) => (n.data as NodeData).relatedCount ?? 0);
+	const minDeg = Math.min(...degrees);
+	const maxDeg = Math.max(...degrees);
+	nodes.forEach((node, i) => {
+		const drawn =
+			minDeg === maxDeg
+				? (MIN_NODE_SIZE + MAX_NODE_SIZE) / 2
+				: Math.round(
+						MIN_NODE_SIZE +
+							((degrees[i] - minDeg) / (maxDeg - minDeg)) *
+								(MAX_NODE_SIZE - MIN_NODE_SIZE),
+					);
+		node.size = drawn * NODE_SPACING;
+	});
+
 	return { nodes, edges };
 }
 
@@ -153,12 +206,14 @@ type LayoutOverridesProp = ComponentProps<
 // circles don't overlap. Cast because reagraph's exported `LayoutOverrides` type
 // only models the forceDirected family, though the factory forwards these keys.
 const SPREAD_OVERRIDES = {
+	// Prevents circle overlap using each node's `size` attribute — which only
+	// works because buildGraph assigns real sizes (unset, every node is radius 1
+	// to the physics). scalingRatio adds the extra spacing labels need (they
+	// render below the circles and are wider than them), while gravity pulls
+	// nodes inward so the graph stays reasonably compact.
 	adjustSizes: true,
-	// `adjustSizes` already prevents circle overlap; a moderate scalingRatio plus
-	// higher gravity (pulls nodes inward) keeps the graph compact without letting
-	// labels collide.
-	scalingRatio: 320,
-	gravity: 28,
+	scalingRatio: 420,
+	gravity: 24,
 	iterations: 250,
 	barnesHutOptimize: true,
 } as unknown as LayoutOverridesProp;
@@ -168,8 +223,8 @@ const SPREAD_OVERRIDES = {
 // nodes apart, and clusterStrength to push the two clusters off each other so
 // changes and capabilities don't bleed together.
 const GROUPED_OVERRIDES: LayoutOverridesProp = {
-	nodeStrength: -1100,
-	linkDistance: 120,
+	nodeStrength: -1400,
+	linkDistance: 150,
 	clusterStrength: 1.5,
 	nodeLevelRatio: 5,
 };
@@ -178,22 +233,15 @@ const GROUPED_OVERRIDES: LayoutOverridesProp = {
 // `layoutOverrides`, so an inline object would re-run the whole layout
 // (repositioning every node) on every hover re-render.
 
-// Smaller node labels than the default (7) so names take less room and overlap
-// less. Derived from the built-in themes; hoisted so the reference stays stable.
-const LIGHT_THEME = {
-	...lightTheme,
-	node: {
-		...lightTheme.node,
-		label: { ...lightTheme.node.label, fontSize: 4 },
-	},
-};
-const DARK_THEME = {
-	...darkTheme,
-	node: {
-		...darkTheme.node,
-		label: { ...darkTheme.node.label, fontSize: 4 },
-	},
-};
+// Node label styling dead ends in reagraph 4.x, so we use the built-in themes
+// as-is — they already stroke label text with the canvas color (an outline halo
+// that keeps names legible over edges without occluding anything):
+// - `theme.node.label.fontSize` is never forwarded to node labels (only edge and
+//   cluster labels honor it), so labels can't be shrunk.
+// - `theme.node.label.backgroundColor` draws a pill at a hardcoded z=10 — in
+//   front of nearby node circles and labels — and sizes it by a rough character
+//   estimate that clips the text. Don't reintroduce it.
+// Readability instead comes from truncateLabel + the layout spacing below.
 
 interface HoverState {
 	label: string;
@@ -368,22 +416,29 @@ export default function GraphCanvasView({ repo, showPeople, layout }: Props) {
 				// Freeze positions after the initial layout so hovering/selecting only
 				// highlights nodes instead of re-animating the whole graph.
 				animated={false}
-				sizingType="centrality"
-				minNodeSize={4}
-				maxNodeSize={12}
+				// "default" min-max rescales the `size` buildGraph assigned (drawn size
+				// × NODE_SPACING) back into [MIN_NODE_SIZE, MAX_NODE_SIZE], so nodes
+				// draw at the intended radius while the layouts saw the inflated one.
+				// (Don't switch back to "centrality": it sizes nodes after layout, so
+				// the physics wouldn't see the rendered radii and circles overlap.)
+				sizingType="default"
+				minNodeSize={MIN_NODE_SIZE}
+				maxNodeSize={MAX_NODE_SIZE}
 				// Render every node label (not "auto", which hides smaller nodes' labels
-				// until you zoom in). The small font + spacing keep them readable.
+				// until you zoom in). Truncation + label backgrounds keep them readable.
 				labelType="nodes"
 				draggable
-				theme={themeMode === "dark" ? DARK_THEME : LIGHT_THEME}
+				theme={themeMode === "dark" ? darkTheme : lightTheme}
 				selections={selections}
 				actives={actives}
 				onCanvasClick={onCanvasClick}
 				onNodePointerOver={(node, event) => {
 					onNodePointerOver?.(node);
+					const data = (node.data ?? {}) as NodeData;
 					setHover({
-						label: node.label ?? "",
-						data: (node.data ?? {}) as NodeData,
+						// Canvas labels are truncated; the hover card shows the full name.
+						label: data.fullLabel ?? node.label ?? "",
+						data,
 						x: event.nativeEvent.clientX,
 						y: event.nativeEvent.clientY,
 					});
