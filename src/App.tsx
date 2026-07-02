@@ -28,6 +28,7 @@ import { AppSidebar } from "./sidebar/AppSidebar";
 import { bootstrap } from "./store/bootstrap";
 import {
 	getNavSnapshot,
+	type NavSnapshot,
 	navSnapshotsEqual,
 	useAppStore,
 } from "./store/useAppStore";
@@ -156,13 +157,31 @@ function App() {
 	}, []);
 
 	// Track navigation history: push the prior snapshot to the past whenever a
-	// nav field changes (unless the change came from goBack/goForward).
+	// nav field changes (unless the change came from goBack/goForward). Writes
+	// landing in the same microtask are coalesced into ONE entry holding the
+	// state before the first write: click handlers navigate in several store
+	// writes (e.g. setView + setSelectedChangeKey), and pushing each one would
+	// make "back" restore the intermediate write — the half-navigated state —
+	// instead of the view the user actually came from.
 	useEffect(() => {
+		let pending: NavSnapshot | null = null;
 		return useAppStore.subscribe(
 			getNavSnapshot,
 			(_next, prev) => {
 				if (useAppStore.getState()._navRestoring) return;
-				useAppStore.getState().pushNavSnapshot(prev);
+				if (pending) return;
+				pending = prev;
+				queueMicrotask(() => {
+					const snapshot = pending;
+					pending = null;
+					// Skip no-ops (state churned but settled back where it started).
+					if (
+						snapshot &&
+						!navSnapshotsEqual(snapshot, getNavSnapshot(useAppStore.getState()))
+					) {
+						useAppStore.getState().pushNavSnapshot(snapshot);
+					}
+				});
 			},
 			{ equalityFn: navSnapshotsEqual },
 		);
