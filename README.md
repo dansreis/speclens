@@ -16,6 +16,24 @@ Desktop reader for OpenSpec change folders (`proposal.md` / `tasks.md` / `specs/
 - Zustand (state with `persist`)
 - react-markdown + remark-gfm + rehype-raw + rehype-slug
 
+## Installing the release build
+
+The `.dmg` is **not code-signed or notarized** with an Apple Developer ID, so macOS Gatekeeper flags it as *"SpecLens is damaged and can't be opened. You should move it to the Trash."* This is not corruption - it's the quarantine flag on an unsigned app.
+
+After dragging SpecLens to `/Applications`, clear the quarantine attribute:
+
+```sh
+xattr -cr /Applications/SpecLens.app
+```
+
+If the `.dmg` itself refuses to mount, clear it first:
+
+```sh
+xattr -cr ~/Downloads/SpecLens_0.1.0_aarch64.dmg
+```
+
+The app then opens normally. (Right-click → **Open** does *not* bypass this particular error - only the `xattr` step does.) Proper signing + notarization is the long-term fix; see [`TODO.md`](./TODO.md).
+
 ## Getting started
 
 ```sh
