@@ -107,7 +107,15 @@ function collectSegments(container: HTMLElement): {
 	let offset = 0;
 	let prevBlock: HTMLElement | null = null;
 
-	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	// Skip text inside rendered mermaid diagrams: wrapping <mark>s around SVG
+	// text nodes would corrupt the diagram, and comments can't anchor there
+	// anyway (MarkdownView blocks selections inside [data-mermaid]).
+	const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+		acceptNode: (node) =>
+			node.parentElement?.closest("[data-mermaid]")
+				? NodeFilter.FILTER_REJECT
+				: NodeFilter.FILTER_ACCEPT,
+	});
 	let node = walker.nextNode() as Text | null;
 	while (node) {
 		const block = findBlockAncestor(node, container);

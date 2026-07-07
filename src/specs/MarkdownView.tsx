@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { alpha, darken } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
@@ -31,6 +31,27 @@ import { formatRelativeTime } from "../lib/relativeTime";
 import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
+import { MermaidDiagram } from "./MermaidDiagram";
+
+// ```mermaid fences arrive as <pre><code class="language-mermaid">. Intercept
+// at the <pre> level so the diagram isn't wrapped in the styled code block.
+const markdownComponents: Components = {
+	pre({ node, children, ...rest }) {
+		const child = node?.children[0];
+		if (
+			child?.type === "element" &&
+			child.tagName === "code" &&
+			Array.isArray(child.properties?.className) &&
+			child.properties.className.includes("language-mermaid")
+		) {
+			const code = child.children
+				.map((c) => (c.type === "text" ? c.value : ""))
+				.join("");
+			return <MermaidDiagram code={code.trim()} />;
+		}
+		return <pre {...rest}>{children}</pre>;
+	},
+};
 
 // Flash keyframes depend on the user-chosen highlight color, so they're built
 // per-color rather than at module scope. The blink still fades the fill to
@@ -272,6 +293,17 @@ export function MarkdownView({
 			}
 			const range = selection.getRangeAt(0);
 			if (!container.contains(range.commonAncestorContainer)) {
+				setPending(null);
+				return;
+			}
+			// Selections inside a rendered mermaid SVG can't be highlighted (the
+			// highlight walker skips [data-mermaid] subtrees), so don't offer to
+			// comment on them.
+			const anchorElement =
+				range.commonAncestorContainer instanceof Element
+					? range.commonAncestorContainer
+					: range.commonAncestorContainer.parentElement;
+			if (anchorElement?.closest("[data-mermaid]")) {
 				setPending(null);
 				return;
 			}
@@ -524,6 +556,7 @@ export function MarkdownView({
 					<ReactMarkdown
 						remarkPlugins={[remarkGfm]}
 						rehypePlugins={rehypePlugins}
+						components={markdownComponents}
 					>
 						{source}
 					</ReactMarkdown>
