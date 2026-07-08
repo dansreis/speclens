@@ -1,0 +1,39 @@
+name: Deploy website
+
+# Publishes website/ to GitHub Pages. Requires Pages to be enabled with
+# "GitHub Actions" as the source (Settings → Pages) - on the free plan that
+# means after the repo goes public. Manual-only until then so website commits
+# don't produce failing runs; uncomment the push trigger once Pages is enabled.
+on:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "website/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: website
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
