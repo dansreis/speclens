@@ -1,108 +1,78 @@
 <div align="center">
-  <img src="./full_logo.png" alt="SpecLens" width="420" />
+  <img src="./docs/assets/logo.png" alt="SpecLens" width="360" />
+
+  <p><strong>A desktop reader for <a href="https://github.com/Fission-AI/OpenSpec">OpenSpec</a> projects.</strong><br />
+  Browse changes, trace how requirements evolved, and comment on specs — all from local folders.</p>
 </div>
 
-# SpecLens
+---
 
-Desktop reader for OpenSpec change folders (`proposal.md` / `tasks.md` / `specs/<capability>/spec.md`). Browse changes across repositories, comment on text selections, and inspect document stats.
+SpecLens reads the OpenSpec convention (`proposal.md` / `tasks.md` / `specs/<capability>/spec.md` under `openspec/changes/<change-slug>/`) straight from folders on your machine. Point it at any repository that uses OpenSpec and it gives you a reading experience the raw markdown can't:
 
-> **Status:** UI-first development against mock data. GitHub integration is on the roadmap - see [`TODO.md`](./TODO.md).
+- **Changes browser** — active and archived changes with tabs for proposal, tasks, design, and spec deltas, plus task-completion progress.
+- **Timeline** — changes laid out chronologically, derived from git history.
+- **Graph & Flow views** — how capabilities, changes, and specs relate to each other.
+- **Specs & Schemas views** — the current state of every capability, and the schema that generated it.
+- **Authorship** — when a project is a git repository, SpecLens runs `git log` per document to show who created and last edited each change. Without git it degrades gracefully.
+- **Comments** — select any text to attach a comment; highlights persist locally (SQLite) and can be exported as markdown, ready to paste into an LLM conversation.
+- **EARS keyword highlighting** — inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin steps (toggle in Settings).
+- **Reader comforts** — minimap with table of contents, document stats and reading time, search palette, Mermaid diagram rendering, zoom, light/dark theme.
 
-## Tech stack
+Everything is local. No accounts, no GitHub integration, no network calls — SpecLens only reads the folders you add.
 
-- Tauri 2 (Rust shell + native window)
-- React 19 + TypeScript + Vite
-- MUI 9 + Emotion
-- Zustand (state with `persist`)
-- react-markdown + remark-gfm + rehype-raw + rehype-slug
+## Install
 
-## Installing the release build
+Grab the `.dmg` from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`.
 
-The `.dmg` is **not code-signed or notarized** with an Apple Developer ID, so macOS Gatekeeper flags it as *"SpecLens is damaged and can't be opened. You should move it to the Trash."* This is not corruption - it's the quarantine flag on an unsigned app.
+> **macOS will claim the app "is damaged and can't be opened."** It isn't — the build is not yet code-signed, so Gatekeeper quarantines it. Clear the flag and it opens normally:
+>
+> ```sh
+> xattr -cr /Applications/SpecLens.app
+> ```
+>
+> If the `.dmg` itself refuses to mount, run the same command on the downloaded file first. (Right-click → **Open** does *not* bypass this particular error.) Proper signing and notarization are on the [roadmap](./docs/ROADMAP.md).
 
-After dragging SpecLens to `/Applications`, clear the quarantine attribute:
+Then click **Add repository** in the sidebar and pick any folder containing an `openspec/` directory.
 
-```sh
-xattr -cr /Applications/SpecLens.app
-```
+## Development
 
-If the `.dmg` itself refuses to mount, clear it first:
-
-```sh
-xattr -cr ~/Downloads/SpecLens_0.1.0_aarch64.dmg
-```
-
-The app then opens normally. (Right-click → **Open** does *not* bypass this particular error - only the `xattr` step does.) Proper signing + notarization is the long-term fix; see [`TODO.md`](./TODO.md).
-
-## Getting started
+Requires [pnpm](https://pnpm.io) and the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) (Rust toolchain).
 
 ```sh
 pnpm install
 pnpm tauri dev   # native desktop window
-pnpm dev         # browser at http://localhost:1420
+pnpm dev         # browser only, at http://localhost:1420
 ```
 
-## Scripts
+| Command          | What it does               |
+| ---------------- | -------------------------- |
+| `pnpm build`     | `tsc && vite build`        |
+| `pnpm typecheck` | `tsc --noEmit`             |
+| `pnpm check`     | Biome lint + format check  |
+| `pnpm format`    | Biome auto-format          |
 
-| Command            | What it does                                |
-| ------------------ | ------------------------------------------- |
-| `pnpm dev`         | Vite dev server (browser)                   |
-| `pnpm tauri dev`   | Tauri dev (native window)                   |
-| `pnpm build`       | `tsc && vite build`                         |
-| `pnpm typecheck`   | `tsc --noEmit`                              |
-| `pnpm check`       | Biome lint + format                         |
-| `pnpm format`      | Biome auto-format                           |
+### Stack
 
-## Project layout
+Tauri 2 (Rust) · React 19 + TypeScript + Vite · MUI + Emotion · Zustand with SQLite write-through persistence · react-markdown.
+
+### Layout
 
 ```
 src/
-├── App.tsx               # top-level layout
-├── sidebar/              # collapsible left sidebar
-├── repos/                # repository switcher
-├── specs/                # change viewer, minimap, markdown view, stats modal
-├── comments/             # right-side comments panel + selection-to-comment
-├── lib/                  # loader, stats, highlight, time helpers
-└── store/                # Zustand stores
-
-examples/                 # mock repos used until real GitHub integration lands
-├── example1/config.json  # { name, type } per repo
-├── example1/openspec/changes/...
-└── ...
-
-src-tauri/                # Rust shell + Tauri config
+├── App.tsx        # top-level layout: sidebar | header + content + comments
+├── views/         # overview, changes, specs, schemas, folder, graph, flow, timeline
+├── specs/         # change viewer, markdown rendering, minimap, stats
+├── comments/      # comments panel + selection-to-comment
+├── repos/         # repository switcher + add-repository flow
+├── sidebar/       # navigation, settings, theme toggle
+├── search/        # search palette
+├── store/         # Zustand stores + SQLite bootstrap
+└── lib/           # loaders, git-derived authorship, stats, highlighting
+src-tauri/         # Rust shell: repo walking, git log, signatures
 ```
 
-## Mock data
+`CLAUDE.md` has deeper architectural notes; `docs/ROADMAP.md` tracks what's missing.
 
-Each `examples/exampleN/` is a mock repository with a `config.json` (name + type: `private` | `organization` | `local`) and an `openspec/` tree. The repository switcher (top of the sidebar) lets you flip between them; `⌘1`..`⌘5` (or `Ctrl+1`..`Ctrl+5`) work as shortcuts.
+## License
 
-## EARS keyword highlighting
-
-Spec markdown is rendered with inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin scenario steps. Toggle it in **Settings** (gear icon, bottom of the sidebar). The fixture repo `speclens/ears-showcase` (`examples/ears-markdown-showcase/`) exercises every keyword and includes negative cases.
-
-Colors are MUI palette tokens, not hex codes - they track light/dark mode and any future theme changes automatically. Keywords are grouped by their semantic role, not by uniqueness, so a few share a token (e.g. SHOULD and THEN both use `info`).
-
-| Keyword(s)  | Role                       | MUI token        |
-| ----------- | -------------------------- | ---------------- |
-| SHALL, MUST | Mandatory - the spine of a requirement | `primary.main`   |
-| SHOULD      | Recommended - weaker than SHALL        | `info.main`      |
-| MAY         | Permitted - explicitly optional         | `secondary.main` |
-| WHEN        | Discrete event trigger     | `success.main`   |
-| WHILE       | Ongoing state              | `warning.main`   |
-| WHERE       | Feature-flag conditional   | `secondary.main` |
-| IF          | Unwanted-behavior branch   | `error.main`     |
-| THEN        | Consequence (paired with IF or scenario) | `info.main`      |
-| GIVEN, AND  | Scenario scaffolding - muted on purpose  | `text.secondary` |
-
-All matches are uppercase + word-bounded, and skipped inside `code`, `pre`, and `kbd` so code samples and keyboard hints stay neutral.
-
-Implementation: rehype plugin `rehypeEarsKeywords` in [`src/lib/earsKeywords.ts`](./src/lib/earsKeywords.ts); styling lives next to the markdown reset in [`src/specs/MarkdownView.tsx`](./src/specs/MarkdownView.tsx). Each keyword emits its own class (`ears-shall`, `ears-when`, …), so splitting a shared token into a distinct color later is a styling-only change.
-
-## Roadmap
-
-See [`TODO.md`](./TODO.md) for planned settings (max width, comments on/off, theme), foundations (i18n, tests, persistence), and features (GitHub PAT auth, real repo loading, comment threads, etc.).
-
-## See also
-
-- [`CLAUDE.md`](./CLAUDE.md) - architectural notes for working on the project with Claude Code.
+Not yet chosen — see the [roadmap](./docs/ROADMAP.md). Until a license is added, all rights reserved.
