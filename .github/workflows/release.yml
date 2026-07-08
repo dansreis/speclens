@@ -133,6 +133,36 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Exports the Apple signing/notarization env vars only when the secrets
+      # are configured: Tauri signs + notarizes when they're present and would
+      # choke on set-but-empty values. Falls back to an unsigned build with a
+      # warning so releases don't hard-depend on the certificate setup.
+      - name: Enable macOS code signing
+        if: matrix.platform == 'macos-arm64'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+            for var in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+              {
+                echo "$var<<APPLE_SECRET_EOF"
+                printenv "$var"
+                echo "APPLE_SECRET_EOF"
+              } >> "$GITHUB_ENV"
+            done
+            echo "✅ Code signing enabled"
+            if [ -z "$APPLE_ID" ]; then
+              echo "::warning::APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID missing - app will be signed but NOT notarized"
+            fi
+          else
+            echo "::warning::Apple signing secrets not configured - building unsigned dmg"
+          fi
+
       - name: Build app
         run: pnpm tauri build ${{ matrix.args }}
 
