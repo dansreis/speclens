@@ -15,7 +15,11 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
   2. app is signed + notarized (cask maintainers reject apps Gatekeeper blocks)
   3. notability bar (~75 stars / 30 forks / 30 watchers) - `brew audit --new --cask` enforces it
   then: fork `homebrew/cask`, add `Casks/s/speclens.rb` (version + sha256 + dmg URL), pass `brew audit --new --cask speclens`, open the PR; each later release gets bumped via `brew bump-cask-pr`
-- [ ] **Auto-updates** - Tauri updater plugin, once signing exists
+- [ ] **Mac App Store** (decided) - needs, beyond the Apple Developer membership:
+  1. **App Sandbox** (mandatory for MAS) with security-scoped bookmarks - the persisted `repoSources` paths are unreadable across launches under sandbox unless each user-picked folder is saved as a security-scoped bookmark and re-resolved on start (custom Rust/objc; Tauri doesn't provide this)
+  2. **Replace the `git` subprocess** - a sandboxed app can't reliably shell out to `/usr/bin/git`; port authorship derivation in `src-tauri/src/lib.rs` to an embedded library (`gitoxide` or `git2`)
+  3. MAS build + upload (`tauri build` with MAS provisioning profile/entitlements, upload via Transporter/`altool`), App Store Connect listing, review
+- [ ] **Auto-updates** - Tauri updater plugin, once signing exists (App Store copies update through Apple; updater applies to the direct/Homebrew build only)
 - [ ] **Enable branch protection once public** - requiring the `frontend` + `rust` checks needs GitHub Pro on private repos; after flipping public, run the saved `gh api .../branches/main/protection` command (see RELEASE.md history)
 
 ## Foundations
