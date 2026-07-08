@@ -1,6 +1,7 @@
 import { Box, useTheme } from "@mui/material";
 import mermaid from "mermaid";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { MermaidLightbox } from "./MermaidLightbox";
 
 interface Props {
 	code: string;
@@ -10,14 +11,16 @@ interface Props {
  * Renders a ```mermaid fenced block as an SVG diagram via the mermaid client
  * API. The container carries `data-mermaid` so the comment-highlight walker
  * and the selection handler skip the generated SVG (wrapping <mark>s inside
- * it would corrupt the diagram).
+ * it would corrupt the diagram). Clicking the diagram opens a pan/zoom
+ * lightbox.
  */
 export function MermaidDiagram({ code }: Props) {
 	const theme = useTheme();
 	const dark = theme.palette.mode === "dark";
 	const id = `mmd-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-	const ref = useRef<HTMLDivElement | null>(null);
+	const [svg, setSvg] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [lightboxOpen, setLightboxOpen] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -31,9 +34,9 @@ export function MermaidDiagram({ code }: Props) {
 		});
 		mermaid
 			.render(id, code)
-			.then(({ svg }) => {
-				if (cancelled || !ref.current) return;
-				ref.current.innerHTML = svg;
+			.then((result) => {
+				if (cancelled) return;
+				setSvg(result.svg);
 				setError(null);
 			})
 			.catch((e: unknown) => {
@@ -41,6 +44,7 @@ export function MermaidDiagram({ code }: Props) {
 				// document; drop it so it doesn't accumulate.
 				document.getElementById(id)?.remove();
 				if (!cancelled) {
+					setSvg(null);
 					setError(e instanceof Error ? e.message : String(e));
 				}
 			});
@@ -62,16 +66,32 @@ export function MermaidDiagram({ code }: Props) {
 		);
 	}
 
+	if (!svg) return <Box data-mermaid="true" sx={{ my: 2 }} />;
+
 	return (
-		<Box
-			ref={ref}
-			data-mermaid="true"
-			sx={{
-				my: 2,
-				display: "flex",
-				justifyContent: "center",
-				"& svg": { maxWidth: "100%", height: "auto" },
-			}}
-		/>
+		<>
+			<Box
+				data-mermaid="true"
+				onClick={() => setLightboxOpen(true)}
+				title="Click to expand"
+				sx={{
+					my: 2,
+					display: "flex",
+					justifyContent: "center",
+					cursor: "zoom-in",
+					borderRadius: 1,
+					transition: "background-color 150ms",
+					"&:hover": { bgcolor: "action.hover" },
+					"& svg": { maxWidth: "100%", height: "auto" },
+				}}
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: mermaid output is sanitized (securityLevel: "strict")
+				dangerouslySetInnerHTML={{ __html: svg }}
+			/>
+			<MermaidLightbox
+				svg={svg}
+				open={lightboxOpen}
+				onClose={() => setLightboxOpen(false)}
+			/>
+		</>
 	);
 }
