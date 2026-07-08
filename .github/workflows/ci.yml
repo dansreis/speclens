@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v6
         with:
@@ -37,7 +37,9 @@ jobs:
 
   rust:
     name: rust
-    runs-on: macos-latest
+    # Pinned (not macos-latest) so runner-image migrations don't change the
+    # build environment underneath us. Bump deliberately.
+    runs-on: macos-15
     defaults:
       run:
         working-directory: src-tauri
