@@ -25,3 +25,6 @@ dist-ssr
 
 # Claude Code local settings
 .claude/
+
+# Local scratchpad, intentionally unversioned
+TODO.md
