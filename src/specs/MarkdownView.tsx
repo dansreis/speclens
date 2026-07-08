@@ -16,6 +16,7 @@ import { alpha, darken } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import { SelectionPopover } from "../comments/SelectionPopover";
@@ -105,11 +106,15 @@ export function MarkdownView({
 
 	useCurrentDocument(documentId ?? null);
 
+	// Sanitize immediately after raw HTML is parsed, before our own plugins add
+	// their attributes: rehype-slug's heading ids and the EARS keyword classes
+	// must not be stripped, so those run after. The GitHub-style default schema
+	// keeps `language-*` code classes (mermaid interception) and GFM checkboxes.
 	const rehypePlugins = useMemo(
 		() =>
 			highlightEars
-				? [rehypeRaw, rehypeSlug, rehypeEarsKeywords]
-				: [rehypeRaw, rehypeSlug],
+				? [rehypeRaw, rehypeSanitize, rehypeSlug, rehypeEarsKeywords]
+				: [rehypeRaw, rehypeSanitize, rehypeSlug],
 		[highlightEars],
 	);
 
