@@ -7,11 +7,13 @@ const SECTIONS = [
 	{
 		os: "macOS",
 		icon: "🍎",
+		hint: "Requires an Apple Silicon Mac (M1 or newer).",
 		rows: [{ label: "Apple Silicon", suffix: ".dmg" }],
 	},
 	{
 		os: "Windows",
 		icon: "🪟",
+		hint: "Most PCs are x64. Pick arm64 only on Windows-on-ARM devices (e.g. Snapdragon laptops).",
 		rows: [
 			{ label: "x64 installer", suffix: "x64-setup.exe" },
 			{ label: "x64 MSI", suffix: ".msi" },
@@ -21,6 +23,7 @@ const SECTIONS = [
 	{
 		os: "Linux",
 		icon: "🐧",
+		hint: "Unsure? The AppImage runs on any distro. deb is for Debian/Ubuntu, rpm for Fedora/openSUSE.",
 		rows: [
 			{ label: "AppImage (x64)", suffix: "amd64.AppImage" },
 			{ label: "AppImage (arm64)", suffix: "aarch64.AppImage" },
@@ -36,9 +39,50 @@ function fmtSize(bytes) {
 	return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
+// Best-effort OS + architecture detection so the page can point at the right
+// build. Returns { name, suffix } or null when unsure - the full matrix below
+// is always there as the fallback.
+async function detectRecommended() {
+	const uad = navigator.userAgentData;
+	const ua = navigator.userAgent;
+	const os =
+		uad?.platform ||
+		(/Mac/i.test(ua)
+			? "macOS"
+			: /Win/i.test(ua)
+				? "Windows"
+				: /Linux/i.test(ua)
+					? "Linux"
+					: null);
+	let arm = /aarch64|arm64/i.test(ua);
+	if (uad?.getHighEntropyValues) {
+		try {
+			const v = await uad.getHighEntropyValues(["architecture"]);
+			if (v.architecture) arm = v.architecture.startsWith("arm");
+		} catch {
+			// high-entropy hints denied; keep the UA guess
+		}
+	}
+	if (/^mac/i.test(os ?? "")) {
+		return { name: "macOS (Apple Silicon)", suffix: ".dmg" };
+	}
+	if (/^win/i.test(os ?? "")) {
+		return arm
+			? { name: "Windows (arm64)", suffix: "arm64-setup.exe" }
+			: { name: "Windows (x64)", suffix: "x64-setup.exe" };
+	}
+	if (/linux/i.test(os ?? "")) {
+		return arm
+			? { name: "Linux (arm64 AppImage)", suffix: "aarch64.AppImage" }
+			: { name: "Linux (x64 AppImage)", suffix: "amd64.AppImage" };
+	}
+	return null;
+}
+
 async function renderDownloads() {
 	const grid = document.getElementById("dl-grid");
 	const versionEl = document.getElementById("dl-version");
+	const recommendedEl = document.getElementById("dl-recommended");
 	let release;
 	try {
 		const res = await fetch(
@@ -65,6 +109,7 @@ async function renderDownloads() {
 		if (!rows) return "";
 		return `<article>
 			<h3>${section.icon} ${section.os}</h3>
+			<p class="dl-hint">${section.hint}</p>
 			<ul class="dl-list">${rows}</ul>
 		</article>`;
 	}).join("");
@@ -72,6 +117,17 @@ async function renderDownloads() {
 	if (!cards) return;
 	versionEl.textContent = release.tag_name ?? "";
 	grid.innerHTML = cards;
+
+	const recommended = await detectRecommended();
+	const asset =
+		recommended && assets.find((a) => a.name.endsWith(recommended.suffix));
+	if (recommended && asset) {
+		recommendedEl.innerHTML = `
+			<a class="button primary" href="${asset.browser_download_url}">
+				Download for ${recommended.name}
+			</a>
+			<p class="dl-detected">${asset.name} · ${fmtSize(asset.size)} · detected from your browser - or pick another build below</p>`;
+	}
 }
 
 renderDownloads();

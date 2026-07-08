@@ -255,6 +255,27 @@ h2 {
 	color: var(--accent);
 }
 
+#dl-recommended {
+	text-align: center;
+	margin-bottom: 28px;
+}
+
+#dl-recommended:empty {
+	display: none;
+}
+
+.dl-detected {
+	color: var(--muted);
+	font-size: 0.8125rem;
+	margin: 10px 0 0;
+}
+
+.dl-hint {
+	color: var(--muted);
+	font-size: 0.8125rem;
+	margin: 0 0 10px;
+}
+
 .dl-fallback {
 	grid-column: 1 / -1;
 	text-align: center;
