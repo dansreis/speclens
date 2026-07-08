@@ -184,6 +184,8 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: SpecLens v${{ env.VERSION }}
           body_path: /tmp/changelog.txt
-          files: dist/*
+          # ** because multi-glob artifacts (linux, windows-x64) arrive with
+          # their bundle subdirectory structure (dist/msi/*.msi etc.) intact.
+          files: dist/**
           draft: false
           prerelease: false
