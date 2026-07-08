@@ -21,6 +21,7 @@ import { CommentsPanel } from "./comments/CommentsPanel";
 import { useDocumentOrphans } from "./lib/orphanDetection";
 import { useMinDelay } from "./lib/useMinDelay";
 import { useRepoSyncWatcher } from "./lib/useRepoSyncWatcher";
+import { TutorialDialog } from "./onboarding/TutorialDialog";
 import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SplashScreen } from "./SplashScreen";
 import { SearchPalette } from "./search/SearchPalette";
@@ -105,6 +106,15 @@ function App() {
 			reloadAllSources();
 		}
 	}, [repoSources.length, repos.length, reloadAllSources]);
+
+	// First-launch onboarding: tutorialSeen is hydrated before App mounts (see
+	// HydrationGate), so this fires exactly once per install. The dialog itself
+	// only renders after the splash early-return clears.
+	useEffect(() => {
+		if (!useAppStore.getState().tutorialSeen) {
+			useAppStore.getState().openTutorial();
+		}
+	}, []);
 
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
@@ -498,6 +508,7 @@ function App() {
 				</Box>
 			</Box>
 			<SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+			<TutorialDialog />
 		</ThemeProvider>
 	);
 }
