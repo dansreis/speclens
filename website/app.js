@@ -39,6 +39,33 @@ function fmtSize(bytes) {
 	return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
+// The releases API 404s while the repo is private, which would blank the
+// whole downloads section during local development. Mirror of the real
+// v0.2.0 assets, used only on localhost/file when the API call fails.
+const SAMPLE_VERSION = "0.2.0";
+const SAMPLE_RELEASE = {
+	tag_name: `v${SAMPLE_VERSION} (sample)`,
+	assets: [
+		{ name: `SpecLens_${SAMPLE_VERSION}_aarch64.dmg`, size: 8905631 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_x64-setup.exe`, size: 5570783 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_x64_en-US.msi`, size: 7008256 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_arm64-setup.exe`, size: 5138461 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_amd64.AppImage`, size: 85641720 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_aarch64.AppImage`, size: 83778056 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_amd64.deb`, size: 8366230 },
+		{ name: `SpecLens_${SAMPLE_VERSION}_arm64.deb`, size: 8242942 },
+		{ name: `SpecLens-${SAMPLE_VERSION}-1.x86_64.rpm`, size: 8365968 },
+		{ name: `SpecLens-${SAMPLE_VERSION}-1.aarch64.rpm`, size: 8245583 },
+	].map((a) => ({
+		...a,
+		browser_download_url: `https://github.com/${REPO}/releases/download/v${SAMPLE_VERSION}/${a.name}`,
+	})),
+};
+
+const isLocalPreview = ["localhost", "127.0.0.1", ""].includes(
+	location.hostname,
+);
+
 // Best-effort OS + architecture detection so the page can point at the right
 // build. Returns { name, suffix } or null when unsure - the full matrix below
 // is always there as the fallback.
@@ -91,7 +118,8 @@ async function renderDownloads() {
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		release = await res.json();
 	} catch {
-		return; // keep the static releases-page fallback
+		if (!isLocalPreview) return; // keep the static releases-page fallback
+		release = SAMPLE_RELEASE;
 	}
 
 	const assets = release.assets ?? [];
