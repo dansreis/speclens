@@ -75,4 +75,4 @@ src-tauri/         # Rust shell: repo walking, git log, signatures
 
 ## License
 
-Not yet chosen - see the [roadmap](./docs/ROADMAP.md). Until a license is added, all rights reserved.
+[MIT](./LICENSE)

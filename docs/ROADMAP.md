@@ -4,7 +4,6 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 
 ## Open-source readiness
 
-- [ ] **Choose a license** - nothing is published under a license yet; README says "all rights reserved" until this lands
 - [ ] **Screenshots / demo GIF in the README** - the feature list needs to be visible, not just described
 - [ ] **CONTRIBUTING.md** - dev setup exists in the README, but conventions (Biome, per-icon imports, gates) live only in CLAUDE.md
 - [ ] **Sanitize untrusted markdown** - `rehype-raw` runs with no sanitizer; fine for your own repos, unsafe for arbitrary ones. Add `rehype-sanitize` with an allowlist before encouraging strangers to open random projects
