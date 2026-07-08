@@ -217,7 +217,7 @@ export function OverviewView({ repo }: Props) {
 	const kindLabel = (kind: ActivityKind): string =>
 		typeof kind === "string" ? kind : kind.folder;
 
-	// Repo loaded but nothing SpecLens can read — usually a non-standard layout
+	// Repo loaded but nothing SpecLens can read - usually a non-standard layout
 	// (e.g. change artifacts filed under specs/, or missing spec.md files).
 	const isEmpty =
 		!!repo &&

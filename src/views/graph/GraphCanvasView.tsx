@@ -166,7 +166,7 @@ function buildGraph(
 	}
 
 	// The force layouts read collision radii from each node's `size` attribute at
-	// layout time, while sizingType-based sizing happens AFTER layout — leaving
+	// layout time, while sizingType-based sizing happens AFTER layout - leaving
 	// every node a radius-1 physics body under circles drawn at 4–12, so they
 	// overlapped. Assign degree-scaled sizes here, inflated by NODE_SPACING so
 	// circles keep clear air between them; sizingType="default" rescales back to
@@ -199,7 +199,7 @@ type LayoutOverridesProp = ComponentProps<
 // circles don't overlap. Cast because reagraph's exported `LayoutOverrides` type
 // only models the forceDirected family, though the factory forwards these keys.
 const SPREAD_OVERRIDES = {
-	// Prevents circle overlap using each node's `size` attribute — which only
+	// Prevents circle overlap using each node's `size` attribute - which only
 	// works because buildGraph assigns real sizes (unset, every node is radius 1
 	// to the physics). scalingRatio adds the extra spacing labels need (they
 	// render below the circles and are wider than them), while gravity pulls
@@ -212,7 +212,7 @@ const SPREAD_OVERRIDES = {
 } as unknown as LayoutOverridesProp;
 
 // "grouped": forceDirected2d enables clustering (capabilities vs changes), but
-// has no radius collision — so we use moderate repulsion + link distance to keep
+// has no radius collision - so we use moderate repulsion + link distance to keep
 // nodes apart, and clusterStrength to push the two clusters off each other so
 // changes and capabilities don't bleed together.
 const GROUPED_OVERRIDES: LayoutOverridesProp = {
@@ -227,12 +227,12 @@ const GROUPED_OVERRIDES: LayoutOverridesProp = {
 // (repositioning every node) on every hover re-render.
 
 // Node label styling dead ends in reagraph 4.x, so we use the built-in themes
-// as-is — they already stroke label text with the canvas color (an outline halo
+// as-is - they already stroke label text with the canvas color (an outline halo
 // that keeps names legible over edges without occluding anything):
 // - `theme.node.label.fontSize` is never forwarded to node labels (only edge and
 //   cluster labels honor it), so labels can't be shrunk.
-// - `theme.node.label.backgroundColor` draws a pill at a hardcoded z=10 — in
-//   front of nearby node circles and labels — and sizes it by a rough character
+// - `theme.node.label.backgroundColor` draws a pill at a hardcoded z=10 - in
+//   front of nearby node circles and labels - and sizes it by a rough character
 //   estimate that clips the text. Don't reintroduce it.
 // Readability instead comes from truncateLabel + the layout spacing below.
 
@@ -270,7 +270,7 @@ function HoverCard({ hover }: { hover: HoverState }) {
 		lines.push(
 			`${data.relatedCount ?? 0} change${data.relatedCount === 1 ? "" : "s"} touch this`,
 		);
-		if (data.proposed) lines.push("No spec yet — introduced by a change");
+		if (data.proposed) lines.push("No spec yet - introduced by a change");
 	} else if (data.type === "change") {
 		lines.push(
 			`${data.relatedCount ?? 0} capabilit${data.relatedCount === 1 ? "y" : "ies"}`,
