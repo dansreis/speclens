@@ -50,7 +50,7 @@ const STEPS: TutorialStep[] = [
 			<>
 				SpecLens is a reader for OpenSpec projects. It shows the proposals,
 				tasks, and specs living under a repository's{" "}
-				<Box component="code">openspec/</Box> folder — with authorship and
+				<Box component="code">openspec/</Box> folder - with authorship and
 				timestamps pulled straight from git history.
 			</>
 		),
@@ -75,8 +75,8 @@ const STEPS: TutorialStep[] = [
 			<>
 				The sidebar lists a repository's changes and specs. Each change opens
 				with <strong>proposal</strong>, <strong>tasks</strong>, and{" "}
-				<strong>specs</strong> tabs, and the other views — Overview, Flow,
-				Graph, Timeline, Schemas — give you different angles on the same
+				<strong>specs</strong> tabs, and the other views - Overview, Flow,
+				Graph, Timeline, Schemas - give you different angles on the same
 				project.
 			</>
 		),
@@ -87,7 +87,7 @@ const STEPS: TutorialStep[] = [
 		body: (
 			<>
 				Select any passage in a document to attach a comment to it. Comments
-				collect in the panel on the right, split into unresolved and resolved —
+				collect in the panel on the right, split into unresolved and resolved -
 				and clicking a comment's quote jumps you back to the highlighted text.
 			</>
 		),

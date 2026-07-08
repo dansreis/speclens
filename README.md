@@ -75,4 +75,4 @@ src-tauri/         # Rust shell: repo walking, git log, signatures
 
 ## License
 
-[Apache 2.0](./LICENSE) — note that the license does not grant rights to the SpecLens name and logo.
+[Apache 2.0](./LICENSE) - note that the license does not grant rights to the SpecLens name and logo.

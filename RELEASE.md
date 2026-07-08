@@ -1,6 +1,6 @@
 # Releasing SpecLens
 
-SpecLens follows [semantic versioning](https://semver.org). The version lives in four files that must stay in sync — `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock` — so never bump it by hand; the release script does it for you (and the release workflow fails if the files disagree).
+SpecLens follows [semantic versioning](https://semver.org). The version lives in four files that must stay in sync - `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock` - so never bump it by hand; the release script does it for you (and the release workflow fails if the files disagree).
 
 ## Cutting a release
 
@@ -13,7 +13,7 @@ SpecLens follows [semantic versioning](https://semver.org). The version lives in
 
    It bumps the version in all four files and prepends a section to `CHANGELOG.md` listing every commit since the last tag.
 
-2. **Review** — check `git diff`, tidy the changelog wording if a commit subject isn't release-note material.
+2. **Review** - check `git diff`, tidy the changelog wording if a commit subject isn't release-note material.
 
 3. **Open a release PR:**
 
@@ -34,7 +34,7 @@ SpecLens follows [semantic versioning](https://semver.org). The version lives in
    - creates the `vX.Y.Z` tag and a GitHub release, with every bundle attached
      and the changelog section as the release notes
 
-Nothing happens on merges that don't change the version — regular PRs never trigger a release.
+Nothing happens on merges that don't change the version - regular PRs never trigger a release.
 
 ## Choosing the bump
 
@@ -46,6 +46,6 @@ Nothing happens on merges that don't change the version — regular PRs never tr
 
 ## Known limitations
 
-- None of the bundles are code-signed yet — macOS users need the `xattr -cr` workaround described in the README, and Windows SmartScreen will warn on the installer. Signing/notarization and Homebrew distribution are tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
+- None of the bundles are code-signed yet - macOS users need the `xattr -cr` workaround described in the README, and Windows SmartScreen will warn on the installer. Signing/notarization and Homebrew distribution are tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
 - macOS is Apple Silicon only (`aarch64`); an Intel (`x86_64-apple-darwin`) build is a roadmap item.
 - Linux/Windows arm64 build on GitHub's arm64 standard runners (`ubuntu-22.04-arm`, `windows-11-arm`), available in private repos since January 2026 (2 vCPUs there, so those legs are slower).
