@@ -30,12 +30,15 @@ export interface AppSettings {
 	highlightColor: string;
 	/** Width of the comments panel in px. */
 	commentsPanelWidth: number;
+	/** Width of the left navigation sidebar in px (expanded mode only). */
+	sidebarWidth: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
 	readingWpm: 200,
 	highlightColor: "#fde047",
 	commentsPanelWidth: 340,
+	sidebarWidth: 240,
 };
 
 /** Preset highlight colors offered in the settings dialog. */
@@ -70,6 +73,12 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			r.commentsPanelWidth <= 640
 				? r.commentsPanelWidth
 				: DEFAULT_SETTINGS.commentsPanelWidth,
+		sidebarWidth:
+			typeof r.sidebarWidth === "number" &&
+			r.sidebarWidth >= 180 &&
+			r.sidebarWidth <= 400
+				? r.sidebarWidth
+				: DEFAULT_SETTINGS.sidebarWidth,
 	};
 }
 

@@ -17,9 +17,13 @@ import {
 	Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { RepositorySwitcher } from "../repos/RepositorySwitcher";
-import { type AppView, useAppStore } from "../store/useAppStore";
+import {
+	type AppView,
+	DEFAULT_SETTINGS,
+	useAppStore,
+} from "../store/useAppStore";
 import { SidebarFooter } from "./SidebarFooter";
 
 interface NavItem {
@@ -63,8 +67,10 @@ function folderLabel(name: string): string {
 	return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-const EXPANDED_WIDTH = 240;
 const COLLAPSED_WIDTH = 64;
+// Drag-resize bounds; must match the sidebarWidth clamp in sanitizeSettings.
+const MIN_WIDTH = 180;
+const MAX_WIDTH = 400;
 
 interface ResolvedNavItem {
 	key: string;
@@ -160,7 +166,38 @@ export function AppSidebar() {
 		setSelectedSpec,
 		setSelectedSchema,
 	]);
-	const width = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
+	const sidebarWidth = useAppStore((s) => s.settings.sidebarWidth);
+	const setSetting = useAppStore((s) => s.setSetting);
+	const [resizing, setResizing] = useState(false);
+	const width = collapsed ? COLLAPSED_WIDTH : sidebarWidth;
+
+	const handleResizeStart = (e: React.PointerEvent<HTMLElement>) => {
+		// preventDefault stops a text selection from starting mid-drag.
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = useAppStore.getState().settings.sidebarWidth;
+		const handle = e.currentTarget;
+		handle.setPointerCapture(e.pointerId);
+		setResizing(true);
+		const onMove = (ev: PointerEvent) => {
+			const w = Math.round(
+				Math.min(
+					MAX_WIDTH,
+					Math.max(MIN_WIDTH, startWidth + ev.clientX - startX),
+				),
+			);
+			useAppStore.getState().setSetting("sidebarWidth", w);
+		};
+		const onUp = () => {
+			setResizing(false);
+			handle.removeEventListener("pointermove", onMove);
+			handle.removeEventListener("pointerup", onUp);
+			handle.removeEventListener("pointercancel", onUp);
+		};
+		handle.addEventListener("pointermove", onMove);
+		handle.addEventListener("pointerup", onUp);
+		handle.addEventListener("pointercancel", onUp);
+	};
 
 	return (
 		<Box
@@ -173,10 +210,37 @@ export function AppSidebar() {
 				display: "flex",
 				flexDirection: "column",
 				bgcolor: "background.paper",
-				transition: "width 200ms ease-in-out",
+				// The collapse toggle animates; dragging must track the cursor 1:1.
+				transition: resizing ? "none" : "width 200ms ease-in-out",
 				overflow: "hidden",
+				position: "relative",
 			}}
 		>
+			{!collapsed && (
+				<Box
+					onPointerDown={handleResizeStart}
+					onDoubleClick={() =>
+						setSetting("sidebarWidth", DEFAULT_SETTINGS.sidebarWidth)
+					}
+					aria-label="Resize sidebar"
+					sx={{
+						position: "absolute",
+						top: 0,
+						right: 0,
+						bottom: 0,
+						width: 5,
+						cursor: "col-resize",
+						zIndex: 1,
+						bgcolor: resizing
+							? (t) => alpha(t.palette.primary.main, 0.3)
+							: "transparent",
+						transition: "background-color 150ms",
+						"&:hover": {
+							bgcolor: (t) => alpha(t.palette.primary.main, 0.2),
+						},
+					}}
+				/>
+			)}
 			<Box
 				sx={{
 					px: 1,
