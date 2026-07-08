@@ -71,7 +71,7 @@ src/
 src-tauri/         # Rust shell: repo walking, git log, signatures
 ```
 
-`CLAUDE.md` has deeper architectural notes; `docs/ROADMAP.md` tracks what's missing.
+`CLAUDE.md` has deeper architectural notes; `docs/ROADMAP.md` tracks what's missing; `RELEASE.md` describes how releases are cut.
 
 ## License
 

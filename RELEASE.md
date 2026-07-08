@@ -1,0 +1,46 @@
+# Releasing SpecLens
+
+SpecLens follows [semantic versioning](https://semver.org). The version lives in four files that must stay in sync — `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock` — so never bump it by hand; the release script does it for you (and the release workflow fails if the files disagree).
+
+## Cutting a release
+
+1. **Run the release script** from a clean `main`:
+
+   ```sh
+   pnpm create-release          # interactive, or:
+   pnpm create-release patch    # patch | minor | major
+   ```
+
+   It bumps the version in all four files and prepends a section to `CHANGELOG.md` listing every commit since the last tag.
+
+2. **Review** — check `git diff`, tidy the changelog wording if a commit subject isn't release-note material.
+
+3. **Open a release PR:**
+
+   ```sh
+   git checkout -b release/vX.Y.Z
+   git add -A && git commit -m "chore: release vX.Y.Z"
+   git push origin release/vX.Y.Z
+   ```
+
+   CI (Biome, typecheck, build, cargo fmt/clippy) must pass like on any other PR.
+
+4. **Merge to main.** The `Release` workflow notices the version change in `package.json` and takes it from there:
+   - verifies the version files are in sync
+   - builds the app (`pnpm tauri build`, currently `aarch64-apple-darwin`)
+   - creates the `vX.Y.Z` tag and a GitHub release, with the `.dmg` attached and the changelog section as the release notes
+
+Nothing happens on merges that don't change the version — regular PRs never trigger a release.
+
+## Choosing the bump
+
+| Type  | When                                              |
+| ----- | ------------------------------------------------- |
+| patch | Bug fixes, dependency updates, docs               |
+| minor | New features, backwards compatible                |
+| major | Breaking changes (data format, settings schema)   |
+
+## Known limitations
+
+- The `.dmg` is not code-signed or notarized yet — users need the `xattr -cr` workaround described in the README. Signing/notarization and Homebrew distribution are tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
+- Only Apple Silicon macOS is built. Intel/Windows/Linux targets are roadmap items.

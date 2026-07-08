@@ -6,14 +6,13 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 
 - [ ] **Screenshots / demo GIF in the README** - the feature list needs to be visible, not just described
 - [ ] **CONTRIBUTING.md** - dev setup exists in the README, but conventions (Biome, per-icon imports, gates) live only in CLAUDE.md
-- [ ] **Sanitize untrusted markdown** - `rehype-raw` runs with no sanitizer; fine for your own repos, unsafe for arbitrary ones. Add `rehype-sanitize` with an allowlist before encouraging strangers to open random projects
 
 ## Distribution
 
 - [ ] **Code signing + notarization (macOS)** - removes the `xattr -cr` workaround, the biggest first-run papercut
 - [ ] **Ship through Homebrew** - `brew install --cask speclens`; needs a versioned release artifact and a cask formula (own tap first, `homebrew/cask` once there's traction)
-- [ ] **CI release pipeline** - GitHub Actions building the `.dmg` (and future targets) on tag push
 - [ ] **Auto-updates** - Tauri updater plugin, once signing exists
+- [ ] **Enable branch protection once public** - requiring the `frontend` + `rust` checks needs GitHub Pro on private repos; after flipping public, run the saved `gh api .../branches/main/protection` command (see RELEASE.md history)
 - [ ] **Windows / Linux builds** - nothing platform-specific in the code; needs icons, testing, and CI targets
 
 ## Foundations
