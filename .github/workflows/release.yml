@@ -2,7 +2,8 @@ name: Release
 
 # Builds and publishes a GitHub release when the version in package.json
 # changes on main (i.e. when a release PR created by `pnpm create-release`
-# is merged). See RELEASE.md for the full flow.
+# is merged). Bundles are built per-platform (macOS, Linux, Windows) and
+# attached to the release together. See RELEASE.md for the full flow.
 on:
   push:
     branches: [main]
@@ -43,27 +44,74 @@ jobs:
             echo "✅ First commit, version: $CURRENT_VERSION"
           fi
 
-  release:
-    needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true'
-    # Pinned (not macos-latest) so runner-image migrations don't change the
-    # release build environment underneath us. arm64 → aarch64-apple-darwin.
-    runs-on: macos-15
-    permissions:
-      contents: write
-    env:
-      VERSION: ${{ needs.check-version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v6
-
       - name: Verify version files are in sync
         run: |
+          VERSION=$(node -p "require('./package.json').version")
           TAURI_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           if [ "$VERSION" != "$TAURI_VERSION" ]; then
             echo "❌ package.json ($VERSION) and tauri.conf.json ($TAURI_VERSION) disagree."
             echo "Run 'pnpm create-release' instead of editing versions by hand."
             exit 1
           fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.version_changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Runners are pinned (not *-latest) so runner-image migrations don't
+          # change the build environment underneath us. Bump deliberately.
+          # macos-15 is arm64 → aarch64-apple-darwin.
+          - platform: macos-arm64
+            os: macos-15
+            bundles: |
+              src-tauri/target/release/bundle/dmg/*.dmg
+          # ubuntu-22.04 (not 24.04): AppImages link against the build host's
+          # glibc, so building on the older LTS keeps them runnable on more
+          # distros.
+          - platform: linux-x86_64
+            os: ubuntu-22.04
+            bundles: |
+              src-tauri/target/release/bundle/appimage/*.AppImage
+              src-tauri/target/release/bundle/deb/*.deb
+              src-tauri/target/release/bundle/rpm/*.rpm
+          - platform: linux-arm64
+            os: ubuntu-22.04-arm
+            bundles: |
+              src-tauri/target/release/bundle/appimage/*.AppImage
+              src-tauri/target/release/bundle/deb/*.deb
+              src-tauri/target/release/bundle/rpm/*.rpm
+          - platform: windows-x86_64
+            os: windows-2022
+            bundles: |
+              src-tauri/target/release/bundle/msi/*.msi
+              src-tauri/target/release/bundle/nsis/*.exe
+          # WiX (msi) doesn't support arm64; NSIS does, so bundle only that.
+          - platform: windows-arm64
+            os: windows-11-arm
+            args: --bundles nsis
+            bundles: |
+              src-tauri/target/release/bundle/nsis/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Linux system dependencies
+        if: contains(matrix.platform, 'linux')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
 
       - uses: pnpm/action-setup@v6
 
@@ -82,7 +130,34 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build app
-        run: pnpm tauri build
+        run: pnpm tauri build ${{ matrix.args }}
+
+      - name: Upload bundles
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundles-${{ matrix.platform }}
+          path: ${{ matrix.bundles }}
+          if-no-files-found: error
+
+  release:
+    needs: [check-version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download all bundles
+        uses: actions/download-artifact@v8
+        with:
+          pattern: bundles-*
+          path: dist
+          merge-multiple: true
+
+      - name: List bundles
+        run: ls -laR dist
 
       - name: Extract changelog for this version
         run: |
@@ -105,7 +180,6 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: SpecLens v${{ env.VERSION }}
           body_path: /tmp/changelog.txt
-          files: |
-            src-tauri/target/release/bundle/dmg/*.dmg
+          files: dist/*
           draft: false
           prerelease: false

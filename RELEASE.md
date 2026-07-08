@@ -27,8 +27,12 @@ SpecLens follows [semantic versioning](https://semver.org). The version lives in
 
 4. **Merge to main.** The `Release` workflow notices the version change in `package.json` and takes it from there:
    - verifies the version files are in sync
-   - builds the app (`pnpm tauri build`, currently `aarch64-apple-darwin`)
-   - creates the `vX.Y.Z` tag and a GitHub release, with the `.dmg` attached and the changelog section as the release notes
+   - builds the app (`pnpm tauri build`) on all platforms in parallel:
+     macOS (`aarch64` → `.dmg`), Linux `x86_64` + `arm64` (on Ubuntu 22.04 →
+     `.AppImage`, `.deb`, `.rpm` each) and Windows `x86_64` (→ `.msi`, NSIS
+     `.exe`) + `arm64` (→ NSIS `.exe` only; WiX/msi doesn't support arm64)
+   - creates the `vX.Y.Z` tag and a GitHub release, with every bundle attached
+     and the changelog section as the release notes
 
 Nothing happens on merges that don't change the version — regular PRs never trigger a release.
 
@@ -42,5 +46,6 @@ Nothing happens on merges that don't change the version — regular PRs never tr
 
 ## Known limitations
 
-- The `.dmg` is not code-signed or notarized yet — users need the `xattr -cr` workaround described in the README. Signing/notarization and Homebrew distribution are tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
-- Only Apple Silicon macOS is built. Intel/Windows/Linux targets are roadmap items.
+- None of the bundles are code-signed yet — macOS users need the `xattr -cr` workaround described in the README, and Windows SmartScreen will warn on the installer. Signing/notarization and Homebrew distribution are tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
+- macOS is Apple Silicon only (`aarch64`); an Intel (`x86_64-apple-darwin`) build is a roadmap item.
+- Linux/Windows arm64 build on GitHub's arm64 standard runners (`ubuntu-22.04-arm`, `windows-11-arm`), available in private repos since January 2026 (2 vCPUs there, so those legs are slower).
