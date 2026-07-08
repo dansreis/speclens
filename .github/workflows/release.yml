@@ -46,7 +46,9 @@ jobs:
   release:
     needs: check-version
     if: needs.check-version.outputs.version_changed == 'true'
-    runs-on: macos-latest # arm64 → aarch64-apple-darwin bundle
+    # Pinned (not macos-latest) so runner-image migrations don't change the
+    # release build environment underneath us. arm64 → aarch64-apple-darwin.
+    runs-on: macos-15
     permissions:
       contents: write
     env:
@@ -63,7 +65,7 @@ jobs:
             exit 1
           fi
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v6
         with:
