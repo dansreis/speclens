@@ -16,7 +16,7 @@ Reads OpenSpec projects from local folders at runtime via a Tauri command. Users
 - **Tauri `load_repo(path)` command** in `src-tauri/src/lib.rs` loads one project: walks its `openspec/` subtree, reads markdown + yaml, and (when a `.git/` exists at the project root or its immediate parent - see `find_git_root`) runs `git log --follow` per file to derive `DocAuthorship`. The walk is intentionally capped at one level up so that loading a folder from inside an unrelated git checkout (e.g. somewhere under `~`) doesn't pull authorship from that repo. JS calls the command once per source and catches per-source errors to mark `missing: true`. **Git is optional** - when absent, `Change.authorship`, `createdAt`, and `archivedAt` are `null` and the UI degrades gracefully.
 - **Per-repo cold-start cache.** Each `load_repo` response includes a `signature` (git: `HEAD-sha + scoped porcelain status` hash; non-git: hash of `openspec/` file mtimes). The fast Tauri command `repo_signature(path)` returns the signature alone (no file reads). On cold start, `reloadAllSources` fetches the signature first; if it matches the cached entry in SQLite (`repo_cache` table, keyed by path), the saved `Repo` is used as-is - no walking, no git log. Mismatch → full reload + cache overwrite. See `src/lib/repoCache.ts` (thin wrapper over `src/lib/db.ts`). Dates in cached entries get revived (JSON round-trip loses the `Date` type).
 - **`@tauri-apps/plugin-dialog`** powers the "Add repository" folder picker (capability `dialog:default`).
-- **No i18n, no tests** - deferred. See `TODO.md`. (Comment persistence is done - SQLite.)
+- **No i18n, no tests** - deferred. See `docs/ROADMAP.md`. (Comment persistence is done - SQLite.)
 
 ## Gates
 
@@ -99,4 +99,4 @@ When `.git/` is absent, the command still returns a `RepoPayload` with file cont
 
 ## When in doubt
 
-Read `TODO.md` - every hardcoded value flagged as "should be configurable" plus the broader roadmap.
+Read `docs/ROADMAP.md` - every hardcoded value flagged as "should be configurable" plus the broader roadmap.
