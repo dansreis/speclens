@@ -1,7 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import ComputerIcon from "@mui/icons-material/Computer";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
-import FolderIcon from "@mui/icons-material/Folder";
 import FolderOffIcon from "@mui/icons-material/FolderOff";
 import GroupIcon from "@mui/icons-material/Group";
 import LockIcon from "@mui/icons-material/Lock";
@@ -145,20 +144,15 @@ export function RepositorySwitcher({ collapsed = false }: SwitcherProps) {
 			}}
 		>
 			<Box
+				component="img"
+				src="/speclens.png"
+				alt=""
 				sx={{
 					width: 32,
 					height: 32,
-					borderRadius: 1,
-					bgcolor: active ? "primary.main" : "action.disabledBackground",
-					color: active ? "primary.contrastText" : "text.disabled",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
 					flexShrink: 0,
 				}}
-			>
-				<FolderIcon sx={{ fontSize: 18 }} />
-			</Box>
+			/>
 			{!collapsed && (
 				<>
 					<Box
