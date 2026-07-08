@@ -9,6 +9,9 @@ on:
     branches: [main]
     paths:
       - "package.json"
+  # Manual escape hatch: re-release the current version, e.g. after fixing a
+  # broken build leg without bumping the version again.
+  workflow_dispatch:
 
 jobs:
   check-version:
@@ -56,7 +59,7 @@ jobs:
 
   build:
     needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true'
+    if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -111,7 +114,8 @@ jobs:
             libxdo-dev \
             libssl-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            xdg-utils
 
       - uses: pnpm/action-setup@v6
 
