@@ -224,7 +224,7 @@ export function MarkdownView({
 	);
 
 	// Re-run only when the rendered DOM or the highlight targets/scroll intent
-	// change — crucially NOT on every render. Hover/selection state changes must
+	// change - crucially NOT on every render. Hover/selection state changes must
 	// not re-trigger the clear+rewrap DOM surgery below, which otherwise reflows
 	// code blocks and collapses an in-progress text selection before a comment can
 	// be added. `source` and `highlightEars` are read here because they change the

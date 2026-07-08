@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Captured when this module is first imported — i.e. at app launch — so the
+// Captured when this module is first imported - i.e. at app launch - so the
 // elapsed time spans bootstrap + initial load, not just when a hook mounts.
 const APP_START = Date.now();
 

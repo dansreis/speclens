@@ -161,7 +161,7 @@ function App() {
 	// landing in the same microtask are coalesced into ONE entry holding the
 	// state before the first write: click handlers navigate in several store
 	// writes (e.g. setView + setSelectedChangeKey), and pushing each one would
-	// make "back" restore the intermediate write — the half-navigated state —
+	// make "back" restore the intermediate write - the half-navigated state -
 	// instead of the view the user actually came from.
 	useEffect(() => {
 		let pending: NavSnapshot | null = null;

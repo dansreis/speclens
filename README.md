@@ -2,29 +2,29 @@
   <img src="./docs/assets/logo.png" alt="SpecLens" width="360" />
 
   <p><strong>A desktop reader for <a href="https://github.com/Fission-AI/OpenSpec">OpenSpec</a> projects.</strong><br />
-  Browse changes, trace how requirements evolved, and comment on specs — all from local folders.</p>
+  Browse changes, trace how requirements evolved, and comment on specs - all from local folders.</p>
 </div>
 
 ---
 
 SpecLens reads the OpenSpec convention (`proposal.md` / `tasks.md` / `specs/<capability>/spec.md` under `openspec/changes/<change-slug>/`) straight from folders on your machine. Point it at any repository that uses OpenSpec and it gives you a reading experience the raw markdown can't:
 
-- **Changes browser** — active and archived changes with tabs for proposal, tasks, design, and spec deltas, plus task-completion progress.
-- **Timeline** — changes laid out chronologically, derived from git history.
-- **Graph & Flow views** — how capabilities, changes, and specs relate to each other.
-- **Specs & Schemas views** — the current state of every capability, and the schema that generated it.
-- **Authorship** — when a project is a git repository, SpecLens runs `git log` per document to show who created and last edited each change. Without git it degrades gracefully.
-- **Comments** — select any text to attach a comment; highlights persist locally (SQLite) and can be exported as markdown, ready to paste into an LLM conversation.
-- **EARS keyword highlighting** — inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin steps (toggle in Settings).
-- **Reader comforts** — minimap with table of contents, document stats and reading time, search palette, Mermaid diagram rendering, zoom, light/dark theme.
+- **Changes browser** - active and archived changes with tabs for proposal, tasks, design, and spec deltas, plus task-completion progress.
+- **Timeline** - changes laid out chronologically, derived from git history.
+- **Graph & Flow views** - how capabilities, changes, and specs relate to each other.
+- **Specs & Schemas views** - the current state of every capability, and the schema that generated it.
+- **Authorship** - when a project is a git repository, SpecLens runs `git log` per document to show who created and last edited each change. Without git it degrades gracefully.
+- **Comments** - select any text to attach a comment; highlights persist locally (SQLite) and can be exported as markdown, ready to paste into an LLM conversation.
+- **EARS keyword highlighting** - inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin steps (toggle in Settings).
+- **Reader comforts** - minimap with table of contents, document stats and reading time, search palette, Mermaid diagram rendering, zoom, light/dark theme.
 
-Everything is local. No accounts, no GitHub integration, no network calls — SpecLens only reads the folders you add.
+Everything is local. No accounts, no GitHub integration, no network calls - SpecLens only reads the folders you add.
 
 ## Install
 
 Grab the `.dmg` from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`.
 
-> **macOS will claim the app "is damaged and can't be opened."** It isn't — the build is not yet code-signed, so Gatekeeper quarantines it. Clear the flag and it opens normally:
+> **macOS will claim the app "is damaged and can't be opened."** It isn't - the build is not yet code-signed, so Gatekeeper quarantines it. Clear the flag and it opens normally:
 >
 > ```sh
 > xattr -cr /Applications/SpecLens.app
@@ -75,4 +75,4 @@ src-tauri/         # Rust shell: repo walking, git log, signatures
 
 ## License
 
-Not yet chosen — see the [roadmap](./docs/ROADMAP.md). Until a license is added, all rights reserved.
+Not yet chosen - see the [roadmap](./docs/ROADMAP.md). Until a license is added, all rights reserved.
