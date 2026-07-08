@@ -11,9 +11,19 @@
 	<meta property="og:type" content="website" />
 	<link rel="icon" type="image/png" href="assets/icon.png" />
 	<link rel="stylesheet" href="styles.css" />
+	<!-- Apply the saved theme before first paint to avoid a flash. -->
+	<script>
+		const saved = localStorage.getItem("theme");
+		if (saved === "light" || saved === "dark") {
+			document.documentElement.dataset.theme = saved;
+		}
+	</script>
 	<script src="app.js" defer></script>
 </head>
 <body>
+	<button id="theme-toggle" type="button" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+		<span class="icon-dark">🌙</span><span class="icon-light">☀️</span>
+	</button>
 	<header class="hero">
 		<img class="hero-icon" src="assets/icon.png" alt="" width="120" height="120" />
 		<h1>SpecLens</h1>
@@ -36,6 +46,7 @@
 			with the embed iframe instead.
 		-->
 		<section class="demo" id="demo">
+			<!-- biome-ignore lint/a11y/useMediaCaption: demo not recorded yet; add a captions track alongside the final video -->
 			<video controls preload="metadata" poster="assets/demo-poster.png">
 				<source src="assets/demo.mp4" type="video/mp4" />
 				Your browser doesn't support embedded video —
@@ -67,6 +78,10 @@
 					<p>Select any passage to attach a comment. Unresolved/resolved workflow, quote-click jumps back to the highlighted text — stored locally in SQLite.</p>
 				</article>
 				<article>
+					<h3>🤖 LLM-ready export</h3>
+					<p>Copy your review comments as structured markdown — quotes, authors, and status included — and paste them straight into your preferred LLM or coding agent.</p>
+				</article>
+				<article>
 					<h3>✍️ Git-derived attribution</h3>
 					<p>Who created and last edited every document, straight from <code>git log</code>. Works with any repo; degrades gracefully without one.</p>
 				</article>
@@ -77,6 +92,10 @@
 				<article>
 					<h3>🔒 Local-first</h3>
 					<p>Point it at folders on your machine. No accounts, no cloud, no telemetry — your specs never leave your disk.</p>
+				</article>
+				<article>
+					<h3>🎨 Make it yours</h3>
+					<p>Dark and light themes, resizable sidebar and comments panel, reading-speed and highlight-color settings, document zoom.</p>
 				</article>
 			</div>
 		</section>

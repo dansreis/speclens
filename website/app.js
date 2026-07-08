@@ -75,3 +75,16 @@ async function renderDownloads() {
 }
 
 renderDownloads();
+
+// Dark/light toggle: follows the system preference until the user overrides;
+// the override persists in localStorage (applied pre-paint by the inline
+// script in index.html).
+document.getElementById("theme-toggle")?.addEventListener("click", () => {
+	const root = document.documentElement;
+	const effective =
+		root.dataset.theme ||
+		(matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+	const next = effective === "dark" ? "light" : "dark";
+	root.dataset.theme = next;
+	localStorage.setItem("theme", next);
+});

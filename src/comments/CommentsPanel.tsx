@@ -211,6 +211,12 @@ function commentsToMarkdown(
 	const lines: string[] = [];
 	lines.push(`# Comments - ${repoName} - ${scopeLabel(scope)}`);
 	lines.push("");
+	// Preamble so the export can be pasted into an LLM as-is: tells the model
+	// what the content is and how quotes relate to the documents.
+	lines.push(
+		`Reviewer comments exported from SpecLens on the OpenSpec documents of "${repoName}". Each comment may include a quoted passage from the document it refers to; use the quote to locate the relevant context.`,
+	);
+	lines.push("");
 	const byDoc = new Map<string, AppComment[]>();
 	for (const c of comments) {
 		const k = `${c.documentKind}::${c.documentId ?? "Repo-level"}`;
