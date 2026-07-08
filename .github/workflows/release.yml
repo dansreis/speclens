@@ -1,0 +1,109 @@
+name: Release
+
+# Builds and publishes a GitHub release when the version in package.json
+# changes on main (i.e. when a release PR created by `pnpm create-release`
+# is merged). See RELEASE.md for the full flow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.check.outputs.version_changed }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2 # need the previous commit to compare against
+
+      - name: Check if version changed
+        id: check
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            PREVIOUS_VERSION=$(git show HEAD~1:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+            echo "Previous version: $PREVIOUS_VERSION"
+
+            if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+              echo "version_changed=true" >> $GITHUB_OUTPUT
+              echo "✅ Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            else
+              echo "version_changed=false" >> $GITHUB_OUTPUT
+              echo "ℹ️ Version unchanged: $CURRENT_VERSION"
+            fi
+          else
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ First commit, version: $CURRENT_VERSION"
+          fi
+
+  release:
+    needs: check-version
+    if: needs.check-version.outputs.version_changed == 'true'
+    runs-on: macos-latest # arm64 → aarch64-apple-darwin bundle
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify version files are in sync
+        run: |
+          TAURI_VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "$VERSION" != "$TAURI_VERSION" ]; then
+            echo "❌ package.json ($VERSION) and tauri.conf.json ($TAURI_VERSION) disagree."
+            echo "Run 'pnpm create-release' instead of editing versions by hand."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build app
+        run: pnpm tauri build
+
+      - name: Extract changelog for this version
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            # Section between this version's header and the next "## [" header
+            sed -n "/^## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '1d;$d' > /tmp/changelog.txt
+            # Last (or only) section has no trailing header to stop at
+            if [ ! -s /tmp/changelog.txt ]; then
+              sed -n "/^## \[$VERSION\]/,\$p" CHANGELOG.md | tail -n +2 > /tmp/changelog.txt
+            fi
+          fi
+          if [ ! -s /tmp/changelog.txt ]; then
+            echo "Release $VERSION" > /tmp/changelog.txt
+          fi
+          cat /tmp/changelog.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: SpecLens v${{ env.VERSION }}
+          body_path: /tmp/changelog.txt
+          files: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+          draft: false
+          prerelease: false
