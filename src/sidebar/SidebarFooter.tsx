@@ -1,6 +1,7 @@
 import CheckIcon from "@mui/icons-material/Check";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import PlayCircleOutlinedIcon from "@mui/icons-material/PlayCircleOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
@@ -64,7 +65,13 @@ export function SidebarFooter({ collapsed = false }: Props) {
 	const settings = useAppStore((s) => s.settings);
 	const setSetting = useAppStore((s) => s.setSetting);
 	const resetSettings = useAppStore((s) => s.resetSettings);
+	const openTutorial = useAppStore((s) => s.openTutorial);
 	const [settingsOpen, setSettingsOpen] = useState(false);
+
+	const handleShowTutorial = () => {
+		setSettingsOpen(false);
+		openTutorial();
+	};
 
 	const handleReset = () => {
 		resetSettings();
@@ -235,6 +242,20 @@ export function SidebarFooter({ collapsed = false }: Props) {
 								</Box>
 							}
 						/>
+
+						<SettingRow
+							title="Tutorial"
+							caption="Replay the quick tour of SpecLens shown on first launch."
+						>
+							<Button
+								onClick={handleShowTutorial}
+								startIcon={<PlayCircleOutlinedIcon />}
+								variant="outlined"
+								size="small"
+							>
+								Show tutorial
+							</Button>
+						</SettingRow>
 					</Stack>
 				</DialogContent>
 				<DialogActions sx={{ justifyContent: "space-between", px: 3 }}>

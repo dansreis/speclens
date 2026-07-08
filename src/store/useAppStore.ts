@@ -178,6 +178,13 @@ interface AppState {
 	highlightEars: boolean;
 	toggleHighlightEars: () => void;
 
+	/** Whether the onboarding tutorial has been shown at least once (persisted). */
+	tutorialSeen: boolean;
+	/** Whether the tutorial dialog is currently open (not persisted). */
+	tutorialOpen: boolean;
+	openTutorial: () => void;
+	closeTutorial: () => void;
+
 	settings: AppSettings;
 	setSetting: <K extends keyof AppSettings>(
 		key: K,
@@ -499,6 +506,13 @@ export const useAppStore = create<AppState>()(
 		highlightEars: true,
 		toggleHighlightEars: () =>
 			set((state) => ({ highlightEars: !state.highlightEars })),
+
+		tutorialSeen: false,
+		tutorialOpen: false,
+		openTutorial: () => set({ tutorialOpen: true }),
+		// Closing always marks the tutorial as seen so it never auto-opens again,
+		// whether the user finished it or dismissed it early.
+		closeTutorial: () => set({ tutorialOpen: false, tutorialSeen: true }),
 
 		settings: DEFAULT_SETTINGS,
 		setSetting: (key, value) =>

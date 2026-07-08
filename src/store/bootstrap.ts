@@ -18,6 +18,7 @@ const KV_KEYS = [
 	"selectedRepoId",
 	"markdownZoom",
 	"highlightEars",
+	"tutorialSeen",
 	"settings",
 ] as const;
 type KvKey = (typeof KV_KEYS)[number];
@@ -48,6 +49,7 @@ export function bootstrap(): Promise<void> {
 			selectedRepoId: string | null;
 			markdownZoom: number;
 			highlightEars: boolean;
+			tutorialSeen: boolean;
 			settings: AppSettings;
 		}> = {};
 		if (kv.themeMode === "light" || kv.themeMode === "dark") {
@@ -64,6 +66,9 @@ export function bootstrap(): Promise<void> {
 		}
 		if (typeof kv.highlightEars === "boolean") {
 			patch.highlightEars = kv.highlightEars;
+		}
+		if (typeof kv.tutorialSeen === "boolean") {
+			patch.tutorialSeen = kv.tutorialSeen;
 		}
 		if (kv.settings !== undefined) {
 			patch.settings = sanitizeSettings(kv.settings);
@@ -128,6 +133,10 @@ function attachWriteThrough(): void {
 	useAppStore.subscribe(
 		(s) => s.highlightEars,
 		(v) => writeKv("highlightEars", v),
+	);
+	useAppStore.subscribe(
+		(s) => s.tutorialSeen,
+		(v) => writeKv("tutorialSeen", v),
 	);
 	useAppStore.subscribe(
 		(s) => s.settings,
