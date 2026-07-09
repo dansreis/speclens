@@ -20,6 +20,26 @@ SpecLens reads the OpenSpec convention (`proposal.md` / `tasks.md` / `specs/<cap
 
 Everything is local. No accounts, no GitHub integration, no network calls - SpecLens only reads the folders you add.
 
+## Demo
+
+<!-- For an inline video player: edit this file on github.com and drag
+     website/assets/demo-1920.mp4 into the editor - GitHub uploads it and
+     inserts a user-attachments URL that renders as a player. Replace the
+     linked poster below with that. -->
+
+[![SpecLens demo video](./website/assets/demo-poster.png)](./website/assets/demo-1920.mp4)
+
+<sub>Click through for the full 2-minute demo.</sub>
+
+## A quick look
+
+| | |
+| --- | --- |
+| ![Overview dashboard](./docs/screenshots/overview.png) <br/><sub>**Overview** - specs, changes, and reading time at a glance</sub> | ![Changes browser](./docs/screenshots/changes.png) <br/><sub>**Changes browser** - active and archived, with task progress</sub> |
+| ![Proposal view](./docs/screenshots/proposal.png) <br/><sub>**Proposal reading** - tabs for proposal, specs, and tasks with git-derived attribution</sub> | ![Comments](./docs/screenshots/comments.png) <br/><sub>**Comments** - select text to comment; export as markdown for an LLM</sub> |
+| ![Flow view](./docs/screenshots/flow.png) <br/><sub>**Flow** - how changes touched each capability over time</sub> | ![Graph view](./docs/screenshots/graph.png) <br/><sub>**Graph** - capabilities, changes, and specs as a network</sub> |
+| ![Timeline view](./docs/screenshots/timeline.png) <br/><sub>**Timeline** - every change laid out chronologically from git history</sub> | ![EARS highlighting](./docs/screenshots/ears-spec.png) <br/><sub>**Spec deltas** - EARS keywords highlighted, table of contents on the side</sub> |
+
 ## Install
 
 Grab the `.dmg` from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`. Builds are signed and notarized, so it opens without any Gatekeeper warnings.
