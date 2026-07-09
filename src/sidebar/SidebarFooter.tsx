@@ -1,5 +1,6 @@
 import CheckIcon from "@mui/icons-material/Check";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import PlayCircleOutlinedIcon from "@mui/icons-material/PlayCircleOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
@@ -23,6 +24,7 @@ import {
 import { alpha } from "@mui/material/styles";
 import { useState } from "react";
 import { HIGHLIGHT_COLORS, useAppStore } from "../store/useAppStore";
+import { AboutDialog } from "./AboutDialog";
 
 interface Props {
 	collapsed?: boolean;
@@ -67,6 +69,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 	const resetSettings = useAppStore((s) => s.resetSettings);
 	const openTutorial = useAppStore((s) => s.openTutorial);
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [aboutOpen, setAboutOpen] = useState(false);
 
 	const handleShowTutorial = () => {
 		setSettingsOpen(false);
@@ -88,6 +91,23 @@ export function SidebarFooter({ collapsed = false }: Props) {
 				sx={{ color: "text.secondary" }}
 			>
 				<SettingsIcon fontSize="small" />
+			</IconButton>
+		</Tooltip>
+	);
+
+	const aboutBtn = (
+		<Tooltip
+			title="About SpecLens"
+			placement={collapsed ? "right" : "top"}
+			arrow
+		>
+			<IconButton
+				onClick={() => setAboutOpen(true)}
+				aria-label="About SpecLens"
+				size="small"
+				sx={{ color: "text.secondary" }}
+			>
+				<InfoOutlinedIcon fontSize="small" />
 			</IconButton>
 		</Tooltip>
 	);
@@ -126,8 +146,10 @@ export function SidebarFooter({ collapsed = false }: Props) {
 				}}
 			>
 				{settingsBtn}
+				{aboutBtn}
 				{themeBtn}
 			</Box>
+			<AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
 			<Dialog
 				open={settingsOpen}
 				onClose={() => setSettingsOpen(false)}
