@@ -51,16 +51,14 @@
 			with the embed iframe instead.
 		-->
 		<section class="demo" id="demo">
+			<!-- The capture includes the app's real macOS title bar, so the
+			     frame stays chrome-less to avoid doubling it. -->
 			<div class="window">
-				<div class="window-bar" aria-hidden="true">
-					<span></span><span></span><span></span>
-					<p class="window-title">SpecLens</p>
-				</div>
-				<!-- biome-ignore lint/a11y/useMediaCaption: demo not recorded yet; add a captions track alongside the final video -->
+				<!-- biome-ignore lint/a11y/useMediaCaption: screen capture with no narration; nothing to caption -->
 				<video controls preload="metadata" poster="assets/demo-poster.png">
-					<source src="assets/demo.mp4" type="video/mp4" />
+					<source src="assets/demo-1920.mp4" type="video/mp4" />
 					Your browser doesn't support embedded video -
-					<a href="assets/demo.mp4">download the demo</a> instead.
+					<a href="assets/demo-1920.mp4">download the demo</a> instead.
 				</video>
 			</div>
 		</section>
@@ -153,7 +151,6 @@
 	<footer>
 		<p>
 			<a href="https://github.com/dansreis/speclens/blob/main/LICENSE">Apache 2.0</a>
-			· Built with <a href="https://tauri.app">Tauri</a> + React
 			· © 2026 Daniel Reis
 		</p>
 	</footer>

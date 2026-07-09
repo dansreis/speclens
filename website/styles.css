@@ -291,39 +291,6 @@ main {
 	overflow: hidden;
 }
 
-.window-bar {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 10px 14px;
-	border-bottom: 1px solid var(--border);
-}
-
-.window-bar span {
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-}
-
-.window-bar span:nth-child(1) {
-	background: #ff5f57;
-}
-
-.window-bar span:nth-child(2) {
-	background: #febc2e;
-}
-
-.window-bar span:nth-child(3) {
-	background: #28c840;
-}
-
-.window-title {
-	margin: 0 auto;
-	padding-right: 52px; /* re-centers the title against the traffic lights */
-	color: var(--muted);
-	font-size: 0.8125rem;
-}
-
 .demo video {
 	width: 100%;
 	display: block;
