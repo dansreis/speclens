@@ -22,15 +22,7 @@ Everything is local. No accounts, no GitHub integration, no network calls - Spec
 
 ## Install
 
-Grab the `.dmg` from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`.
-
-> **macOS will claim the app "is damaged and can't be opened."** It isn't - the build is not yet code-signed, so Gatekeeper quarantines it. Clear the flag and it opens normally:
->
-> ```sh
-> xattr -cr /Applications/SpecLens.app
-> ```
->
-> If the `.dmg` itself refuses to mount, run the same command on the downloaded file first. (Right-click → **Open** does *not* bypass this particular error.) Proper signing and notarization are on the [roadmap](./docs/ROADMAP.md).
+Grab the `.dmg` from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`. Builds are signed and notarized, so it opens without any Gatekeeper warnings.
 
 Then click **Add repository** in the sidebar and pick any folder containing an `openspec/` directory.
 

@@ -9,7 +9,6 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 
 ## Distribution
 
-- [ ] **Code signing + notarization (macOS)** - removes the `xattr -cr` workaround, the biggest first-run papercut
 - [ ] **Ship through official `homebrew/cask`** (decided over a personal tap) - blocked until, in order:
   1. repo is public (cask URLs must be anonymously downloadable)
   2. app is signed + notarized (cask maintainers reject apps Gatekeeper blocks)

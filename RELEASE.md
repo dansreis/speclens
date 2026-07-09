@@ -46,6 +46,6 @@ Nothing happens on merges that don't change the version - regular PRs never trig
 
 ## Known limitations
 
-- None of the bundles are code-signed yet - macOS users need the `xattr -cr` workaround described in the README, and Windows SmartScreen will warn on the installer. Signing/notarization and Homebrew distribution are tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
+- The macOS build is signed and notarized (requires the six `APPLE_*` repo secrets; the workflow warns and builds unsigned when they're absent). The Windows installers are not signed - SmartScreen will warn. Homebrew distribution is tracked in [docs/ROADMAP.md](./docs/ROADMAP.md).
 - macOS is Apple Silicon only (`aarch64`); an Intel (`x86_64-apple-darwin`) build is a roadmap item.
 - Linux/Windows arm64 build on GitHub's arm64 standard runners (`ubuntu-22.04-arm`, `windows-11-arm`), available in private repos since January 2026 (2 vCPUs there, so those legs are slower).
