@@ -160,6 +160,25 @@ async function renderDownloads() {
 
 renderDownloads();
 
+// Scroll-reveal: fade+lift sections and feature cards as they enter the
+// viewport. The .js class gates the hidden initial state so nothing is
+// invisible without JavaScript; reduced-motion users skip it via CSS.
+document.documentElement.classList.add("js");
+const revealTargets = document.querySelectorAll("main section, .grid article");
+for (const el of revealTargets) el.classList.add("reveal");
+const revealObserver = new IntersectionObserver(
+	(entries) => {
+		for (const entry of entries) {
+			if (entry.isIntersecting) {
+				entry.target.classList.add("revealed");
+				revealObserver.unobserve(entry.target);
+			}
+		}
+	},
+	{ threshold: 0.15 },
+);
+for (const el of revealTargets) revealObserver.observe(el);
+
 // Dark/light toggle: follows the system preference until the user overrides;
 // the override persists in localStorage (applied pre-paint by the inline
 // script in index.html).

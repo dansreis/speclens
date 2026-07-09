@@ -25,7 +25,12 @@
 		<span class="icon-dark">🌙</span><span class="icon-light">☀️</span>
 	</button>
 	<header class="hero">
+		<div class="hero-bg" aria-hidden="true">
+			<span class="blob blob-a"></span>
+			<span class="blob blob-b"></span>
+		</div>
 		<img class="hero-icon" src="assets/icon.png" alt="" width="120" height="120" />
+		<p class="eyebrow">Free · Open source · Local-first</p>
 		<h1>SpecLens</h1>
 		<p class="tagline">
 			A desktop reader for <a href="https://github.com/Fission-AI/OpenSpec">OpenSpec</a> projects.<br />
@@ -46,12 +51,18 @@
 			with the embed iframe instead.
 		-->
 		<section class="demo" id="demo">
-			<!-- biome-ignore lint/a11y/useMediaCaption: demo not recorded yet; add a captions track alongside the final video -->
-			<video controls preload="metadata" poster="assets/demo-poster.png">
-				<source src="assets/demo.mp4" type="video/mp4" />
-				Your browser doesn't support embedded video -
-				<a href="assets/demo.mp4">download the demo</a> instead.
-			</video>
+			<div class="window">
+				<div class="window-bar" aria-hidden="true">
+					<span></span><span></span><span></span>
+					<p class="window-title">SpecLens</p>
+				</div>
+				<!-- biome-ignore lint/a11y/useMediaCaption: demo not recorded yet; add a captions track alongside the final video -->
+				<video controls preload="metadata" poster="assets/demo-poster.png">
+					<source src="assets/demo.mp4" type="video/mp4" />
+					Your browser doesn't support embedded video -
+					<a href="assets/demo.mp4">download the demo</a> instead.
+				</video>
+			</div>
 		</section>
 
 		<section class="features">

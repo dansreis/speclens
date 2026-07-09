@@ -9,6 +9,8 @@
 	--accent-soft: rgba(37, 99, 235, 0.1);
 	--border: rgba(15, 23, 42, 0.12);
 	--glow: rgba(59, 130, 246, 0.12);
+	--blob-opacity: 0.35;
+	--blob-b-color: #38bdf8;
 	--radius: 14px;
 }
 
@@ -21,6 +23,8 @@
 	--accent-soft: rgba(59, 130, 246, 0.14);
 	--border: rgba(148, 163, 184, 0.18);
 	--glow: rgba(59, 130, 246, 0.18);
+	--blob-opacity: 0.22;
+	--blob-b-color: #38bdf8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,6 +37,8 @@
 		--accent-soft: rgba(59, 130, 246, 0.14);
 		--border: rgba(148, 163, 184, 0.18);
 		--glow: rgba(59, 130, 246, 0.18);
+		--blob-opacity: 0.22;
+		--blob-b-color: #38bdf8;
 	}
 }
 
@@ -111,20 +117,112 @@ code {
 }
 
 .hero {
+	position: relative;
+	overflow: hidden;
 	text-align: center;
-	padding: 88px 24px 56px;
+	padding: 104px 24px 72px;
 	background:
 		radial-gradient(60% 50% at 50% 0%, var(--glow), transparent 70%), var(--bg);
 }
 
+/* Faint grid texture, faded out towards the edges. */
+.hero::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-image:
+		linear-gradient(var(--border) 1px, transparent 1px),
+		linear-gradient(90deg, var(--border) 1px, transparent 1px);
+	background-size: 44px 44px;
+	mask-image: radial-gradient(60% 55% at 50% 30%, black 0%, transparent 75%);
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.hero-bg {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.blob {
+	position: absolute;
+	width: 420px;
+	height: 420px;
+	border-radius: 50%;
+	filter: blur(90px);
+	opacity: var(--blob-opacity);
+}
+
+.blob-a {
+	background: var(--accent);
+	top: -180px;
+	left: calc(50% - 460px);
+	animation: drift 16s ease-in-out infinite alternate;
+}
+
+.blob-b {
+	background: var(--blob-b-color);
+	top: -220px;
+	left: calc(50% + 60px);
+	animation: drift 19s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes drift {
+	from {
+		transform: translate(0, 0) scale(1);
+	}
+
+	to {
+		transform: translate(60px, 40px) scale(1.15);
+	}
+}
+
+.hero > * {
+	position: relative;
+}
+
 .hero-icon {
-	filter: drop-shadow(0 12px 32px var(--glow));
+	/* Block, not inline: the inline-block eyebrow pill would otherwise share
+	   this line and push the icon off-center. */
+	display: block;
+	margin: 0 auto;
+	filter: drop-shadow(0 16px 40px var(--glow));
+	animation: bob 6s ease-in-out infinite;
+}
+
+@keyframes bob {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+
+	50% {
+		transform: translateY(-8px);
+	}
+}
+
+.eyebrow {
+	display: inline-block;
+	margin: 20px 0 0;
+	padding: 5px 14px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
 }
 
 .hero h1 {
-	font-size: 3rem;
-	margin: 16px 0 8px;
-	letter-spacing: -0.02em;
+	font-size: clamp(3rem, 8vw, 4.25rem);
+	margin: 12px 0 8px;
+	letter-spacing: -0.03em;
+	background: linear-gradient(105deg, var(--text) 40%, var(--accent) 80%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
 }
 
 .tagline {
@@ -149,24 +247,27 @@ code {
 	color: var(--text);
 	font-weight: 600;
 	transition:
-		transform 120ms,
-		background-color 120ms;
+		transform 160ms,
+		box-shadow 160ms,
+		background-color 160ms;
 }
 
 .button:hover {
 	text-decoration: none;
-	transform: translateY(-1px);
+	transform: translateY(-2px);
 	background: var(--panel);
 }
 
 .button.primary {
-	background: var(--accent);
-	border-color: var(--accent);
+	background: linear-gradient(135deg, var(--accent), #60a5fa);
+	border-color: transparent;
 	color: #fff;
+	box-shadow: 0 8px 24px var(--glow);
 }
 
 .button.primary:hover {
-	background: #2f6fe0;
+	background: linear-gradient(135deg, #2f6fe0, #7db4fb);
+	box-shadow: 0 14px 36px var(--glow);
 }
 
 .platforms {
@@ -181,12 +282,52 @@ main {
 	padding: 0 24px;
 }
 
+/* Fake macOS window chrome around the demo video. */
+.window {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--panel);
+	box-shadow: 0 24px 64px var(--glow);
+	overflow: hidden;
+}
+
+.window-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--border);
+}
+
+.window-bar span {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+
+.window-bar span:nth-child(1) {
+	background: #ff5f57;
+}
+
+.window-bar span:nth-child(2) {
+	background: #febc2e;
+}
+
+.window-bar span:nth-child(3) {
+	background: #28c840;
+}
+
+.window-title {
+	margin: 0 auto;
+	padding-right: 52px; /* re-centers the title against the traffic lights */
+	color: var(--muted);
+	font-size: 0.8125rem;
+}
+
 .demo video {
 	width: 100%;
-	border-radius: var(--radius);
-	border: 1px solid var(--border);
-	background: var(--panel);
 	display: block;
+	background: var(--panel);
 }
 
 section {
@@ -222,6 +363,16 @@ h2 {
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	padding: 20px 22px;
+	transition:
+		transform 180ms,
+		box-shadow 180ms,
+		border-color 180ms;
+}
+
+.grid article:hover {
+	transform: translateY(-4px);
+	border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+	box-shadow: 0 14px 36px var(--glow);
 }
 
 .grid h3 {
@@ -339,6 +490,32 @@ h2 {
 	text-align: center;
 	color: var(--muted);
 	margin: 28px 0 0;
+}
+
+/* Scroll-reveal: elements start shifted + transparent only when JS is
+   running (html.js) and the user hasn't asked for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+	html.js .reveal {
+		opacity: 0;
+		transform: translateY(18px);
+		transition:
+			opacity 500ms ease-out,
+			transform 500ms ease-out;
+	}
+
+	html.js .reveal.revealed {
+		opacity: 1;
+		transform: none;
+	}
+
+	/* Cascade the feature cards instead of revealing the grid as one block. */
+	html.js .grid article:nth-child(2n) {
+		transition-delay: 80ms;
+	}
+
+	html.js .grid article:nth-child(3n) {
+		transition-delay: 140ms;
+	}
 }
 
 footer {
