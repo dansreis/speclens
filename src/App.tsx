@@ -16,6 +16,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
+import { setTheme } from "@tauri-apps/api/app";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { useDocumentOrphans } from "./lib/orphanDetection";
@@ -100,6 +101,15 @@ function App() {
 
 	useRepoSyncWatcher();
 	useDocumentOrphans(allComments, repos);
+
+	// Keep the native window chrome (title bar) on the app's theme instead of
+	// following macOS, so a light app never gets a dark title bar (and vice
+	// versa).
+	useEffect(() => {
+		setTheme(themeMode).catch(() => {
+			// platform without app-theme support - the webview theme still applies
+		});
+	}, [themeMode]);
 
 	useEffect(() => {
 		if (repoSources.length > 0 && repos.length === 0) {
