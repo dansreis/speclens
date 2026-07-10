@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildSummaryPrompt,
+	collectCapabilities,
 	formatBytes,
 	linkifyCapabilities,
 	PROMPT_CHAR_LIMIT,
@@ -149,5 +150,37 @@ describe("linkifyCapabilities", () => {
 		expect(linkifyCapabilities("- Billing-and-claims: Governs.", caps)).toBe(
 			canonical("billing-and-claims", "Governs."),
 		);
+	});
+});
+
+describe("collectCapabilities", () => {
+	it("unions spec files with delta-only capabilities, spec file content winning", () => {
+		const out = collectCapabilities(
+			[{ capability: "billing", content: "real spec" }],
+			[
+				{
+					createdAt: new Date("2026-01-02"),
+					specs: { billing: "new delta", scheduling: "newer sched delta" },
+				},
+				{
+					createdAt: new Date("2026-01-01"),
+					specs: { scheduling: "older sched delta", intake: "intake delta" },
+				},
+			],
+		);
+		expect(out).toEqual([
+			{ name: "billing", content: "real spec" },
+			{ name: "intake", content: "intake delta" },
+			{ name: "scheduling", content: "newer sched delta" },
+		]);
+	});
+
+	it("handles null createdAt and empty inputs", () => {
+		expect(collectCapabilities([], [])).toEqual([]);
+		const out = collectCapabilities(
+			[],
+			[{ createdAt: null, specs: { a: "delta" } }],
+		);
+		expect(out).toEqual([{ name: "a", content: "delta" }]);
 	});
 });

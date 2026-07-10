@@ -11,6 +11,38 @@ export const SPEC_CHAR_LIMIT = 1500;
 /** Rough total prompt budget (chars, not tokens). */
 export const PROMPT_CHAR_LIMIT = 16_000;
 
+export interface CapabilityDoc {
+	name: string;
+	content: string;
+}
+
+/**
+ * The full capability universe for a repo, matching what the Specs view
+ * shows: every capability with a materialized `openspec/specs/` file plus
+ * every capability referenced only by change spec-deltas. Many repos keep
+ * few (or no) top-level spec files, so building the summary from repoSpecs
+ * alone drops most capabilities. Content priority: the real spec file if it
+ * exists, otherwise the newest change's delta for that capability.
+ */
+export function collectCapabilities(
+	repoSpecs: { capability: string; content: string }[],
+	changes: { createdAt: Date | null; specs: Record<string, string> }[],
+): CapabilityDoc[] {
+	const map = new Map<string, string>();
+	for (const s of repoSpecs) map.set(s.capability, s.content);
+	const newestFirst = [...changes].sort(
+		(a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+	);
+	for (const c of newestFirst) {
+		for (const [capability, body] of Object.entries(c.specs)) {
+			if (!map.has(capability)) map.set(capability, body);
+		}
+	}
+	return [...map.entries()]
+		.map(([name, content]) => ({ name, content }))
+		.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export interface SummaryPromptInput {
 	repoName: string;
 	/** Capability name + full spec.md content. */

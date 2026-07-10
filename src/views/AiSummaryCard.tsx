@@ -9,7 +9,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiCancelGenerate, aiGenerate, aiModelInfo } from "../lib/ai";
@@ -20,6 +20,7 @@ import {
 } from "../lib/aiSummaries";
 import {
 	buildSummaryPrompt,
+	collectCapabilities,
 	linkifyCapabilities,
 	parseSpecLink,
 	SPEC_LINK_SCHEME,
@@ -100,13 +101,17 @@ export function AiSummaryCard({ repo }: Props) {
 		};
 	}, [repo.id]);
 
+	// Same capability universe as the Specs view - spec files plus capabilities
+	// that only exist in change deltas (which is most of them in many repos).
+	const capabilities = useMemo(
+		() => collectCapabilities(repo.repoSpecs, repo.changes),
+		[repo],
+	);
+
 	const handleGenerate = useCallback(async () => {
 		const prompt = buildSummaryPrompt({
 			repoName: repo.name,
-			capabilities: repo.repoSpecs.map((s) => ({
-				name: s.capability,
-				content: s.content,
-			})),
+			capabilities,
 			activeChangeTitles: repo.changes
 				.filter((c) => !c.archived)
 				.map((c) => c.name),
@@ -151,7 +156,7 @@ export function AiSummaryCard({ repo }: Props) {
 			setGenerating(false);
 			setStreamText("");
 		}
-	}, [repo, aiModel, signature]);
+	}, [repo, capabilities, aiModel, signature]);
 
 	// Linking is done here, not by the model: capability bullets come back as
 	// plain text and get rewritten to speclens-spec:// links deterministically
@@ -159,7 +164,7 @@ export function AiSummaryCard({ repo }: Props) {
 	const renderMarkdown = (raw: string) => {
 		const text = linkifyCapabilities(
 			raw,
-			repo.repoSpecs.map((s) => s.capability),
+			capabilities.map((c) => c.name),
 		);
 		return (
 			<Box sx={markdownSx}>
