@@ -52,6 +52,8 @@ brew install --cask dansreis/tap/speclens
 
 Then click **Add repository** in the sidebar and pick any folder containing an `openspec/` directory.
 
+No OpenSpec project at hand? Clone [openspec-examples](https://github.com/dansreis/openspec-examples) - two fictional products with a full year of spec-driven git history (proposals, specs, ADRs, tasks, playbooks) - and point SpecLens at either project folder. It's the same data the demo and screenshots above show.
+
 ## Development
 
 Requires [pnpm](https://pnpm.io) and the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) (Rust toolchain).
