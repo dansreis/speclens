@@ -219,3 +219,38 @@ jobs:
           files: dist/**
           draft: false
           prerelease: false
+
+  # Bumps version + sha256 in dansreis/homebrew-tap's speclens cask. Needs the
+  # TAP_TOKEN secret (fine-grained PAT with contents:write on homebrew-tap);
+  # skips with a warning when it's absent so releases don't depend on it.
+  update-tap:
+    needs: [check-version, release]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
+    steps:
+      - name: Bump Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::warning::TAP_TOKEN not set - skipping Homebrew cask bump"
+            exit 0
+          fi
+          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --pattern "*aarch64.dmg" --output app.dmg
+          SHA256=$(sha256sum app.dmg | cut -d' ' -f1)
+          git clone --depth 1 \
+            "https://x-access-token:${TAP_TOKEN}@github.com/dansreis/homebrew-tap.git" tap
+          cd tap
+          sed -i "s/^  version \".*\"$/  version \"$VERSION\"/" Casks/speclens.rb
+          sed -i "s/^  sha256 \".*\"$/  sha256 \"$SHA256\"/" Casks/speclens.rb
+          if git diff --quiet; then
+            echo "Cask already up to date"
+            exit 0
+          fi
+          git config user.name "Daniel Reis"
+          git config user.email "danielreis3195@gmail.com"
+          git commit -am "speclens $VERSION"
+          git push

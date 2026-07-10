@@ -7,7 +7,7 @@ const SECTIONS = [
 	{
 		os: "macOS",
 		icon: "🍎",
-		hint: "Requires an Apple Silicon Mac (M1 or newer).",
+		hint: "Requires an Apple Silicon Mac (M1 or newer). Also on Homebrew: <code>brew install --cask dansreis/tap/speclens</code>",
 		rows: [{ label: "Apple Silicon", suffix: ".dmg" }],
 	},
 	{

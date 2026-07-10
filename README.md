@@ -42,7 +42,13 @@ Everything is local. No accounts, no GitHub integration, no network calls - Spec
 
 ## Install
 
-Grab the `.dmg` from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`. Builds are signed and notarized, so it opens without any Gatekeeper warnings.
+**Homebrew** (macOS, Apple Silicon):
+
+```sh
+brew install --cask dansreis/tap/speclens
+```
+
+**Direct download**: grab the `.dmg` (or the Linux/Windows build) from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`. Builds are signed and notarized, so it opens without any Gatekeeper warnings.
 
 Then click **Add repository** in the sidebar and pick any folder containing an `openspec/` directory.
 
