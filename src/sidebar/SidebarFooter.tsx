@@ -25,6 +25,7 @@ import { alpha } from "@mui/material/styles";
 import { useState } from "react";
 import { HIGHLIGHT_COLORS, useAppStore } from "../store/useAppStore";
 import { AboutDialog } from "./AboutDialog";
+import { AiSettingsSection } from "./AiSettingsSection";
 
 interface Props {
 	collapsed?: boolean;
@@ -264,6 +265,8 @@ export function SidebarFooter({ collapsed = false }: Props) {
 								</Box>
 							}
 						/>
+
+						<AiSettingsSection />
 
 						<SettingRow
 							title="Tutorial"

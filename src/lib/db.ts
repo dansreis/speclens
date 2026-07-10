@@ -2,7 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import type { Repo } from "./repoLoader";
 
 const DB_PATH = "sqlite:speclens.sqlite";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 let dbPromise: Promise<Database> | null = null;
 
@@ -57,6 +57,18 @@ async function migrate(db: Database): Promise<void> {
 		await db.execute(
 			"CREATE INDEX IF NOT EXISTS comments_by_repo_resolved ON comments (repo_id, resolved);",
 		);
+	}
+
+	if (current < 2) {
+		await db.execute(`
+			CREATE TABLE IF NOT EXISTS ai_summaries (
+				repo_path TEXT PRIMARY KEY,
+				signature TEXT NOT NULL,
+				model_id TEXT NOT NULL,
+				summary TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			);
+		`);
 	}
 
 	await db.execute(`PRAGMA user_version = ${SCHEMA_VERSION}`);
@@ -215,6 +227,46 @@ export async function cacheDeleteRaw(path: string): Promise<void> {
 	await db.execute("DELETE FROM repo_cache WHERE path = $1", [path]);
 }
 
+// ───── ai_summaries ─────
+
+export interface AiSummaryRow {
+	repo_path: string;
+	signature: string;
+	model_id: string;
+	summary: string;
+	created_at: string;
+}
+
+export async function aiSummaryGetRaw(
+	path: string,
+): Promise<AiSummaryRow | null> {
+	const db = await getDb();
+	const rows = await db.select<AiSummaryRow[]>(
+		"SELECT repo_path, signature, model_id, summary, created_at FROM ai_summaries WHERE repo_path = $1",
+		[path],
+	);
+	return rows[0] ?? null;
+}
+
+export async function aiSummarySetRaw(
+	path: string,
+	signature: string,
+	modelId: string,
+	summary: string,
+): Promise<void> {
+	const db = await getDb();
+	await db.execute(
+		`INSERT INTO ai_summaries (repo_path, signature, model_id, summary, created_at) VALUES ($1, $2, $3, $4, $5)
+		 ON CONFLICT(repo_path) DO UPDATE SET signature = excluded.signature, model_id = excluded.model_id, summary = excluded.summary, created_at = excluded.created_at`,
+		[path, signature, modelId, summary, new Date().toISOString()],
+	);
+}
+
+export async function aiSummaryDeleteRaw(path: string): Promise<void> {
+	const db = await getDb();
+	await db.execute("DELETE FROM ai_summaries WHERE repo_path = $1", [path]);
+}
+
 // ───── comments ─────
 
 export interface CommentRow {
@@ -297,15 +349,15 @@ export async function commentsCountByRepo(repoId: string): Promise<number> {
 // ───── reconciliation / GC ─────
 
 /**
- * Delete every `comments` and `repo_cache` row whose repo is not one of
- * `validPaths` (the current `repo_sources` list). Removing a repo already
- * cleans up its data, so anything else is dangling from an incomplete removal;
- * running this on startup keeps the three tables self-consistent. Returns how
- * many rows were pruned from each table.
+ * Delete every `comments`, `repo_cache`, and `ai_summaries` row whose repo is
+ * not one of `validPaths` (the current `repo_sources` list). Removing a repo
+ * already cleans up its data, so anything else is dangling from an incomplete
+ * removal; running this on startup keeps the tables self-consistent. Returns
+ * how many rows were pruned from each table.
  */
 export async function pruneOrphanedRepoData(
 	validPaths: string[],
-): Promise<{ comments: number; cache: number }> {
+): Promise<{ comments: number; cache: number; summaries: number }> {
 	return serialize(async () => {
 		const db = await getDb();
 		const prune = async (table: string, column: string): Promise<number> => {
@@ -323,6 +375,7 @@ export async function pruneOrphanedRepoData(
 		};
 		const comments = await prune("comments", "repo_id");
 		const cache = await prune("repo_cache", "path");
-		return { comments, cache };
+		const summaries = await prune("ai_summaries", "repo_path");
+		return { comments, cache, summaries };
 	});
 }

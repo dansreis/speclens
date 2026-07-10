@@ -1,6 +1,8 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { DEFAULT_AI_MODEL_ID, isKnownAiModelId } from "../lib/ai";
+import { aiSummaryDelete } from "../lib/aiSummaries";
 import { sourcesDelete } from "../lib/db";
 import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
 import {
@@ -32,6 +34,10 @@ export interface AppSettings {
 	commentsPanelWidth: number;
 	/** Width of the left navigation sidebar in px (expanded mode only). */
 	sidebarWidth: number;
+	/** Opt-in local AI features (model download + on-device inference). */
+	aiEnabled: boolean;
+	/** Selected local model id; must be one of the ids in AI_MODELS. */
+	aiModel: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -39,6 +45,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	highlightColor: "#fde047",
 	commentsPanelWidth: 340,
 	sidebarWidth: 240,
+	aiEnabled: false,
+	aiModel: DEFAULT_AI_MODEL_ID,
 };
 
 /** Preset highlight colors offered in the settings dialog. */
@@ -79,6 +87,11 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			r.sidebarWidth <= 400
 				? r.sidebarWidth
 				: DEFAULT_SETTINGS.sidebarWidth,
+		aiEnabled:
+			typeof r.aiEnabled === "boolean"
+				? r.aiEnabled
+				: DEFAULT_SETTINGS.aiEnabled,
+		aiModel: isKnownAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
 	};
 }
 
@@ -313,6 +326,7 @@ export const useAppStore = create<AppState>()(
 			// empty lists (so removing the very last repo still commits).
 			void sourcesDelete(path);
 			void cacheDelete(path);
+			void aiSummaryDelete(path);
 			void useCommentsStore.getState().deleteCommentsForRepo(path);
 			const { [path]: _removedStale, ...restStale } = staleRepos;
 			const { [path]: _removedSig, ...restSigs } = loadedSignatures;

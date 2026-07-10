@@ -23,6 +23,7 @@ import { artifactLabel } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { useAppStore } from "../store/useAppStore";
+import { AiSummaryCard } from "./AiSummaryCard";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const RECENT_ARCHIVED_LIMIT = 10;
@@ -63,6 +64,7 @@ export function OverviewView({ repo }: Props) {
 	const openFolder = useAppStore((s) => s.openFolder);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const readingWpm = useAppStore((s) => s.settings.readingWpm);
+	const aiEnabled = useAppStore((s) => s.settings.aiEnabled);
 	const [configOpen, setConfigOpen] = useState(false);
 	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
 		"summary",
@@ -364,6 +366,7 @@ export function OverviewView({ repo }: Props) {
 							help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${readingWpm} words per minute.`}
 						/>
 					</Box>
+					{repo && aiEnabled && <AiSummaryCard key={repo.id} repo={repo} />}
 					{repo?.config?.context && (
 						<Box
 							sx={{
