@@ -30,6 +30,7 @@ import {
 } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
+import { AiDocSummaryButton } from "./AiDocSummaryButton";
 import { AttributionLine } from "./AttributionLine";
 import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
@@ -302,6 +303,13 @@ export function ChangeViewer({
 							<ZoomInIcon fontSize="small" />
 						</IconButton>
 					</Tooltip>
+					<AiDocSummaryButton
+						title={change.name}
+						kind={
+							activeDoc ? artifactLabel(activeDoc.id).toLowerCase() : "document"
+						}
+						source={currentSource}
+					/>
 					<Tooltip
 						title={<DocumentStatsTooltipContent sections={statsSections} />}
 						placement="bottom-end"

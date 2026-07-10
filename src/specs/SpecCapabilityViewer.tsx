@@ -19,6 +19,7 @@ import { formatRelativeTime } from "../lib/relativeTime";
 import type { Change, RepoSpecDoc } from "../lib/repoLoader";
 import { artifactLabel } from "../lib/schema";
 import { useAppStore } from "../store/useAppStore";
+import { AiDocSummaryButton } from "./AiDocSummaryButton";
 import { AttributionLine } from "./AttributionLine";
 import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
@@ -220,6 +221,15 @@ export function SpecCapabilityViewer({
 							<ZoomInIcon fontSize="small" />
 						</IconButton>
 					</Tooltip>
+					<AiDocSummaryButton
+						title={
+							tab === "canonical"
+								? capability
+								: `${capability} (${activeChange?.name ?? "change"})`
+						}
+						kind={tab === "canonical" ? "spec" : "spec delta"}
+						source={source || null}
+					/>
 					<Tooltip
 						title={
 							<DocumentStatsTooltipContent

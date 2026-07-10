@@ -18,6 +18,8 @@ import {
 	Slider,
 	Stack,
 	Switch,
+	Tab,
+	Tabs,
 	Tooltip,
 	Typography,
 } from "@mui/material";
@@ -70,7 +72,14 @@ export function SidebarFooter({ collapsed = false }: Props) {
 	const resetSettings = useAppStore((s) => s.resetSettings);
 	const openTutorial = useAppStore((s) => s.openTutorial);
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [settingsTab, setSettingsTab] = useState(0);
 	const [aboutOpen, setAboutOpen] = useState(false);
+
+	const handleOpenSettings = () => {
+		// Always land on the first tab when the dialog opens.
+		setSettingsTab(0);
+		setSettingsOpen(true);
+	};
 
 	const handleShowTutorial = () => {
 		setSettingsOpen(false);
@@ -86,7 +95,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 	const settingsBtn = (
 		<Tooltip title="Settings" placement={collapsed ? "right" : "top"} arrow>
 			<IconButton
-				onClick={() => setSettingsOpen(true)}
+				onClick={handleOpenSettings}
 				aria-label="Settings"
 				size="small"
 				sx={{ color: "text.secondary" }}
@@ -157,117 +166,134 @@ export function SidebarFooter({ collapsed = false }: Props) {
 				maxWidth="sm"
 				fullWidth
 			>
-				<DialogTitle>Settings</DialogTitle>
-				<DialogContent dividers>
-					<Stack spacing={3} divider={<Divider flexItem />}>
-						<SettingRow
-							title="Reading speed"
-							caption={`Words per minute used to estimate reading time. Currently ${settings.readingWpm} wpm.`}
-						>
-							<Slider
-								value={settings.readingWpm}
-								onChange={(_, v) => setSetting("readingWpm", v as number)}
-								min={100}
-								max={500}
-								step={25}
-								marks={[
-									{ value: 100, label: "100" },
-									{ value: 300, label: "300" },
-									{ value: 500, label: "500" },
-								]}
-								valueLabelDisplay="auto"
-								size="small"
-							/>
-						</SettingRow>
-
-						<SettingRow
-							title="Highlight color"
-							caption="Color used for comment highlights in the document."
-						>
-							<Stack direction="row" spacing={1.5}>
-								{HIGHLIGHT_COLORS.map((color) => {
-									const selected = settings.highlightColor === color;
-									return (
-										<Box
-											key={color}
-											component="button"
-											type="button"
-											aria-label={`Highlight color ${color}`}
-											aria-pressed={selected}
-											onClick={() => setSetting("highlightColor", color)}
-											sx={{
-												width: 28,
-												height: 28,
-												p: 0,
-												borderRadius: "50%",
-												cursor: "pointer",
-												bgcolor: alpha(color, 0.85),
-												border: 2,
-												borderColor: selected ? "text.primary" : "transparent",
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-												transition: "transform 100ms",
-												"&:hover": { transform: "scale(1.1)" },
-											}}
-										>
-											{selected && (
-												<CheckIcon
-													sx={{ fontSize: 16, color: "rgba(0,0,0,0.7)" }}
-												/>
-											)}
-										</Box>
-									);
-								})}
-							</Stack>
-						</SettingRow>
-
-						<SettingRow
-							title="Comments panel width"
-							caption={`Width of the comments panel. Currently ${settings.commentsPanelWidth}px.`}
-						>
-							<Slider
-								value={settings.commentsPanelWidth}
-								onChange={(_, v) =>
-									setSetting("commentsPanelWidth", v as number)
-								}
-								min={240}
-								max={640}
-								step={20}
-								marks={[
-									{ value: 240, label: "240" },
-									{ value: 440, label: "440" },
-									{ value: 640, label: "640" },
-								]}
-								valueLabelDisplay="auto"
-								size="small"
-							/>
-						</SettingRow>
-
-						<FormControlLabel
-							sx={{ ml: 0, alignItems: "flex-start" }}
-							control={
-								<Switch
-									checked={highlightEars}
-									onChange={toggleHighlightEars}
-									sx={{ mt: -0.5 }}
+				<DialogTitle sx={{ pb: 0 }}>Settings</DialogTitle>
+				<Tabs
+					value={settingsTab}
+					onChange={(_, v) => setSettingsTab(v as number)}
+					sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}
+				>
+					<Tab label="Reading" />
+					<Tab label="Comments" />
+					<Tab label="AI" />
+					<Tab label="General" />
+				</Tabs>
+				<DialogContent sx={{ minHeight: 340 }}>
+					{settingsTab === 0 && (
+						<Stack spacing={3} divider={<Divider flexItem />}>
+							<SettingRow
+								title="Reading speed"
+								caption={`Words per minute used to estimate reading time. Currently ${settings.readingWpm} wpm.`}
+							>
+								<Slider
+									value={settings.readingWpm}
+									onChange={(_, v) => setSetting("readingWpm", v as number)}
+									min={100}
+									max={500}
+									step={25}
+									marks={[
+										{ value: 100, label: "100" },
+										{ value: 300, label: "300" },
+										{ value: 500, label: "500" },
+									]}
+									valueLabelDisplay="auto"
+									size="small"
 								/>
-							}
-							label={
-								<Box>
-									<Typography variant="body2" sx={{ fontWeight: 500 }}>
-										Highlight EARS keywords
-									</Typography>
-									<Typography variant="caption" color="text.secondary">
-										Colors SHALL, MUST, SHOULD, MAY, WHEN, WHILE, WHERE, IF,
-										THEN, GIVEN, AND in spec prose.
-									</Typography>
-								</Box>
-							}
-						/>
+							</SettingRow>
 
-						<AiSettingsSection />
+							<FormControlLabel
+								sx={{ ml: 0, alignItems: "flex-start" }}
+								control={
+									<Switch
+										checked={highlightEars}
+										onChange={toggleHighlightEars}
+										sx={{ mt: -0.5 }}
+									/>
+								}
+								label={
+									<Box>
+										<Typography variant="body2" sx={{ fontWeight: 500 }}>
+											Highlight EARS keywords
+										</Typography>
+										<Typography variant="caption" color="text.secondary">
+											Colors SHALL, MUST, SHOULD, MAY, WHEN, WHILE, WHERE, IF,
+											THEN, GIVEN, AND in spec prose.
+										</Typography>
+									</Box>
+								}
+							/>
+						</Stack>
+					)}
+					{settingsTab === 1 && (
+						<Stack spacing={3} divider={<Divider flexItem />}>
+							<SettingRow
+								title="Highlight color"
+								caption="Color used for comment highlights in the document."
+							>
+								<Stack direction="row" spacing={1.5}>
+									{HIGHLIGHT_COLORS.map((color) => {
+										const selected = settings.highlightColor === color;
+										return (
+											<Box
+												key={color}
+												component="button"
+												type="button"
+												aria-label={`Highlight color ${color}`}
+												aria-pressed={selected}
+												onClick={() => setSetting("highlightColor", color)}
+												sx={{
+													width: 28,
+													height: 28,
+													p: 0,
+													borderRadius: "50%",
+													cursor: "pointer",
+													bgcolor: alpha(color, 0.85),
+													border: 2,
+													borderColor: selected
+														? "text.primary"
+														: "transparent",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													transition: "transform 100ms",
+													"&:hover": { transform: "scale(1.1)" },
+												}}
+											>
+												{selected && (
+													<CheckIcon
+														sx={{ fontSize: 16, color: "rgba(0,0,0,0.7)" }}
+													/>
+												)}
+											</Box>
+										);
+									})}
+								</Stack>
+							</SettingRow>
 
+							<SettingRow
+								title="Comments panel width"
+								caption={`Width of the comments panel. Currently ${settings.commentsPanelWidth}px.`}
+							>
+								<Slider
+									value={settings.commentsPanelWidth}
+									onChange={(_, v) =>
+										setSetting("commentsPanelWidth", v as number)
+									}
+									min={240}
+									max={640}
+									step={20}
+									marks={[
+										{ value: 240, label: "240" },
+										{ value: 440, label: "440" },
+										{ value: 640, label: "640" },
+									]}
+									valueLabelDisplay="auto"
+									size="small"
+								/>
+							</SettingRow>
+						</Stack>
+					)}
+					{settingsTab === 2 && <AiSettingsSection />}
+					{settingsTab === 3 && (
 						<SettingRow
 							title="Tutorial"
 							caption="Replay the quick tour of SpecLens shown on first launch."
@@ -281,9 +307,16 @@ export function SidebarFooter({ collapsed = false }: Props) {
 								Show tutorial
 							</Button>
 						</SettingRow>
-					</Stack>
+					)}
 				</DialogContent>
-				<DialogActions sx={{ justifyContent: "space-between", px: 3 }}>
+				<DialogActions
+					sx={{
+						justifyContent: "space-between",
+						px: 3,
+						borderTop: 1,
+						borderColor: "divider",
+					}}
+				>
 					<Button
 						onClick={handleReset}
 						startIcon={<RestartAltIcon />}

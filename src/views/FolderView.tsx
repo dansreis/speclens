@@ -84,6 +84,7 @@ export function FolderView({ repo, commentsOpen, onToggleComments }: Props) {
 				documentKind="folder-doc"
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
+				aiKind={`${folder.name} document`}
 			/>
 		);
 	}

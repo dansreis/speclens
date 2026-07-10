@@ -52,7 +52,7 @@ export interface SummaryPromptInput {
 }
 
 /** Truncated output never exceeds `max` chars, ellipsis included. */
-function truncate(text: string, max: number): string {
+export function truncate(text: string, max: number): string {
 	const trimmed = text.trim();
 	if (trimmed.length <= max) return trimmed;
 	if (max <= 1) return max === 1 ? "…" : "";
