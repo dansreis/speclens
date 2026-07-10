@@ -8,6 +8,7 @@ import {
 	parseSpecLink,
 	SPEC_CHAR_LIMIT,
 	SPEC_LINK_SCHEME,
+	stripThinkBlocks,
 } from "./aiSummary";
 
 describe("buildSummaryPrompt", () => {
@@ -182,5 +183,24 @@ describe("collectCapabilities", () => {
 			[{ createdAt: null, specs: { a: "delta" } }],
 		);
 		expect(out).toEqual([{ name: "a", content: "delta" }]);
+	});
+});
+
+describe("stripThinkBlocks", () => {
+	it("removes a closed think block", () => {
+		expect(stripThinkBlocks("<think>reasoning</think>Answer.")).toBe("Answer.");
+	});
+
+	it("removes multiple blocks and is case-insensitive", () => {
+		expect(stripThinkBlocks("<THINK>a</THINK>X<think>b</think>Y")).toBe("XY");
+	});
+
+	it("hides an unclosed trailing block while streaming", () => {
+		expect(stripThinkBlocks("<think>still reason")).toBe("");
+		expect(stripThinkBlocks("Done.\n<think>more")).toBe("Done.\n");
+	});
+
+	it("leaves text without think blocks untouched", () => {
+		expect(stripThinkBlocks("Plain answer.")).toBe("Plain answer.");
 	});
 });

@@ -113,6 +113,19 @@ export function buildSummaryPrompt(input: SummaryPromptInput): string {
 }
 
 /**
+ * Removes `<think>…</think>` reasoning blocks that thinking-tuned models
+ * (e.g. Qwen3.5) emit before their answer. Also drops a trailing unclosed
+ * block so reasoning never renders mid-stream while the model is still
+ * thinking.
+ */
+export function stripThinkBlocks(text: string): string {
+	return text
+		.replace(/<think>[\s\S]*?<\/think>\s*/gi, "")
+		.replace(/<think>[\s\S]*$/i, "")
+		.trimStart();
+}
+
+/**
  * Rewrites capability bullets into canonical linked form:
  * `- **[<name>](speclens-spec://<name>)** - description`.
  *

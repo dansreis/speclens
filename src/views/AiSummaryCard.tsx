@@ -24,6 +24,7 @@ import {
 	linkifyCapabilities,
 	parseSpecLink,
 	SPEC_LINK_SCHEME,
+	stripThinkBlocks,
 } from "../lib/aiSummary";
 import { formatCompactDateTime } from "../lib/relativeTime";
 import type { Repo } from "../lib/repoLoader";
@@ -32,6 +33,9 @@ import { useAppStore } from "../store/useAppStore";
 
 interface Props {
 	repo: Repo;
+	/** Render only the body - no heading or border - for embedding in an
+	 * Accordion or other container that provides its own chrome. */
+	bare?: boolean;
 }
 
 const markdownSx = {
@@ -58,7 +62,7 @@ const markdownSx = {
  *
  * Mount this with `key={repo.id}` so all generation state resets per repo.
  */
-export function AiSummaryCard({ repo }: Props) {
+export function AiSummaryCard({ repo, bare = false }: Props) {
 	const aiModel = useAppStore((s) => s.settings.aiModel);
 	const signature = useAppStore((s) => s.loadedSignatures[repo.id] ?? null);
 	const setView = useAppStore((s) => s.setView);
@@ -133,11 +137,12 @@ export function AiSummaryCard({ repo }: Props) {
 				}
 			});
 			generatingRef.current = false;
-			if (reason !== "cancelled" && acc.trim().length > 0) {
+			const finalText = stripThinkBlocks(acc).trim();
+			if (reason !== "cancelled" && finalText.length > 0) {
 				const summary: CachedAiSummary = {
 					signature: signature ?? "",
 					modelId: aiModel,
-					summary: acc.trim(),
+					summary: finalText,
 					createdAt: new Date(),
 				};
 				await aiSummarySet(
@@ -163,7 +168,7 @@ export function AiSummaryCard({ repo }: Props) {
 	// (this also repairs older cached summaries with model-mangled links).
 	const renderMarkdown = (raw: string) => {
 		const text = linkifyCapabilities(
-			raw,
+			stripThinkBlocks(raw),
 			capabilities.map((c) => c.name),
 		);
 		return (
@@ -233,11 +238,11 @@ export function AiSummaryCard({ repo }: Props) {
 	} else if (generating) {
 		body = (
 			<>
-				{streamText ? (
+				{stripThinkBlocks(streamText) ? (
 					renderMarkdown(streamText)
 				) : (
 					<Typography variant="body2" color="text.secondary">
-						Loading the model and generating…
+						{streamText ? "Thinking…" : "Loading the model and generating…"}
 					</Typography>
 				)}
 				<Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5 }}>
@@ -317,6 +322,8 @@ export function AiSummaryCard({ repo }: Props) {
 			</>
 		);
 	}
+
+	if (bare) return <Box>{body}</Box>;
 
 	return (
 		<Box sx={{ mb: 4 }}>
