@@ -2,10 +2,6 @@
 
 Everything that's still missing, roughly grouped. Not in priority order unless stated. Finished work is removed from this file - git history is the record.
 
-## Open-source readiness
-
-- [ ] **CONTRIBUTING.md** - dev setup exists in the README, but conventions (Biome, per-icon imports, gates) live only in CLAUDE.md
-
 ## Distribution
 
 - [ ] **Ship through official `homebrew/cask`** (decided over a personal tap) - blocked until, in order:
@@ -21,8 +17,6 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 
 ## Foundations
 
-- [ ] **Tests** - Vitest for the pure helpers first (`tasksCompletion`, `extractHeadings`, `documentStats`)
-- [ ] **Code splitting** - production bundle > 500 KB (Vite warning); split MUI icons / markdown / graph deps with `manualChunks`
 - [ ] **Refactor pass** - extract reusable components where views grew organically
 - [ ] **Cross-process source list sync** - two open windows don't see each other's added repos until restart
 - [ ] **i18n scaffolding** - English-only is fine until a second locale is actually needed
