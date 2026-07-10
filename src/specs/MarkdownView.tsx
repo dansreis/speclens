@@ -47,6 +47,12 @@ const MermaidDiagram = lazy(() =>
 	import("./MermaidDiagram").then((m) => ({ default: m.MermaidDiagram })),
 );
 
+// Warm the chunk shortly after startup: it keeps the initial render fast but
+// makes the Suspense fallback (and its DOM swap) a rare event in practice.
+setTimeout(() => {
+	void import("./MermaidDiagram");
+}, 3000);
+
 // ```mermaid fences arrive as <pre><code class="language-mermaid">. Intercept
 // at the <pre> level so the diagram isn't wrapped in the styled code block.
 const markdownComponents: Components = {
@@ -61,10 +67,19 @@ const markdownComponents: Components = {
 			const code = child.children
 				.map((c) => (c.type === "text" ? c.value : ""))
 				.join("");
+			// The wrapper is load-bearing: applyHighlights mutates text nodes and
+			// normalize()s the whole container, which invalidates React's node
+			// references. Anchoring the Suspense fallback→content swap inside a
+			// dedicated element (which the highlight walker skips via
+			// [data-mermaid]) keeps that insertBefore away from mutated siblings -
+			// without it, loading the chunk mid-highlight crashes with a WebKit
+			// NotFoundError.
 			return (
-				<Suspense fallback={null}>
-					<MermaidDiagram code={code.trim()} />
-				</Suspense>
+				<div data-mermaid>
+					<Suspense fallback={null}>
+						<MermaidDiagram code={code.trim()} />
+					</Suspense>
+				</div>
 			);
 		}
 		return <pre {...rest}>{children}</pre>;
