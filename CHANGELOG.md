@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-07-10
+
+- Faster startup - the eager bundle shrank from 1.9 MB to 744 KB; Mermaid now loads on demand, only when a document renders a diagram
+- The project went public: [website](https://dansreis.github.io/speclens/), Homebrew install, CONTRIBUTING.md, and unit tests running in CI
+
 ## [1.0.1] - 2026-07-10
 
 - Add-repository picker now validates the selection - folders without an `openspec/` directory are rejected with a clear warning instead of being persisted as broken sources
