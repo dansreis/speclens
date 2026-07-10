@@ -13,7 +13,15 @@ import {
 	Typography,
 } from "@mui/material";
 import { alpha, darken } from "@mui/material/styles";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
@@ -32,7 +40,12 @@ import { formatRelativeTime } from "../lib/relativeTime";
 import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
-import { MermaidDiagram } from "./MermaidDiagram";
+
+// Lazy: mermaid is ~3 MB across its chunks and only needed when a document
+// actually contains a ```mermaid fence - keep it off the startup path.
+const MermaidDiagram = lazy(() =>
+	import("./MermaidDiagram").then((m) => ({ default: m.MermaidDiagram })),
+);
 
 // ```mermaid fences arrive as <pre><code class="language-mermaid">. Intercept
 // at the <pre> level so the diagram isn't wrapped in the styled code block.
@@ -48,7 +61,11 @@ const markdownComponents: Components = {
 			const code = child.children
 				.map((c) => (c.type === "text" ? c.value : ""))
 				.join("");
-			return <MermaidDiagram code={code.trim()} />;
+			return (
+				<Suspense fallback={null}>
+					<MermaidDiagram code={code.trim()} />
+				</Suspense>
+			);
 		}
 		return <pre {...rest}>{children}</pre>;
 	},
