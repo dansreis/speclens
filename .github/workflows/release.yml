@@ -220,6 +220,19 @@ jobs:
           draft: false
           prerelease: false
 
+  # Redeploys the website so anything derived from the release (downloads
+  # grid, recommended build) is served fresh rather than from a stale deploy.
+  deploy-website:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Trigger the Deploy website workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY"
+
   # Bumps version + sha256 in dansreis/homebrew-tap's speclens cask. Needs the
   # TAP_TOKEN secret (fine-grained PAT with contents:write on homebrew-tap);
   # skips with a warning when it's absent so releases don't depend on it.
