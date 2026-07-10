@@ -365,8 +365,7 @@ h2 {
 }
 
 .how strong,
-.grid strong,
-.roadmap-list strong {
+.grid strong {
 	color: var(--text);
 }
 
@@ -424,33 +423,6 @@ h2 {
 	color: var(--muted);
 	font-size: 0.8125rem;
 	white-space: nowrap;
-}
-
-.roadmap-list {
-	max-width: 640px;
-	margin: 0 auto;
-	padding: 0;
-	list-style: none;
-	color: var(--muted);
-	font-size: 1.0625rem;
-}
-
-.roadmap-list li {
-	position: relative;
-	margin: 12px 0;
-	padding-left: 30px;
-}
-
-/* Empty checkbox marker - a nod to the tasks.md checklists the app renders. */
-.roadmap-list li::before {
-	content: "";
-	position: absolute;
-	left: 0;
-	top: 0.4em;
-	width: 13px;
-	height: 13px;
-	border: 1.5px solid var(--muted);
-	border-radius: 4px;
 }
 
 .roadmap-more {

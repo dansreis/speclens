@@ -4,7 +4,6 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 
 ## Open-source readiness
 
-- [ ] **Screenshots / demo GIF in the README** - the feature list needs to be visible, not just described
 - [ ] **CONTRIBUTING.md** - dev setup exists in the README, but conventions (Biome, per-icon imports, gates) live only in CLAUDE.md
 
 ## Distribution
