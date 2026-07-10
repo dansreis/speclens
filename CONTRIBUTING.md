@@ -4,7 +4,7 @@ Thanks for your interest! Issues and pull requests are welcome.
 
 ## Dev setup
 
-You need [pnpm](https://pnpm.io) and the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) (Rust toolchain).
+You need [pnpm](https://pnpm.io), the [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) (Rust toolchain), and `cmake` (the local-LLM engine compiles llama.cpp from source; `brew install cmake` on macOS). No cmake? Build the Rust side with `--no-default-features` - everything except AI inference works.
 
 ```sh
 pnpm install
