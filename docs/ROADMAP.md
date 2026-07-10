@@ -44,7 +44,6 @@ The plumbing is done (`AppSettings` in `useAppStore`, persisted as one kv blob -
 - [ ] **Relocate a missing repo** - "Locate folder…" picker instead of remove-and-re-add when a source path breaks
 - [ ] **Repo display name override** - read a `name:` field from `openspec/config.yaml` instead of using the folder name
 - [ ] **Comment threads / replies** - currently a flat list
-- [ ] **Mark/unmark resolved from the UI** - `toggleResolved` exists in the store, no button wired
 - [ ] **Click highlight → scroll to comment** - reverse of the existing comment → highlight jump
 - [ ] **Cross-text-node selection** - selecting across an inline `<code>` boundary silently fails to anchor
 - [ ] **Cross-doc comment indicator** - viewing doc X, hint that doc Y has comments
