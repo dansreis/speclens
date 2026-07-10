@@ -20,6 +20,7 @@ import {
 } from "../lib/aiSummaries";
 import {
 	buildSummaryPrompt,
+	linkifyCapabilities,
 	parseSpecLink,
 	SPEC_LINK_SCHEME,
 } from "../lib/aiSummary";
@@ -152,49 +153,58 @@ export function AiSummaryCard({ repo }: Props) {
 		}
 	}, [repo, aiModel, signature]);
 
-	const renderMarkdown = (text: string) => (
-		<Box sx={markdownSx}>
-			<ReactMarkdown
-				remarkPlugins={[remarkGfm]}
-				urlTransform={(url) =>
-					url.startsWith(SPEC_LINK_SCHEME) ? url : defaultUrlTransform(url)
-				}
-				components={{
-					a: ({ href, children }) => {
-						const capability = parseSpecLink(href);
-						if (capability) {
+	// Linking is done here, not by the model: capability bullets come back as
+	// plain text and get rewritten to speclens-spec:// links deterministically
+	// (this also repairs older cached summaries with model-mangled links).
+	const renderMarkdown = (raw: string) => {
+		const text = linkifyCapabilities(
+			raw,
+			repo.repoSpecs.map((s) => s.capability),
+		);
+		return (
+			<Box sx={markdownSx}>
+				<ReactMarkdown
+					remarkPlugins={[remarkGfm]}
+					urlTransform={(url) =>
+						url.startsWith(SPEC_LINK_SCHEME) ? url : defaultUrlTransform(url)
+					}
+					components={{
+						a: ({ href, children }) => {
+							const capability = parseSpecLink(href);
+							if (capability) {
+								return (
+									<Link
+										component="button"
+										type="button"
+										onClick={() => {
+											setView("specs");
+											setSelectedSpec(capability);
+										}}
+										sx={{ verticalAlign: "baseline" }}
+									>
+										{children}
+									</Link>
+								);
+							}
 							return (
 								<Link
-									component="button"
-									type="button"
-									onClick={() => {
-										setView("specs");
-										setSelectedSpec(capability);
+									href={href}
+									onClick={(e) => {
+										e.preventDefault();
+										if (href) void openUrl(href).catch(console.error);
 									}}
-									sx={{ verticalAlign: "baseline" }}
 								>
 									{children}
 								</Link>
 							);
-						}
-						return (
-							<Link
-								href={href}
-								onClick={(e) => {
-									e.preventDefault();
-									if (href) void openUrl(href).catch(console.error);
-								}}
-							>
-								{children}
-							</Link>
-						);
-					},
-				}}
-			>
-				{text}
-			</ReactMarkdown>
-		</Box>
-	);
+						},
+					}}
+				>
+					{text}
+				</ReactMarkdown>
+			</Box>
+		);
+	};
 
 	const modelStatus = models?.find((m) => m.id === aiModel) ?? null;
 	const modelReady = modelStatus?.downloaded ?? false;

@@ -507,8 +507,9 @@ mod engine {
 
     use super::{fallback_prompt, GenerateEvent, TemplateKind};
 
-    /// Sensible defaults for our "summarize / explain a spec" use case.
-    pub const MAX_OUTPUT_TOKENS: u32 = 1024;
+    /// Sensible defaults for our "summarize / explain a spec" use case. The
+    /// output cap fits ~15 capabilities at 2-3 sentences each plus overview.
+    pub const MAX_OUTPUT_TOKENS: u32 = 2048;
     const TEMPERATURE: f32 = 0.3;
     const N_CTX: u32 = 8192;
     /// Prompt tokens are decoded in chunks of this size so we never exceed

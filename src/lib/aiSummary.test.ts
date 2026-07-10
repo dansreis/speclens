@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	buildSummaryPrompt,
 	formatBytes,
+	linkifyCapabilities,
 	PROMPT_CHAR_LIMIT,
 	parseSpecLink,
 	SPEC_CHAR_LIMIT,
@@ -9,7 +10,7 @@ import {
 } from "./aiSummary";
 
 describe("buildSummaryPrompt", () => {
-	it("includes project name, capabilities, changes, and link instructions", () => {
+	it("includes project name, capabilities, changes, and plain-bullet instructions", () => {
 		const prompt = buildSummaryPrompt({
 			repoName: "my-project",
 			capabilities: [
@@ -22,8 +23,11 @@ describe("buildSummaryPrompt", () => {
 		expect(prompt).toContain("### search\nSearch spec body.");
 		expect(prompt).toContain("### auth\nAuth spec body.");
 		expect(prompt).toContain("- Add Fuzzy Search");
-		expect(prompt).toContain(SPEC_LINK_SCHEME);
+		expect(prompt).toContain("exactly 2 capabilities");
 		expect(prompt).toContain("one bullet per capability");
+		// Linking is done in code (linkifyCapabilities) - the model must not
+		// attempt link syntax, so the scheme never appears in the prompt.
+		expect(prompt).not.toContain(SPEC_LINK_SCHEME);
 	});
 
 	it("shows (none) when there are no active changes", () => {
@@ -101,5 +105,49 @@ describe("formatBytes", () => {
 		expect(formatBytes(512_000_000)).toBe("512 MB");
 		expect(formatBytes(12_000)).toBe("12 kB");
 		expect(formatBytes(42)).toBe("42 B");
+	});
+});
+
+describe("linkifyCapabilities", () => {
+	const caps = ["agent-playbooks", "billing-and-claims", "category-reporting"];
+	const canonical = (name: string, desc: string) =>
+		`- **[${name}](speclens-spec://${name})** - ${desc}`;
+
+	it("links plain '- name: description' bullets", () => {
+		expect(
+			linkifyCapabilities("- billing-and-claims: Governs claims.", caps),
+		).toBe(canonical("billing-and-claims", "Governs claims."));
+	});
+
+	it("repairs the observed 'name](scheme://name)' mangling", () => {
+		const broken =
+			"- **agent-playbooks](speclens-spec://agent-playbooks)** - Codifies workflows.";
+		expect(linkifyCapabilities(broken, caps)).toBe(
+			canonical("agent-playbooks", "Codifies workflows."),
+		);
+	});
+
+	it("repairs the observed 'name(scheme://name)' mangling", () => {
+		const broken =
+			"- **category-reporting(speclens-spec://category-reporting)** - Defines logging.";
+		expect(linkifyCapabilities(broken, caps)).toBe(
+			canonical("category-reporting", "Defines logging."),
+		);
+	});
+
+	it("is idempotent on already-canonical bullets", () => {
+		const ok = canonical("billing-and-claims", "Governs claims.");
+		expect(linkifyCapabilities(ok, caps)).toBe(ok);
+	});
+
+	it("leaves non-capability bullets and prose untouched", () => {
+		const text = "An overview paragraph.\n- some other bullet: unrelated";
+		expect(linkifyCapabilities(text, caps)).toBe(text);
+	});
+
+	it("matches capability names case-insensitively", () => {
+		expect(linkifyCapabilities("- Billing-and-claims: Governs.", caps)).toBe(
+			canonical("billing-and-claims", "Governs."),
+		);
 	});
 });

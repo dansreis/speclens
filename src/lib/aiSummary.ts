@@ -35,22 +35,28 @@ function assemble(input: SummaryPromptInput, perSpecChars: number): string {
 		input.activeChangeTitles.length > 0
 			? input.activeChangeTitles.map((t) => `- ${t}`).join("\n")
 			: "(none)";
+	const capabilityNames = input.capabilities.map((c) => `- ${c.name}`);
+	const count = input.capabilities.length;
 	return [
 		"You are generating a project overview for an OpenSpec repository.",
 		"",
 		`Project: ${input.repoName}`,
 		"",
-		"Capabilities and their current specs:",
+		`The project has exactly ${count} capabilities (use these exact names):`,
+		...capabilityNames,
+		"",
+		"Their current specs:",
 		"",
 		specSections,
 		"",
 		"Active changes in flight:",
 		changeLines,
 		"",
-		"Write concise markdown and nothing else - no preamble, no code fences, no closing remarks:",
-		"1. One short overview paragraph describing what this project covers.",
-		"2. Then exactly one bullet per capability listed above, in this exact form:",
-		`- **[<capability>](${SPEC_LINK_SCHEME}<capability>)** - one-sentence description`,
+		"Write markdown and nothing else - no preamble, no headings, no code fences, no closing remarks:",
+		"1. Start with one overview paragraph (3-5 sentences) describing what this project is, what domain it covers, and how its capabilities fit together.",
+		`2. Then write exactly one bullet per capability - all ${count} of them, in the order listed - in this form:`,
+		"- <capability-name>: two or three sentences describing what it governs and why it matters.",
+		"Each bullet must start with the capability's exact name. Do not invent capabilities, do not skip any, and do not use link or URL syntax anywhere.",
 	].join("\n");
 }
 
@@ -72,6 +78,51 @@ export function buildSummaryPrompt(input: SummaryPromptInput): string {
 		Math.floor((PROMPT_CHAR_LIMIT - overhead) / input.capabilities.length),
 	);
 	return assemble(input, perSpec);
+}
+
+/**
+ * Rewrites capability bullets into canonical linked form:
+ * `- **[<name>](speclens-spec://<name>)** - description`.
+ *
+ * The model is told to emit plain `- <name>: description` bullets (small
+ * models reliably fumble link syntax), and linking happens here instead.
+ * Also repairs summaries from the earlier prompt where the model attempted
+ * the link syntax and mangled it (`name](scheme://name)`, `name(scheme://name)`),
+ * and is idempotent on already-canonical bullets - so cached summaries render
+ * correctly without regeneration.
+ */
+export function linkifyCapabilities(
+	markdown: string,
+	capabilities: string[],
+): string {
+	if (capabilities.length === 0) return markdown;
+	// Longest first so "billing-and-claims" wins over a hypothetical "billing".
+	const sorted = [...capabilities].sort((a, b) => b.length - a.length);
+	return markdown
+		.split("\n")
+		.map((line) => {
+			const bullet = /^(\s*[-*]\s+)(.*)$/.exec(line);
+			if (!bullet) return line;
+			const [, marker, rest] = bullet;
+			for (const cap of sorted) {
+				const idx = rest.toLowerCase().indexOf(cap.toLowerCase());
+				// The name must sit at the bullet head, allowing only emphasis /
+				// bracket punctuation before it (e.g. "**[").
+				if (idx === -1 || idx > 8 || /[^*_`[\]()]/.test(rest.slice(0, idx))) {
+					continue;
+				}
+				let tail = rest.slice(idx + cap.length);
+				// Swallow any (possibly mangled) attempt at our link syntax plus
+				// trailing emphasis/bracket junk, then the separator.
+				tail = tail
+					.replace(/^(\]?\(?speclens-spec:\/\/[^)\s]*\)?)?[*_`\]).]*/, "")
+					.replace(/^\s*[-–:]+\s*/, "")
+					.trim();
+				return `${marker}**[${cap}](${SPEC_LINK_SCHEME}${cap})**${tail ? ` - ${tail}` : ""}`;
+			}
+			return line;
+		})
+		.join("\n");
 }
 
 /**
