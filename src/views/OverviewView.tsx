@@ -10,7 +10,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -66,9 +66,15 @@ export function OverviewView({ repo }: Props) {
 	const readingWpm = useAppStore((s) => s.settings.readingWpm);
 	const aiEnabled = useAppStore((s) => s.settings.aiEnabled);
 	const [configOpen, setConfigOpen] = useState(false);
-	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
-		"summary",
-	);
+	const [tab, setTab] = useState<
+		"summary" | "ai" | "activity" | "changes" | "config"
+	>("summary");
+
+	// Disabling AI while on its tab would leave the Tabs value pointing at a
+	// tab that no longer renders.
+	useEffect(() => {
+		if (!aiEnabled && tab === "ai") setTab("summary");
+	}, [aiEnabled, tab]);
 
 	const stats = useMemo(() => {
 		if (!repo) {
@@ -296,6 +302,7 @@ export function OverviewView({ repo }: Props) {
 				}}
 			>
 				<Tab value="summary" label="Summary" />
+				{aiEnabled && <Tab value="ai" label="AI Summary" />}
 				<Tab value="activity" label="Activity" />
 				<Tab value="changes" label="Changes" />
 				<Tab value="config" label="Config" />
@@ -366,7 +373,6 @@ export function OverviewView({ repo }: Props) {
 							help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${readingWpm} words per minute.`}
 						/>
 					</Box>
-					{repo && aiEnabled && <AiSummaryCard key={repo.id} repo={repo} />}
 					{repo?.config?.context && (
 						<Box
 							sx={{
@@ -389,6 +395,9 @@ export function OverviewView({ repo }: Props) {
 						</Box>
 					)}
 				</>
+			)}
+			{tab === "ai" && repo && aiEnabled && (
+				<AiSummaryCard key={repo.id} repo={repo} />
 			)}
 			{tab === "activity" && (
 				<Section title="Recent activity">
