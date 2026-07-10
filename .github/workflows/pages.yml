@@ -1,14 +1,11 @@
 name: Deploy website
 
-# Publishes website/ to GitHub Pages. Requires Pages to be enabled with
-# "GitHub Actions" as the source (Settings → Pages) - on the free plan that
-# means after the repo goes public. Manual-only until then so website commits
-# don't produce failing runs; uncomment the push trigger once Pages is enabled.
+# Publishes website/ to GitHub Pages ("GitHub Actions" as the Pages source).
 on:
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - "website/**"
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
   workflow_dispatch:
 
 permissions:
