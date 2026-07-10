@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-07-10
+
+- Add-repository picker now validates the selection - folders without an `openspec/` directory are rejected with a clear warning instead of being persisted as broken sources
+- Install through Homebrew: `brew install --cask dansreis/tap/speclens` (Apple Silicon), with the cask updated automatically on every release
+- README: feature screenshot gallery, demo video, and a pointer to the [openspec-examples](https://github.com/dansreis/openspec-examples) try-it-now dataset
+
 ## [1.0.0] - 2026-07-10
 
 First release of SpecLens - a desktop reader for OpenSpec projects.
