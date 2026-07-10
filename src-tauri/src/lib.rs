@@ -173,14 +173,14 @@ async fn repo_signature(path: String) -> Result<String, String> {
 /// Resolves the folder the user picked to the actual project root. A project
 /// root is the folder that *contains* an `openspec/` directory. If the user
 /// instead picked the `openspec/` directory itself, return its parent so
-/// `<root>/openspec` resolves correctly. Otherwise return the path unchanged
-/// and let `load_repo` surface any error.
+/// `<root>/openspec` resolves correctly. Any other folder is rejected, so the
+/// add-repository flow can refuse it before a broken source is persisted.
 #[tauri::command]
-fn resolve_repo_root(path: String) -> String {
+fn resolve_repo_root(path: String) -> Result<String, String> {
     let p = PathBuf::from(&path);
     // Already a valid root: it contains an openspec/ subdirectory.
     if p.join("openspec").is_dir() {
-        return path;
+        return Ok(path);
     }
     // Picked the openspec/ dir itself: named "openspec" and holding the usual
     // OpenSpec contents. Use its parent so <parent>/openspec == the picked dir.
@@ -190,10 +190,10 @@ fn resolve_repo_root(path: String) -> String {
             || p.join("config.yaml").is_file());
     if is_openspec_dir {
         if let Some(parent) = p.parent() {
-            return parent.to_string_lossy().into_owned();
+            return Ok(parent.to_string_lossy().into_owned());
         }
     }
-    path
+    Err(format!("No openspec/ folder found inside {}", p.display()))
 }
 
 /// A fingerprint that changes iff the project's loaded content would change.
