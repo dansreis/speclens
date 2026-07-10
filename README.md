@@ -68,6 +68,7 @@ pnpm dev         # browser only, at http://localhost:1420
 | ---------------- | -------------------------- |
 | `pnpm build`     | `tsc && vite build`        |
 | `pnpm typecheck` | `tsc --noEmit`             |
+| `pnpm test`      | Vitest unit tests          |
 | `pnpm check`     | Biome lint + format check  |
 | `pnpm format`    | Biome auto-format          |
 
