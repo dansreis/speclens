@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2026-07-10
+
+- Fixed a crash when opening a document containing a Mermaid diagram before the diagram renderer had loaded ("Something went wrong rendering this view")
+- Git is no longer required on your machine: authorship and timestamps now come from an embedded git library, with identical rename-following and .mailmap behavior
+
 ## [1.0.2] - 2026-07-10
 
 - Faster startup - the eager bundle shrank from 1.9 MB to 744 KB; Mermaid now loads on demand, only when a document renders a diagram
