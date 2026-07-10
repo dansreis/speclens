@@ -25,4 +25,11 @@ tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 walkdir = "2"
+# default-features = false drops the ssh/https transports (and their openssl
+# dependency); vendored-libgit2 builds libgit2 from source so no system
+# library is needed on any CI target or user machine.
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+
+[dev-dependencies]
+tempfile = "3"
 

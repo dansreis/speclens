@@ -62,3 +62,6 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --all-targets
+
+      - name: Test
+        run: cargo test
