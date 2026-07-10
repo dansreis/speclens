@@ -48,6 +48,12 @@ Everything is local. No accounts, no GitHub integration, no network calls - Spec
 brew install --cask dansreis/tap/speclens
 ```
 
+Updating later is the usual brew flow - the cask tracks every release automatically:
+
+```sh
+brew upgrade --cask speclens   # or just `brew upgrade` for everything
+```
+
 **Direct download**: grab the `.dmg` (or the Linux/Windows build) from [Releases](https://github.com/dansreis/speclens/releases) and drag SpecLens to `/Applications`. Builds are signed and notarized, so it opens without any Gatekeeper warnings.
 
 Then click **Add repository** in the sidebar and pick any folder containing an `openspec/` directory.
