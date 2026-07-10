@@ -19,7 +19,6 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
   2. **Replace the `git` subprocess** - a sandboxed app can't reliably shell out to `/usr/bin/git`; port authorship derivation in `src-tauri/src/lib.rs` to an embedded library (`gitoxide` or `git2`)
   3. MAS build + upload (`tauri build` with MAS provisioning profile/entitlements, upload via Transporter/`altool`), App Store Connect listing, review
 - [ ] **Auto-updates** - Tauri updater plugin, once signing exists (App Store copies update through Apple; updater applies to the direct/Homebrew build only)
-- [ ] **Enable branch protection once public** - requiring the `frontend` + `rust` checks needs GitHub Pro on private repos; after flipping public, run the saved `gh api .../branches/main/protection` command (see RELEASE.md history)
 
 ## Foundations
 
