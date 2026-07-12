@@ -163,8 +163,9 @@ export function SidebarFooter({ collapsed = false }: Props) {
 			<Dialog
 				open={settingsOpen}
 				onClose={() => setSettingsOpen(false)}
-				maxWidth="sm"
+				maxWidth="md"
 				fullWidth
+				slotProps={{ paper: { sx: { maxWidth: 760 } } }}
 			>
 				<DialogTitle sx={{ pb: 0 }}>Settings</DialogTitle>
 				<Tabs
@@ -177,7 +178,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 				</Tabs>
 				<DialogContent
 					sx={{
-						height: 640,
+						height: "min(72vh, 720px)",
 						overflow: "hidden",
 						display: "flex",
 						flexDirection: "column",
