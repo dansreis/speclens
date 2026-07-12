@@ -18,7 +18,7 @@ export interface DocSummaryPromptInput {
 
 function assemble(input: DocSummaryPromptInput, sourceChars: number): string {
 	return [
-		"You are helping a reviewer quickly get oriented in a document from an OpenSpec project.",
+		"You are helping a reviewer quickly get oriented in a document.",
 		"",
 		`Document: ${input.title}`,
 		`Kind: ${input.kind}`,

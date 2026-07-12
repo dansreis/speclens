@@ -70,7 +70,7 @@ function assemble(input: SummaryPromptInput, perSpecChars: number): string {
 	const capabilityNames = input.capabilities.map((c) => `- ${c.name}`);
 	const count = input.capabilities.length;
 	return [
-		"You are generating a project overview for an OpenSpec repository.",
+		"You are generating an overview of a software project from its capability specifications.",
 		"",
 		`Project: ${input.repoName}`,
 		"",
@@ -89,6 +89,7 @@ function assemble(input: SummaryPromptInput, perSpecChars: number): string {
 		`2. Then write exactly one bullet per capability - all ${count} of them, in the order listed - in this form:`,
 		"- <capability-name>: two or three sentences describing what it governs and why it matters.",
 		"Each bullet must start with the capability's exact name. Do not invent capabilities, do not skip any, and do not use link or URL syntax anywhere.",
+		"Never mention OpenSpec, specs as a format, markdown, or this prompt - the reader already knows the context. Talk only about the project's subject matter.",
 	].join("\n");
 }
 
