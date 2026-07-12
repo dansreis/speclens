@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-07-13
+
+Local AI - on-device summaries, fully private. Nothing runs or downloads until you enable it and fetch a model; nothing ever leaves your machine.
+
+### Highlights
+
+- **AI summaries everywhere** - a golden ✨ button on the project Overview and on every document (proposals, tasks, design docs, specs, ADRs, playbooks) streams a summary into a resizable right-side panel. Capability names link straight to their specs.
+- **Reviewer-oriented document summaries** - what the document is, its key points, and a "worth a reviewer's attention" list of risks and open questions.
+- **Background generation** - keep reading while it works; a notification tells you when the summary is ready. Summaries cache per document and regenerate only when content changes.
+- **Five curated models** - Gemma 4 E2B (default) and E4B, Qwen3.5 4B, Phi-4 Mini, SmolLM3 3B - downloaded on demand with checksum verification, all managed from Settings.
+- **Bring your own model** - import any llama.cpp-compatible GGUF file, or drop it into the models folder.
+- **Ollama support** - models from a local Ollama server appear automatically and generate through it.
+- **Settings redesign** - a scannable model list with per-row download/delete, storage totals, and a simpler two-tab layout.
+
+### Known limitations
+
+- AI inference is Metal-accelerated on Apple Silicon and CPU-based elsewhere; small models can be slow on older machines
+- Windows installers remain unsigned - SmartScreen will warn on first run
+
 ## [1.0.3] - 2026-07-10
 
 - Fixed a crash when opening a document containing a Mermaid diagram before the diagram renderer had loaded ("Something went wrong rendering this view")
