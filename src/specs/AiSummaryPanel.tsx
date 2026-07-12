@@ -136,17 +136,14 @@ export function AiSummaryPanel() {
 
 	const { text, tokens, generating, error } = docSummary;
 
-	// Tail the stream: keep the body scrolled to the bottom as tokens arrive,
-	// but only while the user is already near the bottom - scrolling up to
-	// read pauses the auto-follow instead of yanking them back down.
+	// Tail the stream: while generating, the body stays pinned to the bottom
+	// as tokens arrive - the newest text is always in view.
 	const bodyRef = useRef<HTMLDivElement | null>(null);
-	const followRef = useRef(true);
 	useEffect(() => {
 		// `text` is read only as the effect trigger (each streamed chunk).
 		void text;
 		const el = bodyRef.current;
-		if (!el || !generating) return;
-		if (followRef.current) el.scrollTop = el.scrollHeight;
+		if (el && generating) el.scrollTop = el.scrollHeight;
 	}, [text, generating]);
 	const modelReady =
 		models?.some((m) => m.id === aiModel && m.downloaded) ?? false;
@@ -372,16 +369,7 @@ export function AiSummaryPanel() {
 					</IconButton>
 				</Tooltip>
 			</Box>
-			<Box
-				ref={bodyRef}
-				onScroll={() => {
-					const el = bodyRef.current;
-					if (!el) return;
-					followRef.current =
-						el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-				}}
-				sx={{ flex: 1, overflowY: "auto", p: 2 }}
-			>
+			<Box ref={bodyRef} sx={{ flex: 1, overflowY: "auto", p: 2 }}>
 				{body}
 			</Box>
 			{showFooter && (
