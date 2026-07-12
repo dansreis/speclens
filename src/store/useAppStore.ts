@@ -36,7 +36,9 @@ export interface AppSettings {
 	sidebarWidth: number;
 	/** Width of the AI summary side panel in px (drag-resizable). */
 	aiPanelWidth: number;
-	/** Opt-in local AI features (model download + on-device inference). */
+	/** Local AI features (model download + on-device inference). On by
+	 * default - the UI shows, but nothing downloads or runs until the user
+	 * explicitly fetches a model, so the no-network promise holds. */
 	aiEnabled: boolean;
 	/** Selected local model id; must be one of the ids in AI_MODELS. */
 	aiModel: string;
@@ -48,7 +50,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	commentsPanelWidth: 340,
 	sidebarWidth: 240,
 	aiPanelWidth: 380,
-	aiEnabled: false,
+	aiEnabled: true,
 	aiModel: DEFAULT_AI_MODEL_ID,
 };
 
