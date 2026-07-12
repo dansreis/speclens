@@ -7,6 +7,7 @@ import {
 	Button,
 	FormControlLabel,
 	LinearProgress,
+	Link,
 	MenuItem,
 	Select,
 	Stack,
@@ -14,6 +15,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { AI_MODELS, aiImportModel, DEFAULT_AI_MODEL_ID } from "../lib/ai";
 
@@ -251,9 +253,22 @@ export function AiSettingsSection() {
 							color="text.secondary"
 							sx={{ display: "block", mt: 0.5 }}
 						>
-							Any llama.cpp-compatible GGUF works. Imported models use their
-							built-in chat template; very new architectures may not be
-							supported by the bundled engine.
+							Any llama.cpp-compatible GGUF works - browse{" "}
+							<Link
+								component="button"
+								type="button"
+								onClick={() =>
+									void openUrl(
+										"https://huggingface.co/models?library=gguf&sort=trending",
+									).catch(console.error)
+								}
+								sx={{ verticalAlign: "baseline" }}
+							>
+								GGUF models on Hugging Face
+							</Link>{" "}
+							and download a <code>Q4_K_M</code> file for a good size/quality
+							balance. Imported models use their built-in chat template; very
+							new architectures may not be supported by the bundled engine.
 						</Typography>
 					</Box>
 					{importError && <Alert severity="error">{importError}</Alert>}
