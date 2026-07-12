@@ -172,10 +172,8 @@ export function SidebarFooter({ collapsed = false }: Props) {
 					onChange={(_, v) => setSettingsTab(v as number)}
 					sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}
 				>
-					<Tab label="Reading" />
-					<Tab label="Comments" />
-					<Tab label="AI" />
 					<Tab label="General" />
+					<Tab label="AI" />
 				</Tabs>
 				<DialogContent
 					sx={{
@@ -186,7 +184,11 @@ export function SidebarFooter({ collapsed = false }: Props) {
 					}}
 				>
 					{settingsTab === 0 && (
-						<Stack spacing={3} divider={<Divider flexItem />}>
+						<Stack
+							spacing={3}
+							divider={<Divider flexItem />}
+							sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}
+						>
 							<SettingRow
 								title="Reading speed"
 								caption={`Words per minute used to estimate reading time. Currently ${settings.readingWpm} wpm.`}
@@ -228,10 +230,6 @@ export function SidebarFooter({ collapsed = false }: Props) {
 									</Box>
 								}
 							/>
-						</Stack>
-					)}
-					{settingsTab === 1 && (
-						<Stack spacing={3} divider={<Divider flexItem />}>
 							<SettingRow
 								title="Highlight color"
 								caption="Color used for comment highlights in the document."
@@ -297,24 +295,23 @@ export function SidebarFooter({ collapsed = false }: Props) {
 									size="small"
 								/>
 							</SettingRow>
+
+							<SettingRow
+								title="Tutorial"
+								caption="Replay the quick tour of SpecLens shown on first launch."
+							>
+								<Button
+									onClick={handleShowTutorial}
+									startIcon={<PlayCircleOutlinedIcon />}
+									variant="outlined"
+									size="small"
+								>
+									Show tutorial
+								</Button>
+							</SettingRow>
 						</Stack>
 					)}
-					{settingsTab === 2 && <AiSettingsSection />}
-					{settingsTab === 3 && (
-						<SettingRow
-							title="Tutorial"
-							caption="Replay the quick tour of SpecLens shown on first launch."
-						>
-							<Button
-								onClick={handleShowTutorial}
-								startIcon={<PlayCircleOutlinedIcon />}
-								variant="outlined"
-								size="small"
-							>
-								Show tutorial
-							</Button>
-						</SettingRow>
-					)}
+					{settingsTab === 1 && <AiSettingsSection />}
 				</DialogContent>
 				<DialogActions
 					sx={{
