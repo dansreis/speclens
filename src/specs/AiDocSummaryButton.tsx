@@ -5,6 +5,10 @@ import { useEffect } from "react";
 import { type DocSummaryInput, useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
+/** Golden sparkle - brighter in dark mode, deeper on light backgrounds. */
+const gold = (t: { palette: { mode: string } }) =>
+	t.palette.mode === "dark" ? "#facc15" : "#ca8a04";
+
 /** Gentle sparkle while a summary is generating anywhere in the app. */
 const sparkle = keyframes`
   0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
@@ -59,7 +63,7 @@ export function AiDocSummaryButton({
 						.summarizeDoc({ title, kind, source, rawPrompt, persist })
 				}
 				aria-label="AI summary"
-				sx={{ color: generating ? "primary.main" : "text.secondary" }}
+				sx={{ color: gold }}
 			>
 				<AutoAwesomeIcon
 					fontSize="small"
