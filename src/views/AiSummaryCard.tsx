@@ -78,6 +78,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 	);
 	const [generating, setGenerating] = useState(false);
 	const [streamText, setStreamText] = useState("");
+	const [tokenCount, setTokenCount] = useState(0);
 	const [error, setError] = useState<string | null>(null);
 	// Tracks unmount so late channel events / promise settlement are ignored,
 	// and lets cleanup cancel a still-running generation.
@@ -123,6 +124,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 		});
 		setError(null);
 		setStreamText("");
+		setTokenCount(0);
 		setGenerating(true);
 		generatingRef.current = true;
 		let acc = "";
@@ -133,6 +135,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 				if (event.event === "token") {
 					acc += event.text;
 					setStreamText(acc);
+					setTokenCount((n) => n + 1);
 				} else {
 					reason = event.reason;
 				}
@@ -153,6 +156,11 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 					summary.summary,
 				);
 				if (aliveRef.current) setCached(summary);
+			} else if (reason !== "cancelled" && aliveRef.current) {
+				// Finished with nothing visible after think-stripping.
+				setError(
+					`The model finished (${reason || "eos"}) without a visible answer - thinking models can spend the whole output budget reasoning. Try Regenerate, or pick a different model in Settings → AI.`,
+				);
 			}
 		} catch (e) {
 			generatingRef.current = false;
@@ -250,6 +258,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 					<CircularProgress size={14} />
 					<Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
 						Generating with {modelName}
+						{tokenCount > 0 ? ` · ${tokenCount} tokens` : ""}
 					</Typography>
 					<Button size="small" onClick={() => void aiCancelGenerate()}>
 						Cancel

@@ -100,7 +100,7 @@ export function AiSummaryPanel() {
 		if (open && models === null) void refreshModels();
 	}, [open, models, refreshModels]);
 
-	const { title, kind, text, receivedTokens, generating, error } = docSummary;
+	const { title, kind, text, tokens, generating, error } = docSummary;
 	const modelReady =
 		models?.some((m) => m.id === aiModel && m.downloaded) ?? false;
 	const modelName = aiModelInfo(aiModel)?.displayName ?? aiModel;
@@ -119,13 +119,16 @@ export function AiSummaryPanel() {
 					renderMarkdown(text)
 				) : (
 					<Typography variant="body2" color="text.secondary">
-						{receivedTokens ? "Thinking…" : "Loading the model and generating…"}
+						{tokens > 0
+							? `Thinking… · ${tokens} tokens`
+							: "Loading the model and generating…"}
 					</Typography>
 				)}
 				<Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5 }}>
 					<CircularProgress size={14} />
 					<Typography variant="caption" color="text.secondary">
 						Generating with {modelName}
+						{tokens > 0 ? ` · ${tokens} tokens` : ""}
 					</Typography>
 				</Box>
 			</>

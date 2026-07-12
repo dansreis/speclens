@@ -43,7 +43,8 @@ export interface DocSummaryState {
 	text: string;
 	/** True once any raw token arrived - distinguishes "Thinking…" from
 	 * "Loading the model…" while `text` is still empty. */
-	receivedTokens: boolean;
+	/** Raw token events received this run - live progress signal. */
+	tokens: number;
 	generating: boolean;
 	error: string | null;
 	/** Set when a generation finishes while the panel is closed. */
@@ -57,7 +58,7 @@ const EMPTY_DOC_SUMMARY: DocSummaryState = {
 	docKey: "",
 	source: "",
 	text: "",
-	receivedTokens: false,
+	tokens: 0,
 	generating: false,
 	error: null,
 	unseen: false,
@@ -301,7 +302,7 @@ async function startDocGeneration(
 					docSummary: {
 						...state.docSummary,
 						text: visible,
-						receivedTokens: true,
+						tokens: state.docSummary.tokens + 1,
 					},
 				}));
 			} else {
@@ -320,9 +321,19 @@ async function startDocGeneration(
 					unseen: !state.docSummary.open,
 				},
 			}));
-		} else {
+		} else if (reason === "cancelled") {
 			set((state) => ({
 				docSummary: { ...state.docSummary, generating: false },
+			}));
+		} else {
+			// Finished but nothing visible survived think-stripping: say so
+			// instead of silently resetting to the idle state.
+			set((state) => ({
+				docSummary: {
+					...state.docSummary,
+					generating: false,
+					error: `The model finished (${reason || "eos"}) without a visible answer - thinking models can spend the whole output budget reasoning. Try Regenerate, or pick a different model in Settings → AI.`,
+				},
 			}));
 		}
 	} catch (e) {

@@ -60,7 +60,7 @@ beforeEach(() => {
 			docKey: "",
 			source: "",
 			text: "",
-			receivedTokens: false,
+			tokens: 0,
 			generating: false,
 			error: null,
 			unseen: false,
@@ -90,12 +90,12 @@ describe("summarizeDoc", () => {
 		expect(mocks.aiGenerate).toHaveBeenCalledTimes(1);
 		expect(docSummary().open).toBe(true);
 		expect(docSummary().generating).toBe(true);
-		expect(docSummary().receivedTokens).toBe(false);
+		expect(docSummary().tokens).toBe(0);
 
 		// A pure <think> prefix streams as no visible text but marks tokens seen.
 		runs[0].emit({ event: "token", text: "<think>reasoning</think>" });
 		expect(docSummary().text).toBe("");
-		expect(docSummary().receivedTokens).toBe(true);
+		expect(docSummary().tokens).toBeGreaterThan(0);
 
 		runs[0].emit({ event: "token", text: "Summary " });
 		runs[0].emit({ event: "token", text: "text" });
