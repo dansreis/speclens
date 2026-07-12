@@ -10,15 +10,18 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { useEffect } from "react";
+import { alpha } from "@mui/material/styles";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiModelInfo } from "../lib/ai";
 import { useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
-/** Fixed width; sits next to the (resizable) comments panel. */
-const PANEL_WIDTH = 380;
+/** Views where the panel stays hidden - full-canvas visualizations. */
+const CANVAS_VIEWS = new Set(["flow", "graph", "timeline"]);
+const MIN_WIDTH = 300;
+const MAX_WIDTH = 640;
 
 const markdownSx = {
 	color: "text.primary",
@@ -46,6 +49,10 @@ const markdownSx = {
 export function AiSummaryPanel() {
 	const aiEnabled = useAppStore((s) => s.settings.aiEnabled);
 	const aiModel = useAppStore((s) => s.settings.aiModel);
+	const panelWidth = useAppStore((s) => s.settings.aiPanelWidth);
+	const setSetting = useAppStore((s) => s.setSetting);
+	const view = useAppStore((s) => s.view);
+	const [resizing, setResizing] = useState(false);
 	const docSummary = useAiStore((s) => s.docSummary);
 	const models = useAiStore((s) => s.models);
 	const modelsError = useAiStore((s) => s.modelsError);
@@ -54,7 +61,39 @@ export function AiSummaryPanel() {
 	const regenerateDocSummary = useAiStore((s) => s.regenerateDocSummary);
 	const closeDocSummaryPanel = useAiStore((s) => s.closeDocSummaryPanel);
 
-	const open = docSummary.open && aiEnabled;
+	// Hidden on full-canvas views (flow/graph/timeline) - generation continues
+	// and the panel reappears when returning to a document view.
+	const open = docSummary.open && aiEnabled && !CANVAS_VIEWS.has(view);
+
+	// Same drag idiom as the sidebar (AppSidebar): pointer capture, width
+	// written straight to the persisted setting, no transition while dragging.
+	const handleResizeStart = (e: React.PointerEvent<HTMLElement>) => {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = useAppStore.getState().settings.aiPanelWidth;
+		const handle = e.currentTarget;
+		handle.setPointerCapture(e.pointerId);
+		setResizing(true);
+		const onMove = (ev: PointerEvent) => {
+			// Panel sits on the right, so dragging left grows it.
+			const w = Math.round(
+				Math.min(
+					MAX_WIDTH,
+					Math.max(MIN_WIDTH, startWidth + startX - ev.clientX),
+				),
+			);
+			useAppStore.getState().setSetting("aiPanelWidth", w);
+		};
+		const onUp = () => {
+			setResizing(false);
+			handle.removeEventListener("pointermove", onMove);
+			handle.removeEventListener("pointerup", onUp);
+			handle.removeEventListener("pointercancel", onUp);
+		};
+		handle.addEventListener("pointermove", onMove);
+		handle.addEventListener("pointerup", onUp);
+		handle.addEventListener("pointercancel", onUp);
+	};
 
 	useEffect(() => {
 		if (open && models === null) void refreshModels();
@@ -148,9 +187,9 @@ export function AiSummaryPanel() {
 		<Box
 			sx={{
 				position: "relative",
-				width: open ? PANEL_WIDTH : 0,
+				width: open ? panelWidth : 0,
 				flexShrink: 0,
-				transition: "width 200ms ease-in-out",
+				transition: resizing ? "none" : "width 200ms ease-in-out",
 				borderLeft: 1,
 				borderColor: "divider",
 				bgcolor: "background.paper",
@@ -160,6 +199,29 @@ export function AiSummaryPanel() {
 				pointerEvents: open ? "auto" : "none",
 			}}
 		>
+			{open && (
+				<Box
+					onPointerDown={handleResizeStart}
+					onDoubleClick={() => setSetting("aiPanelWidth", 380)}
+					aria-label="Resize AI summary panel"
+					sx={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						bottom: 0,
+						width: 5,
+						cursor: "col-resize",
+						zIndex: 1,
+						bgcolor: resizing
+							? (t) => alpha(t.palette.primary.main, 0.3)
+							: "transparent",
+						transition: "background-color 150ms",
+						"&:hover": {
+							bgcolor: (t) => alpha(t.palette.primary.main, 0.2),
+						},
+					}}
+				/>
+			)}
 			<Box
 				sx={{
 					display: "flex",

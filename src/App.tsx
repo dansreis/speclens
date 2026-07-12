@@ -4,6 +4,7 @@ import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutl
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+	Alert,
 	Backdrop,
 	Box,
 	Button,
@@ -538,17 +539,24 @@ function App() {
 						useAiStore.getState().clearDocSummaryUnseen();
 					}
 				}}
-				message="AI summary ready"
-				action={
-					<Button
-						size="small"
-						color="primary"
-						onClick={() => useAiStore.getState().openDocSummaryPanel()}
-					>
-						View
-					</Button>
-				}
-			/>
+			>
+				<Alert
+					severity="info"
+					variant="filled"
+					sx={{ alignItems: "center" }}
+					action={
+						<Button
+							size="small"
+							color="inherit"
+							onClick={() => useAiStore.getState().openDocSummaryPanel()}
+						>
+							View
+						</Button>
+					}
+				>
+					AI summary ready
+				</Alert>
+			</Snackbar>
 			<TutorialDialog />
 		</ThemeProvider>
 	);

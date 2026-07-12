@@ -34,6 +34,8 @@ export interface AppSettings {
 	commentsPanelWidth: number;
 	/** Width of the left navigation sidebar in px (expanded mode only). */
 	sidebarWidth: number;
+	/** Width of the AI summary side panel in px (drag-resizable). */
+	aiPanelWidth: number;
 	/** Opt-in local AI features (model download + on-device inference). */
 	aiEnabled: boolean;
 	/** Selected local model id; must be one of the ids in AI_MODELS. */
@@ -45,6 +47,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	highlightColor: "#fde047",
 	commentsPanelWidth: 340,
 	sidebarWidth: 240,
+	aiPanelWidth: 380,
 	aiEnabled: false,
 	aiModel: DEFAULT_AI_MODEL_ID,
 };
@@ -87,6 +90,12 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			r.sidebarWidth <= 400
 				? r.sidebarWidth
 				: DEFAULT_SETTINGS.sidebarWidth,
+		aiPanelWidth:
+			typeof r.aiPanelWidth === "number" &&
+			r.aiPanelWidth >= 300 &&
+			r.aiPanelWidth <= 640
+				? r.aiPanelWidth
+				: DEFAULT_SETTINGS.aiPanelWidth,
 		aiEnabled:
 			typeof r.aiEnabled === "boolean"
 				? r.aiEnabled
