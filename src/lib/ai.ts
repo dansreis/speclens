@@ -13,6 +13,8 @@ export interface AiModelInfo {
 	displayName: string;
 	/** Approximate download size in bytes (decimal, from Hugging Face). */
 	sizeBytes: number;
+	/** One-line character description shown in the model picker. */
+	description: string;
 }
 
 /** Keep ids/sizes in sync with `MODELS` in src-tauri/src/ai.rs. */
@@ -21,26 +23,31 @@ export const AI_MODELS: readonly AiModelInfo[] = [
 		id: "gemma-4-e2b-it",
 		displayName: "Gemma 4 E2B Instruct (Q4_K_M)",
 		sizeBytes: 3_110_000_000,
+		description: "Balanced all-rounder - the default",
 	},
 	{
 		id: "qwen3.5-4b",
 		displayName: "Qwen3.5 4B Instruct (Q4_K_M)",
 		sizeBytes: 2_740_000_000,
+		description: "Follows structured instructions closely",
 	},
 	{
 		id: "gemma-4-e4b-it",
 		displayName: "Gemma 4 E4B Instruct (Q4_K_M)",
 		sizeBytes: 4_977_169_568,
+		description: "Best quality prose; needs the most memory",
 	},
 	{
 		id: "phi-4-mini",
 		displayName: "Phi-4 Mini Instruct (Q4_K_M)",
 		sizeBytes: 2_491_874_272,
+		description: "Structured-output specialist",
 	},
 	{
 		id: "smollm3-3b",
 		displayName: "SmolLM3 3B (Q4_K_M)",
 		sizeBytes: 1_915_306_528,
+		description: "Smallest and fastest",
 	},
 ];
 

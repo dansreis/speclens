@@ -81,6 +81,10 @@ export function AiSettingsSection() {
 						size="small"
 						fullWidth
 						aria-label="AI model"
+						renderValue={(id) => {
+							const m = MODELS_ALPHABETICAL.find((x) => x.id === id);
+							return m ? `${m.displayName} · ~${formatBytes(m.sizeBytes)}` : id;
+						}}
 					>
 						{MODELS_ALPHABETICAL.map((m) => {
 							const downloaded = models?.some(
@@ -88,8 +92,19 @@ export function AiSettingsSection() {
 							);
 							return (
 								<MenuItem key={m.id} value={m.id}>
-									{m.displayName} · ~{formatBytes(m.sizeBytes)}
-									{downloaded ? " · downloaded" : ""}
+									<Box>
+										<Typography variant="body2">
+											{m.displayName} · ~{formatBytes(m.sizeBytes)}
+											{downloaded ? " · downloaded" : ""}
+										</Typography>
+										<Typography
+											variant="caption"
+											color="text.secondary"
+											component="div"
+										>
+											{m.description}
+										</Typography>
+									</Box>
 								</MenuItem>
 							);
 						})}
