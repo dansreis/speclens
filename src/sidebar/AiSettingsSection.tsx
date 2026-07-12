@@ -424,7 +424,7 @@ export function AiSettingsSection() {
 								size="small"
 								disabled={importing}
 							>
-								{importing ? "Importing…" : "Import model…"}
+								{importing ? "Importing…" : "Import model"}
 							</Button>
 							<Button
 								onClick={() => void aiRevealModelsDir().catch(console.error)}
