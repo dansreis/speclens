@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiModelInfo } from "../lib/ai";
-import { aiErrorSeverity } from "../lib/aiSummary";
+import { aiErrorSeverity, formatTokenCount } from "../lib/aiSummary";
 import { useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
@@ -120,7 +120,7 @@ export function AiSummaryPanel() {
 				) : (
 					<Typography variant="body2" color="text.secondary">
 						{tokens > 0
-							? `Thinking… · ${tokens} tokens`
+							? `Thinking… · ${formatTokenCount(tokens)} tokens`
 							: "Loading the model and generating…"}
 					</Typography>
 				)}
@@ -128,7 +128,7 @@ export function AiSummaryPanel() {
 					<CircularProgress size={14} />
 					<Typography variant="caption" color="text.secondary">
 						Generating with {modelName}
-						{tokens > 0 ? ` · ${tokens} tokens` : ""}
+						{tokens > 0 ? ` · ${formatTokenCount(tokens)} tokens` : ""}
 					</Typography>
 				</Box>
 			</>

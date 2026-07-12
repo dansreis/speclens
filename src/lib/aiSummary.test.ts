@@ -4,6 +4,7 @@ import {
 	buildSummaryPrompt,
 	collectCapabilities,
 	formatBytes,
+	formatTokenCount,
 	linkifyCapabilities,
 	PROMPT_CHAR_LIMIT,
 	parseSpecLink,
@@ -213,5 +214,15 @@ describe("aiErrorSeverity", () => {
 
 	it("treats real failures as error", () => {
 		expect(aiErrorSeverity("model file is corrupt")).toBe("error");
+	});
+});
+
+describe("formatTokenCount", () => {
+	it("shows small counts as-is and larger ones in k units", () => {
+		expect(formatTokenCount(214)).toBe("214");
+		expect(formatTokenCount(999)).toBe("999");
+		expect(formatTokenCount(1140)).toBe("1.1k");
+		expect(formatTokenCount(2048)).toBe("2.0k");
+		expect(formatTokenCount(12400)).toBe("12k");
 	});
 });

@@ -184,6 +184,12 @@ export const useAiStore = create<AiStoreState>()((set, get) => ({
 	summarizeDoc: async (input) => {
 		const model = useAppStore.getState().settings.aiModel;
 		const docKey = docSummaryCacheKey(model, input.source);
+		// Already generating THIS document: just surface the panel - restarting
+		// would throw away the progress the user is asking to see.
+		if (get().docSummary.generating && get().docSummary.docKey === docKey) {
+			get().openDocSummaryPanel();
+			return;
+		}
 		const cached = docSummaryCache.get(docKey);
 		if (cached !== undefined) {
 			// Instant open from cache. This replaces whatever was showing, so any

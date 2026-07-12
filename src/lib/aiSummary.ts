@@ -196,6 +196,13 @@ export function aiErrorSeverity(message: string): "info" | "error" {
 		: "error";
 }
 
+/** Compact token count: 214 → "214", 1140 → "1.1k". */
+export function formatTokenCount(n: number): string {
+	if (n < 1000) return String(n);
+	const k = n / 1000;
+	return `${k >= 10 ? Math.round(k) : k.toFixed(1)}k`;
+}
+
 /** Human-readable decimal size: "3.11 GB", "512 MB", "12 kB". */
 export function formatBytes(bytes: number): string {
 	if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;

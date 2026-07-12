@@ -22,6 +22,7 @@ import {
 	aiErrorSeverity,
 	buildSummaryPrompt,
 	collectCapabilities,
+	formatTokenCount,
 	linkifyCapabilities,
 	parseSpecLink,
 	SPEC_LINK_SCHEME,
@@ -258,7 +259,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 					<CircularProgress size={14} />
 					<Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
 						Generating with {modelName}
-						{tokenCount > 0 ? ` · ${tokenCount} tokens` : ""}
+						{tokenCount > 0 ? ` · ${formatTokenCount(tokenCount)} tokens` : ""}
 					</Typography>
 					<Button size="small" onClick={() => void aiCancelGenerate()}>
 						Cancel
