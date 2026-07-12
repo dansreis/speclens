@@ -19,6 +19,11 @@
 //!   best-effort cancellation via `ai_cancel_generate`. The feature is off by
 //!   default because building llama.cpp from source requires `cmake`; without
 //!   it `ai_generate` returns a clear error string.
+//!
+//! Additionally (always compiled, plain HTTP, no cargo feature): models served
+//! by a local Ollama instance are discovered in `ai_model_status` (as
+//! `ollama:<name>` entries) and generate via Ollama's streaming chat API.
+//! Absence of Ollama is normal and adds no error and no noticeable latency.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,8 +31,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 #[cfg(feature = "local-llm")]
 use std::sync::Mutex;
+use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager, State};
@@ -60,7 +66,9 @@ pub struct ModelSpec {
     pub size_bytes: u64,
     /// Thinking-tuned models open a `<think>` block and can burn the whole
     /// output budget reasoning; we prefill a closed empty block to skip it
-    /// (Qwen3.5 ignores the older `/no_think` soft switch).
+    /// (Qwen3.5 ignores the older `/no_think` soft switch). Only read by the
+    /// feature-gated generation path.
+    #[cfg_attr(not(feature = "local-llm"), allow(dead_code))]
     pub thinking: bool,
     /// Lowercase hex sha256 of the file, taken from the Hugging Face LFS
     /// metadata. Verified after download when present.
@@ -163,6 +171,215 @@ fn is_safe_model_id(id: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Ollama integration (plain HTTP against a local server; no cargo feature)
+// ---------------------------------------------------------------------------
+
+const OLLAMA_BASE_URL: &str = "http://127.0.0.1:11434";
+const OLLAMA_ID_PREFIX: &str = "ollama:";
+/// Discovery budget for `/api/tags`: a machine without Ollama must add no
+/// noticeable latency to `ai_model_status`, so connect and total share one
+/// short deadline.
+const OLLAMA_DISCOVERY_TIMEOUT: Duration = Duration::from_millis(700);
+
+/// The Ollama model name behind an `ollama:`-prefixed id, or None for every
+/// other id. Ollama names may contain `/` and `:` (e.g. `hf.co/user/model:tag`),
+/// which is fine because these ids never touch the filesystem: generation
+/// branches on the prefix before any path is built, and download/delete
+/// reject them via `ensure_not_ollama`.
+fn ollama_model_name(id: &str) -> Option<&str> {
+    id.strip_prefix(OLLAMA_ID_PREFIX)
+        .filter(|name| !name.is_empty())
+}
+
+/// Ollama models live in Ollama's own store; SpecLens never downloads or
+/// deletes them. Guards `ai_download_model` / `ai_delete_model`.
+fn ensure_not_ollama(id: &str) -> Result<(), String> {
+    if id.starts_with(OLLAMA_ID_PREFIX) {
+        return Err(format!(
+            "{} is managed by Ollama, not SpecLens - use `ollama pull` / `ollama rm` instead",
+            id
+        ));
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct OllamaTagsResponse {
+    #[serde(default)]
+    models: Vec<OllamaTagModel>,
+}
+
+#[derive(Deserialize)]
+struct OllamaTagModel {
+    name: String,
+    #[serde(default)]
+    size: u64,
+}
+
+/// Models served by a local Ollama instance, as picker entries. Absence of
+/// Ollama is normal, not an error: any failure (connection refused, timeout,
+/// unexpected body) silently yields zero entries. Sorted by id for a stable
+/// order. Blocking - call from a blocking task.
+fn ollama_model_statuses() -> Vec<ModelStatus> {
+    let Ok(client) = reqwest::blocking::Client::builder()
+        .connect_timeout(OLLAMA_DISCOVERY_TIMEOUT)
+        .timeout(OLLAMA_DISCOVERY_TIMEOUT)
+        .build()
+    else {
+        return Vec::new();
+    };
+    let Ok(body) = client
+        .get(format!("{}/api/tags", OLLAMA_BASE_URL))
+        .send()
+        .and_then(|r| r.error_for_status())
+        .and_then(|r| r.text())
+    else {
+        return Vec::new();
+    };
+    let Ok(tags) = serde_json::from_str::<OllamaTagsResponse>(&body) else {
+        return Vec::new();
+    };
+    let mut out: Vec<ModelStatus> = tags
+        .models
+        .into_iter()
+        .map(|m| ModelStatus {
+            id: format!("{}{}", OLLAMA_ID_PREFIX, m.name),
+            display_name: m.name,
+            size_bytes: m.size,
+            is_default: false,
+            downloaded: true,
+            downloaded_bytes: Some(m.size),
+            partial_bytes: None,
+            custom: false,
+            ollama: true,
+        })
+        .collect();
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out
+}
+
+/// One NDJSON line of a streaming `/api/chat` response.
+#[derive(Deserialize)]
+struct OllamaChatChunk {
+    message: Option<OllamaChatMessage>,
+    #[serde(default)]
+    done: bool,
+    /// Present on the final (`done: true`) line.
+    eval_count: Option<u32>,
+    /// Ollama reports request-level failures (e.g. unknown model) as an
+    /// in-band error line.
+    error: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct OllamaChatMessage {
+    #[serde(default)]
+    content: String,
+}
+
+/// Streams a single-user-turn chat completion from the local Ollama server,
+/// emitting the same `GenerateEvent`s as the built-in engine. The cancel flag
+/// is checked between NDJSON lines; on cancel the reader (and with it the
+/// connection) is dropped, which makes Ollama stop generating.
+fn ollama_chat_blocking(
+    name: &str,
+    prompt: &str,
+    cancel: &AtomicBool,
+    channel: &Channel<GenerateEvent>,
+) -> Result<(), String> {
+    use std::io::{BufRead, BufReader};
+
+    // No total timeout - generation can take minutes; only connecting must
+    // fail fast so a stopped Ollama surfaces as a clear error.
+    let client = reqwest::blocking::Client::builder()
+        .timeout(None)
+        .connect_timeout(Duration::from_secs(2))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let body = serde_json::json!({
+        "model": name,
+        "messages": [{ "role": "user", "content": prompt }],
+        "stream": true,
+    });
+    let resp = client
+        .post(format!("{}/api/chat", OLLAMA_BASE_URL))
+        .header("content-type", "application/json")
+        .body(body.to_string())
+        .send()
+        .map_err(|_| "Couldn't reach Ollama at 127.0.0.1:11434 - is it running?".to_string())?
+        .error_for_status()
+        .map_err(|e| format!("Ollama request failed: {}", e))?;
+
+    let mut tokens: u32 = 0;
+    for line in BufReader::new(resp).lines() {
+        if cancel.load(Ordering::SeqCst) {
+            let _ = channel.send(GenerateEvent::Done {
+                reason: "cancelled".to_string(),
+                tokens,
+            });
+            return Ok(());
+        }
+        let line = line.map_err(|e| format!("Ollama stream interrupted: {}", e))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let chunk: OllamaChatChunk = serde_json::from_str(&line)
+            .map_err(|e| format!("Unexpected Ollama response: {}", e))?;
+        if let Some(error) = chunk.error {
+            return Err(format!("Ollama error: {}", error));
+        }
+        if let Some(message) = chunk.message {
+            if !message.content.is_empty() {
+                tokens += 1;
+                let _ = channel.send(GenerateEvent::Token {
+                    text: message.content,
+                });
+            }
+        }
+        if chunk.done {
+            let _ = channel.send(GenerateEvent::Done {
+                reason: "eos".to_string(),
+                tokens: chunk.eval_count.unwrap_or(tokens),
+            });
+            return Ok(());
+        }
+    }
+    // Stream closed without a done:true line - treat as a normal end.
+    let _ = channel.send(GenerateEvent::Done {
+        reason: "eos".to_string(),
+        tokens,
+    });
+    Ok(())
+}
+
+/// Shared Ollama generation path for both `ai_generate` variants: takes the
+/// busy flag (rejecting concurrent runs), resets the cancel flag, and streams
+/// the chat completion from a blocking task.
+async fn ollama_generate(
+    state: &State<'_, AiState>,
+    name: String,
+    prompt: String,
+    channel: Channel<GenerateEvent>,
+) -> Result<(), String> {
+    if state
+        .busy
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("A generation is already in progress".to_string());
+    }
+    let _busy = ClearOnDrop(state.busy.clone());
+    state.cancel.store(false, Ordering::SeqCst);
+    let cancel = state.cancel.clone();
+    // reqwest's blocking client must not run on the async runtime thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        ollama_chat_blocking(&name, &prompt, &cancel, &channel)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+// ---------------------------------------------------------------------------
 // Chat-template fallback (pure, unit-tested)
 // ---------------------------------------------------------------------------
 
@@ -187,11 +404,11 @@ fn fallback_prompt(kind: TemplateKind, user_prompt: &str) -> String {
 /// Managed by Tauri (`.manage(AiState::default())`). Arcs so blocking tasks
 /// can outlive the `State` borrow.
 pub struct AiState {
-    /// Best-effort cancellation flag, checked between decode steps.
+    /// Best-effort cancellation flag, checked between decode steps (engine)
+    /// or stream lines (Ollama).
     cancel: Arc<AtomicBool>,
-    /// True while a generation is running; concurrent `ai_generate` calls
-    /// are rejected instead of queued.
-    #[cfg(feature = "local-llm")]
+    /// True while a generation is running (engine or Ollama); concurrent
+    /// `ai_generate` calls are rejected instead of queued.
     busy: Arc<AtomicBool>,
     /// One loaded model at a time; swapping model ids drops the old one
     /// (freeing its memory) before the new one is loaded.
@@ -203,7 +420,6 @@ impl Default for AiState {
     fn default() -> Self {
         Self {
             cancel: Arc::new(AtomicBool::new(false)),
-            #[cfg(feature = "local-llm")]
             busy: Arc::new(AtomicBool::new(false)),
             #[cfg(feature = "local-llm")]
             loaded: Arc::new(Mutex::new(None)),
@@ -229,9 +445,6 @@ pub enum DownloadEvent {
 
 #[derive(Serialize, Clone)]
 #[serde(tag = "event", rename_all = "camelCase")]
-// Constructed only by the feature-gated engine; the wire shape stays
-// stable (and unit-tested) in every build.
-#[cfg_attr(not(feature = "local-llm"), allow(dead_code))]
 pub enum GenerateEvent {
     #[serde(rename_all = "camelCase")]
     Token { text: String },
@@ -260,30 +473,50 @@ pub struct ModelStatus {
     /// True for user-imported models discovered in the models dir (any
     /// `*.gguf` whose file stem is not a registry id).
     pub custom: bool,
+    /// True for models served by a local Ollama instance (`ollama:<name>`
+    /// ids). These never live in the models dir and are managed by Ollama.
+    pub ollama: bool,
 }
 
 #[tauri::command]
-pub fn ai_model_status(app: AppHandle) -> Result<Vec<ModelStatus>, String> {
+pub async fn ai_model_status(app: AppHandle) -> Result<Vec<ModelStatus>, String> {
+    // Ollama discovery uses reqwest's blocking client (which must not run on
+    // the async runtime thread), so the whole scan runs as a blocking task.
+    tauri::async_runtime::spawn_blocking(move || {
+        let dir = models_dir(&app)?;
+        let mut statuses: Vec<ModelStatus> = MODELS
+            .iter()
+            .map(|spec| {
+                let file_len = |name: String| fs::metadata(dir.join(name)).ok().map(|m| m.len());
+                let downloaded_bytes = file_len(model_file_name(spec.id));
+                ModelStatus {
+                    id: spec.id.to_string(),
+                    display_name: spec.display_name.to_string(),
+                    size_bytes: spec.size_bytes,
+                    is_default: spec.id == DEFAULT_MODEL_ID,
+                    downloaded: downloaded_bytes.is_some(),
+                    downloaded_bytes,
+                    partial_bytes: file_len(part_file_name(spec.id)),
+                    custom: false,
+                    ollama: false,
+                }
+            })
+            .collect();
+        statuses.extend(custom_model_statuses(&dir));
+        statuses.extend(ollama_model_statuses());
+        Ok(statuses)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Ensures the models dir exists and reveals it in the OS file manager
+/// (Finder on macOS). Called from Rust, so no JS opener capability is needed.
+#[tauri::command]
+pub fn ai_reveal_models_dir(app: AppHandle) -> Result<(), String> {
     let dir = models_dir(&app)?;
-    let mut statuses: Vec<ModelStatus> = MODELS
-        .iter()
-        .map(|spec| {
-            let file_len = |name: String| fs::metadata(dir.join(name)).ok().map(|m| m.len());
-            let downloaded_bytes = file_len(model_file_name(spec.id));
-            ModelStatus {
-                id: spec.id.to_string(),
-                display_name: spec.display_name.to_string(),
-                size_bytes: spec.size_bytes,
-                is_default: spec.id == DEFAULT_MODEL_ID,
-                downloaded: downloaded_bytes.is_some(),
-                downloaded_bytes,
-                partial_bytes: file_len(part_file_name(spec.id)),
-                custom: false,
-            }
-        })
-        .collect();
-    statuses.extend(custom_model_statuses(&dir));
-    Ok(statuses)
+    fs::create_dir_all(&dir).map_err(|e| format!("Cannot create {}: {}", dir.display(), e))?;
+    tauri_plugin_opener::reveal_item_in_dir(&dir).map_err(|e| e.to_string())
 }
 
 /// Scans the models dir for user-imported models: every regular `*.gguf`
@@ -317,6 +550,7 @@ fn custom_model_statuses(dir: &Path) -> Vec<ModelStatus> {
                 downloaded_bytes: Some(meta.len()),
                 partial_bytes: None,
                 custom: true,
+                ollama: false,
             })
         })
         .collect();
@@ -330,6 +564,7 @@ pub async fn ai_download_model(
     id: String,
     channel: Channel<DownloadEvent>,
 ) -> Result<(), String> {
+    ensure_not_ollama(&id)?;
     let spec = spec_for(&id)?;
     let dir = models_dir(&app)?;
     // reqwest's blocking client spins up its own single-purpose runtime, so
@@ -450,6 +685,7 @@ pub fn ai_delete_model(
     id: String,
     state: State<'_, AiState>,
 ) -> Result<(), String> {
+    ensure_not_ollama(&id)?;
     // Works for both registry ids and custom (imported) ids - the id only
     // needs to be a safe file stem, not a registry entry.
     if !is_safe_model_id(&id) {
@@ -571,6 +807,11 @@ pub async fn ai_generate(
     prompt: String,
     channel: Channel<GenerateEvent>,
 ) -> Result<(), String> {
+    // Ollama ids bypass the file/engine path entirely - plain HTTP streaming
+    // against the local server.
+    if let Some(name) = ollama_model_name(&model_id) {
+        return ollama_generate(&state, name.to_string(), prompt, channel).await;
+    }
     let (path, template, thinking) = resolve_generation_target(&app, &model_id)?;
 
     if state
@@ -636,7 +877,13 @@ pub async fn ai_generate(
     prompt: String,
     channel: Channel<GenerateEvent>,
 ) -> Result<(), String> {
-    let _ = (app, state, model_id, prompt, channel);
+    let _ = app;
+    // Ollama generation is plain HTTP - it works even without the bundled
+    // inference engine.
+    if let Some(name) = ollama_model_name(&model_id) {
+        return ollama_generate(&state, name.to_string(), prompt, channel).await;
+    }
+    let _ = channel;
     Err(
         "SpecLens was built without the local-llm feature. Install cmake and rebuild with \
 		 `cargo build --features local-llm` (or add it to default features) to enable inference."
@@ -646,10 +893,8 @@ pub async fn ai_generate(
 
 /// Clears an AtomicBool when dropped; keeps the busy flag honest on every
 /// exit path (including errors and panics unwinding through the command).
-#[cfg(feature = "local-llm")]
 struct ClearOnDrop(Arc<AtomicBool>);
 
-#[cfg(feature = "local-llm")]
 impl Drop for ClearOnDrop {
     fn drop(&mut self) {
         self.0.store(false, Ordering::SeqCst);
@@ -941,6 +1186,7 @@ mod tests {
         let a = &statuses[0];
         assert_eq!(a.display_name, "custom-a.gguf");
         assert!(a.custom);
+        assert!(!a.ollama);
         assert!(a.downloaded);
         assert!(!a.is_default);
         assert_eq!(a.size_bytes, 3);
@@ -952,7 +1198,7 @@ mod tests {
     }
 
     #[test]
-    fn model_status_wire_shape_includes_custom() {
+    fn model_status_wire_shape_includes_custom_and_ollama() {
         let status = serde_json::to_value(ModelStatus {
             id: "m".into(),
             display_name: "m.gguf".into(),
@@ -962,6 +1208,7 @@ mod tests {
             downloaded_bytes: Some(1),
             partial_bytes: None,
             custom: true,
+            ollama: false,
         })
         .unwrap();
         assert_eq!(
@@ -975,8 +1222,43 @@ mod tests {
                 "downloadedBytes": 1,
                 "partialBytes": null,
                 "custom": true,
+                "ollama": false,
             })
         );
+    }
+
+    #[test]
+    fn ollama_id_parsing() {
+        assert_eq!(ollama_model_name("ollama:llama3.2:3b"), Some("llama3.2:3b"));
+        assert_eq!(
+            ollama_model_name("ollama:hf.co/user/model:tag"),
+            Some("hf.co/user/model:tag")
+        );
+        // Empty name and non-ollama ids never take the Ollama path.
+        assert_eq!(ollama_model_name("ollama:"), None);
+        assert_eq!(ollama_model_name("gemma-4-e2b-it"), None);
+        assert_eq!(ollama_model_name("My-Model.Q4_K_M"), None);
+    }
+
+    #[test]
+    fn ollama_ids_rejected_by_download_and_delete() {
+        // ai_download_model / ai_delete_model guard on this before any file
+        // or registry lookup - Ollama manages these models, not SpecLens.
+        let err = ensure_not_ollama("ollama:llama3.2:3b").unwrap_err();
+        assert!(
+            err.contains("managed by Ollama"),
+            "unexpected error: {}",
+            err
+        );
+        assert!(ensure_not_ollama("ollama:hf.co/user/model:tag").is_err());
+        assert!(ensure_not_ollama("gemma-4-e2b-it").is_ok());
+        assert!(ensure_not_ollama("My-Model.Q4_K_M").is_ok());
+
+        // Ollama ids never reach file operations: generation branches on the
+        // prefix before any path is built, and download/delete reject them
+        // above. Even if one slipped through, slash-bearing names fail the
+        // file-stem safety check, so they could never escape the models dir.
+        assert!(!is_safe_model_id("ollama:hf.co/user/model:tag"));
     }
 
     #[test]

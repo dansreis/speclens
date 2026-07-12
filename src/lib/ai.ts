@@ -54,20 +54,28 @@ export const AI_MODELS: readonly AiModelInfo[] = [
 /** Mirror of DEFAULT_MODEL_ID in src-tauri/src/ai.rs. */
 export const DEFAULT_AI_MODEL_ID = "gemma-4-e2b-it";
 
+/** Prefix marking a model served by a local Ollama instance
+ * (`ollama:<name>`). Mirrors OLLAMA_ID_PREFIX in src-tauri/src/ai.rs. */
+export const OLLAMA_ID_PREFIX = "ollama:";
+
 /**
  * Whether `id` can safely be persisted as the selected model. Accepts any
- * registry id *or* custom (imported) model id - custom ids are file stems, so
- * the only hard rules are non-empty, bounded length, and no path separators
- * (mirrors `is_safe_model_id` in src-tauri/src/ai.rs).
+ * registry id, custom (imported) model id, or Ollama id.
+ *
+ * Custom ids are file stems, so the hard rules are non-empty, bounded length,
+ * and no path separators (mirrors `is_safe_model_id` in src-tauri/src/ai.rs).
+ * Ollama ids (`ollama:<name>`) never touch the filesystem - names may contain
+ * `/` and `:` (e.g. `ollama:hf.co/user/model:tag`), so only non-empty name
+ * and bounded length apply.
  */
 export function isValidAiModelId(id: unknown): id is string {
-	return (
-		typeof id === "string" &&
-		id.length > 0 &&
-		id.length <= 128 &&
-		!id.includes("/") &&
-		!id.includes("\\")
-	);
+	if (typeof id !== "string" || id.length === 0 || id.length > 200) {
+		return false;
+	}
+	if (id.startsWith(OLLAMA_ID_PREFIX)) {
+		return id.length > OLLAMA_ID_PREFIX.length;
+	}
+	return id.length <= 128 && !id.includes("/") && !id.includes("\\");
 }
 
 export function aiModelInfo(id: string): AiModelInfo | null {
@@ -90,6 +98,9 @@ export interface AiModelStatus {
 	/** True for user-imported models found in the models dir (their id is the
 	 * file stem and they are downloaded by definition). */
 	custom?: boolean;
+	/** True for models served by a local Ollama instance (`ollama:<name>` ids).
+	 * Managed by Ollama - SpecLens never downloads or deletes them. */
+	ollama?: boolean;
 }
 
 export type AiDownloadEvent =
@@ -104,6 +115,12 @@ export type AiGenerateEvent =
 
 export async function aiModelStatus(): Promise<AiModelStatus[]> {
 	return await invoke<AiModelStatus[]>("ai_model_status");
+}
+
+/** Ensures the models folder exists and reveals it in the OS file manager
+ * (Finder on macOS). It doubles as the drop-in folder for GGUF files. */
+export async function aiRevealModelsDir(): Promise<void> {
+	await invoke("ai_reveal_models_dir");
 }
 
 /**

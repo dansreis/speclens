@@ -1,5 +1,6 @@
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import DownloadIcon from "@mui/icons-material/Download";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import {
 	Alert,
@@ -17,7 +18,12 @@ import {
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
-import { AI_MODELS, aiImportModel, DEFAULT_AI_MODEL_ID } from "../lib/ai";
+import {
+	AI_MODELS,
+	aiImportModel,
+	aiRevealModelsDir,
+	DEFAULT_AI_MODEL_ID,
+} from "../lib/ai";
 
 const MODELS_ALPHABETICAL = [...AI_MODELS].sort((a, b) =>
 	a.displayName.localeCompare(b.displayName),
@@ -60,6 +66,12 @@ export function AiSettingsSection() {
 		.filter((m) => m.custom)
 		.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
+	/** Models served by a local Ollama instance, grouped at the bottom. When
+	 * Ollama isn't running this is empty and nothing about Ollama shows. */
+	const ollamaModels = (models ?? [])
+		.filter((m) => m.ollama)
+		.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
 	const handleImport = async () => {
 		setImportError(null);
 		try {
@@ -93,8 +105,9 @@ export function AiSettingsSection() {
 		});
 	};
 
+	// Ollama models live in Ollama's own store, not the app's models folder.
 	const totalOnDisk = (models ?? [])
-		.filter((m) => m.downloaded)
+		.filter((m) => m.downloaded && !m.ollama)
 		.reduce((sum, m) => sum + (m.downloadedBytes ?? m.sizeBytes), 0);
 
 	return (
@@ -132,9 +145,11 @@ export function AiSettingsSection() {
 						renderValue={(id) => {
 							const m = MODELS_ALPHABETICAL.find((x) => x.id === id);
 							if (m) return `${m.displayName} · ~${formatBytes(m.sizeBytes)}`;
-							const custom = customModels.find((x) => x.id === id);
-							return custom
-								? `${custom.displayName} · ${formatBytes(custom.downloadedBytes ?? custom.sizeBytes)}`
+							const other =
+								customModels.find((x) => x.id === id) ??
+								ollamaModels.find((x) => x.id === id);
+							return other
+								? `${other.displayName} · ${formatBytes(other.downloadedBytes ?? other.sizeBytes)}`
 								: id;
 						}}
 					>
@@ -177,10 +192,28 @@ export function AiSettingsSection() {
 								</Box>
 							</MenuItem>
 						))}
+						{ollamaModels.map((m) => (
+							<MenuItem key={m.id} value={m.id}>
+								<Box>
+									<Typography variant="body2">
+										{m.displayName} · {formatBytes(m.sizeBytes)}
+									</Typography>
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										component="div"
+									>
+										Ollama (local server)
+									</Typography>
+								</Box>
+							</MenuItem>
+						))}
 					</Select>
 					{modelsError && <Alert severity="error">{modelsError}</Alert>}
 					{downloadError && <Alert severity="error">{downloadError}</Alert>}
-					{download ? (
+					{/* Ollama models are managed by Ollama itself - no download or
+					    delete UI applies to them. */}
+					{status?.ollama ? null : download ? (
 						<Box>
 							<LinearProgress
 								variant={download.bytesTotal ? "determinate" : "indeterminate"}
@@ -272,11 +305,23 @@ export function AiSettingsSection() {
 						</Typography>
 					</Box>
 					{importError && <Alert severity="error">{importError}</Alert>}
-					{totalOnDisk > 0 && (
-						<Typography variant="caption" color="text.secondary">
-							Total on disk: {formatBytes(totalOnDisk)}
-						</Typography>
-					)}
+					<Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+						{totalOnDisk > 0 && (
+							<Typography variant="caption" color="text.secondary">
+								Total on disk: {formatBytes(totalOnDisk)}
+							</Typography>
+						)}
+						{/* Always shown - the models folder doubles as the drop-in
+						    location for GGUF files even before anything is downloaded. */}
+						<Button
+							onClick={() => void aiRevealModelsDir().catch(console.error)}
+							startIcon={<FolderOpenIcon />}
+							variant="text"
+							size="small"
+						>
+							Reveal models folder
+						</Button>
+					</Stack>
 				</Stack>
 			)}
 		</Box>

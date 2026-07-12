@@ -544,6 +544,7 @@ pub fn run() {
             repo_signature,
             resolve_repo_root,
             ai::ai_model_status,
+            ai::ai_reveal_models_dir,
             ai::ai_download_model,
             ai::ai_delete_model,
             ai::ai_import_model,
