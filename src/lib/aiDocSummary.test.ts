@@ -20,7 +20,7 @@ describe("buildDocSummaryPrompt", () => {
 			kind: "spec",
 			source: "body",
 		});
-		expect(prompt).toContain("2-3 sentences");
+		expect(prompt).toContain("3-5 sentences");
 		expect(prompt).toContain("**Key points**");
 		expect(prompt).toContain("**Worth a reviewer's attention**");
 		expect(prompt).toContain("(nothing stood out)");
