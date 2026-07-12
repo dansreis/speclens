@@ -185,11 +185,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 					}}
 				>
 					{settingsTab === 0 && (
-						<Stack
-							spacing={3}
-							divider={<Divider flexItem />}
-							sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}
-						>
+						<Stack spacing={3} divider={<Divider flexItem />}>
 							<SettingRow
 								title="Reading speed"
 								caption={`Words per minute used to estimate reading time. Currently ${settings.readingWpm} wpm.`}
