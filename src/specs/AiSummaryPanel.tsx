@@ -7,16 +7,25 @@ import {
 	Button,
 	CircularProgress,
 	IconButton,
+	Link,
 	Tooltip,
 	Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiModelInfo } from "../lib/ai";
 import { docSummaryCacheKey } from "../lib/aiDocSummary";
-import { aiErrorSeverity, formatTokenCount } from "../lib/aiSummary";
+import {
+	aiErrorSeverity,
+	collectCapabilities,
+	formatTokenCount,
+	linkifyCapabilities,
+	parseSpecLink,
+	SPEC_LINK_SCHEME,
+} from "../lib/aiSummary";
 import { getCachedDocSummary, useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
@@ -54,7 +63,21 @@ export function AiSummaryPanel() {
 	const panelWidth = useAppStore((s) => s.settings.aiPanelWidth);
 	const setSetting = useAppStore((s) => s.setSetting);
 	const view = useAppStore((s) => s.view);
+	const repos = useAppStore((s) => s.repos);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
+	const setView = useAppStore((s) => s.setView);
+	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const [resizing, setResizing] = useState(false);
+
+	// Capability names of the active repo: bullet heads matching them get
+	// rewritten into speclens-spec:// links (project overview summaries; also
+	// upgrades doc summaries that happen to lead bullets with a capability).
+	const capabilityNames = useMemo(() => {
+		const repo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+		return repo
+			? collectCapabilities(repo.repoSpecs, repo.changes).map((c) => c.name)
+			: [];
+	}, [repos, selectedRepoId]);
 	const docSummary = useAiStore((s) => s.docSummary);
 	const currentDoc = useAiStore((s) => s.currentDoc);
 	const models = useAiStore((s) => s.models);
@@ -123,7 +146,45 @@ export function AiSummaryPanel() {
 
 	const renderMarkdown = (markdown: string) => (
 		<Box sx={markdownSx}>
-			<ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
+			<ReactMarkdown
+				remarkPlugins={[remarkGfm]}
+				urlTransform={(url) =>
+					url.startsWith(SPEC_LINK_SCHEME) ? url : defaultUrlTransform(url)
+				}
+				components={{
+					a: ({ href, children }) => {
+						const capability = parseSpecLink(href);
+						if (capability) {
+							return (
+								<Link
+									component="button"
+									type="button"
+									onClick={() => {
+										setView("specs");
+										setSelectedSpec(capability);
+									}}
+									sx={{ verticalAlign: "baseline" }}
+								>
+									{children}
+								</Link>
+							);
+						}
+						return (
+							<Link
+								href={href}
+								onClick={(e) => {
+									e.preventDefault();
+									if (href) void openUrl(href).catch(console.error);
+								}}
+							>
+								{children}
+							</Link>
+						);
+					},
+				}}
+			>
+				{linkifyCapabilities(markdown, capabilityNames)}
+			</ReactMarkdown>
 		</Box>
 	);
 

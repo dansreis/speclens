@@ -8,6 +8,7 @@ import {
 	aiModelStatus,
 } from "../lib/ai";
 import { buildDocSummaryPrompt, docSummaryCacheKey } from "../lib/aiDocSummary";
+import { aiSummarySet } from "../lib/aiSummaries";
 import { stripThinkBlocks } from "../lib/aiSummary";
 import { useAppStore } from "./useAppStore";
 
@@ -23,6 +24,11 @@ export interface DocSummaryInput {
 	kind: string;
 	/** Full markdown source of the document being summarized. */
 	source: string;
+	/** When true, `source` IS the finished prompt (used by the project
+	 * overview, which builds its own capability prompt). */
+	rawPrompt?: boolean;
+	/** Persist the finished summary to SQLite (project overview only). */
+	persist?: { repoId: string; signature: string | null };
 }
 
 /**
@@ -83,6 +89,17 @@ export function getCachedDocSummary(
 	source: string,
 ): string | undefined {
 	return docSummaryCache.get(docSummaryCacheKey(model, source));
+}
+
+/** Preloads the session cache (e.g. from a SQLite-persisted project summary)
+ * without overwriting anything generated this session. */
+export function seedDocSummaryCache(
+	model: string,
+	source: string,
+	text: string,
+): void {
+	const key = docSummaryCacheKey(model, source);
+	if (!docSummaryCache.has(key)) docSummaryCache.set(key, text);
 }
 
 /**
@@ -258,17 +275,11 @@ export const useAiStore = create<AiStoreState>()((set, get) => ({
 	},
 
 	regenerateDocSummary: async (input) => {
-		const doc = input ?? get().docSummary;
+		const doc: DocSummaryInput = input ?? get().docSummary;
 		if (!doc.source) return;
 		const model = useAppStore.getState().settings.aiModel;
 		const docKey = docSummaryCacheKey(model, doc.source);
-		await startDocGeneration(
-			{ title: doc.title, kind: doc.kind, source: doc.source },
-			model,
-			docKey,
-			set,
-			get,
-		);
+		await startDocGeneration(doc, model, docKey, set, get);
 	},
 
 	cancelDocSummary: () => {
@@ -329,7 +340,10 @@ async function startDocGeneration(
 	let acc = "";
 	let reason = "";
 	try {
-		await aiGenerate(model, buildDocSummaryPrompt(input), (event) => {
+		const prompt = input.rawPrompt
+			? input.source
+			: buildDocSummaryPrompt(input);
+		await aiGenerate(model, prompt, (event) => {
 			if (generation !== docSummaryGeneration) return;
 			if (event.event === "token") {
 				acc += event.text;
@@ -349,6 +363,14 @@ async function startDocGeneration(
 		const finalText = stripThinkBlocks(acc).trim();
 		if (reason !== "cancelled" && finalText.length > 0) {
 			docSummaryCache.set(docKey, finalText);
+			if (input.persist) {
+				void aiSummarySet(
+					input.persist.repoId,
+					input.persist.signature ?? "",
+					model,
+					finalText,
+				);
+			}
 			set((state) => ({
 				docSummary: {
 					...state.docSummary,

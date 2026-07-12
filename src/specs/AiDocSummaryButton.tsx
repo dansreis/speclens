@@ -2,7 +2,7 @@ import { keyframes } from "@emotion/react";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { IconButton, Tooltip } from "@mui/material";
 import { useEffect } from "react";
-import { useAiStore } from "../store/useAiStore";
+import { type DocSummaryInput, useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
 /** Gentle sparkle while a summary is generating anywhere in the app. */
@@ -18,6 +18,9 @@ interface Props {
 	kind: string;
 	/** Markdown source of the document currently shown; null hides the button. */
 	source: string | null;
+	/** See DocSummaryInput - used by the project overview. */
+	rawPrompt?: boolean;
+	persist?: DocSummaryInput["persist"];
 }
 
 /**
@@ -26,16 +29,24 @@ interface Props {
  * Generation runs detached in useAiStore, so navigating away doesn't cancel
  * it. Rendered only when the `aiEnabled` setting is on and a source exists.
  */
-export function AiDocSummaryButton({ title, kind, source }: Props) {
+export function AiDocSummaryButton({
+	title,
+	kind,
+	source,
+	rawPrompt,
+	persist,
+}: Props) {
 	const aiEnabled = useAppStore((s) => s.settings.aiEnabled);
 	const generating = useAiStore((s) => s.docSummary.generating);
 	const setCurrentAiDoc = useAiStore((s) => s.setCurrentAiDoc);
 
 	// Register the document on screen so the AI panel always reflects it.
 	useEffect(() => {
-		setCurrentAiDoc(source ? { title, kind, source } : null);
+		setCurrentAiDoc(
+			source ? { title, kind, source, rawPrompt, persist } : null,
+		);
 		return () => setCurrentAiDoc(null);
-	}, [title, kind, source, setCurrentAiDoc]);
+	}, [title, kind, source, rawPrompt, persist, setCurrentAiDoc]);
 
 	if (!aiEnabled || !source) return null;
 
@@ -43,7 +54,9 @@ export function AiDocSummaryButton({ title, kind, source }: Props) {
 		<Tooltip title={generating ? "Generating AI summary…" : "AI summary"}>
 			<IconButton
 				onClick={() =>
-					void useAiStore.getState().summarizeDoc({ title, kind, source })
+					void useAiStore
+						.getState()
+						.summarizeDoc({ title, kind, source, rawPrompt, persist })
 				}
 				aria-label="AI summary"
 				sx={{ color: generating ? "primary.main" : "text.secondary" }}
