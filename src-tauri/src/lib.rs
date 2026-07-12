@@ -546,6 +546,7 @@ pub fn run() {
             ai::ai_model_status,
             ai::ai_download_model,
             ai::ai_delete_model,
+            ai::ai_import_model,
             ai::ai_generate,
             ai::ai_cancel_generate
         ])

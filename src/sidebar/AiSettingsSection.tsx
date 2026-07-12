@@ -1,5 +1,6 @@
 import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import DownloadIcon from "@mui/icons-material/Download";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import {
 	Alert,
 	Box,
@@ -12,8 +13,9 @@ import {
 	Switch,
 	Typography,
 } from "@mui/material";
-import { useEffect } from "react";
-import { AI_MODELS } from "../lib/ai";
+import { open } from "@tauri-apps/plugin-dialog";
+import { useEffect, useState } from "react";
+import { AI_MODELS, aiImportModel, DEFAULT_AI_MODEL_ID } from "../lib/ai";
 
 const MODELS_ALPHABETICAL = [...AI_MODELS].sort((a, b) =>
 	a.displayName.localeCompare(b.displayName),
@@ -40,6 +42,8 @@ export function AiSettingsSection() {
 	const refreshModels = useAiStore((s) => s.refreshModels);
 	const startDownload = useAiStore((s) => s.startDownload);
 	const removeModel = useAiStore((s) => s.removeModel);
+	const [importing, setImporting] = useState(false);
+	const [importError, setImportError] = useState<string | null>(null);
 
 	useEffect(() => {
 		void refreshModels();
@@ -48,6 +52,48 @@ export function AiSettingsSection() {
 	const status = models?.find((m) => m.id === aiModel) ?? null;
 	const download = downloads[aiModel];
 	const downloadError = downloadErrors[aiModel];
+
+	/** User-imported models, listed after the registry entries. */
+	const customModels = (models ?? [])
+		.filter((m) => m.custom)
+		.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+	const handleImport = async () => {
+		setImportError(null);
+		try {
+			const picked = await open({
+				multiple: false,
+				filters: [{ name: "GGUF model", extensions: ["gguf"] }],
+			});
+			if (typeof picked !== "string") return;
+			setImporting(true);
+			const id = await aiImportModel(picked);
+			await refreshModels();
+			setSetting("aiModel", id);
+		} catch (e) {
+			setImportError(String(e));
+		} finally {
+			setImporting(false);
+		}
+	};
+
+	const handleDelete = () => {
+		const wasCustom = status?.custom === true;
+		void removeModel(aiModel).then(() => {
+			// A deleted custom model vanishes from the list entirely (unlike
+			// registry entries), so fall back to the default selection.
+			const stillExists = useAiStore
+				.getState()
+				.models?.some((m) => m.id === aiModel);
+			if (wasCustom && !stillExists) {
+				setSetting("aiModel", DEFAULT_AI_MODEL_ID);
+			}
+		});
+	};
+
+	const totalOnDisk = (models ?? [])
+		.filter((m) => m.downloaded)
+		.reduce((sum, m) => sum + (m.downloadedBytes ?? m.sizeBytes), 0);
 
 	return (
 		<Box>
@@ -83,7 +129,11 @@ export function AiSettingsSection() {
 						aria-label="AI model"
 						renderValue={(id) => {
 							const m = MODELS_ALPHABETICAL.find((x) => x.id === id);
-							return m ? `${m.displayName} · ~${formatBytes(m.sizeBytes)}` : id;
+							if (m) return `${m.displayName} · ~${formatBytes(m.sizeBytes)}`;
+							const custom = customModels.find((x) => x.id === id);
+							return custom
+								? `${custom.displayName} · ${formatBytes(custom.downloadedBytes ?? custom.sizeBytes)}`
+								: id;
 						}}
 					>
 						{MODELS_ALPHABETICAL.map((m) => {
@@ -108,6 +158,23 @@ export function AiSettingsSection() {
 								</MenuItem>
 							);
 						})}
+						{customModels.map((m) => (
+							<MenuItem key={m.id} value={m.id}>
+								<Box>
+									<Typography variant="body2">
+										{m.displayName} ·{" "}
+										{formatBytes(m.downloadedBytes ?? m.sizeBytes)}
+									</Typography>
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										component="div"
+									>
+										Imported model
+									</Typography>
+								</Box>
+							</MenuItem>
+						))}
 					</Select>
 					{modelsError && <Alert severity="error">{modelsError}</Alert>}
 					{downloadError && <Alert severity="error">{downloadError}</Alert>}
@@ -137,7 +204,7 @@ export function AiSettingsSection() {
 								disk
 							</Typography>
 							<Button
-								onClick={() => void removeModel(aiModel)}
+								onClick={handleDelete}
 								startIcon={<DeleteOutlinedIcon />}
 								color="error"
 								variant="text"
@@ -168,6 +235,32 @@ export function AiSettingsSection() {
 								</Typography>
 							)}
 						</Box>
+					)}
+					<Box>
+						<Button
+							onClick={() => void handleImport()}
+							startIcon={<UploadFileIcon />}
+							variant="outlined"
+							size="small"
+							disabled={importing}
+						>
+							{importing ? "Importing…" : "Import model…"}
+						</Button>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							sx={{ display: "block", mt: 0.5 }}
+						>
+							Any llama.cpp-compatible GGUF works. Imported models use their
+							built-in chat template; very new architectures may not be
+							supported by the bundled engine.
+						</Typography>
+					</Box>
+					{importError && <Alert severity="error">{importError}</Alert>}
+					{totalOnDisk > 0 && (
+						<Typography variant="caption" color="text.secondary">
+							Total on disk: {formatBytes(totalOnDisk)}
+						</Typography>
 					)}
 				</Stack>
 			)}

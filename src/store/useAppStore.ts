@@ -1,7 +1,7 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { DEFAULT_AI_MODEL_ID, isKnownAiModelId } from "../lib/ai";
+import { DEFAULT_AI_MODEL_ID, isValidAiModelId } from "../lib/ai";
 import { aiSummaryDelete } from "../lib/aiSummaries";
 import { sourcesDelete } from "../lib/db";
 import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
@@ -40,7 +40,8 @@ export interface AppSettings {
 	 * default - the UI shows, but nothing downloads or runs until the user
 	 * explicitly fetches a model, so the no-network promise holds. */
 	aiEnabled: boolean;
-	/** Selected local model id; must be one of the ids in AI_MODELS. */
+	/** Selected local model id: a registry id from AI_MODELS or the file stem
+	 * of a user-imported custom model. */
 	aiModel: string;
 }
 
@@ -102,7 +103,9 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			typeof r.aiEnabled === "boolean"
 				? r.aiEnabled
 				: DEFAULT_SETTINGS.aiEnabled,
-		aiModel: isKnownAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
+		// Custom (imported) model ids are not in the registry, so any safe file
+		// stem is accepted - a persisted custom selection must survive restarts.
+		aiModel: isValidAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
 	};
 }
 

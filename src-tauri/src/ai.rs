@@ -8,8 +8,11 @@
 //!
 //! - **Model management** (always compiled): a static registry of supported
 //!   GGUF models, `ai_model_status`, `ai_download_model` (streaming progress
-//!   over an IPC channel, sha256-verified, `.part` + rename), and
-//!   `ai_delete_model`. Files live under `<app_data>/models/<id>.gguf`.
+//!   over an IPC channel, sha256-verified, `.part` + rename),
+//!   `ai_delete_model`, and `ai_import_model` (copies a user-provided GGUF
+//!   into the models dir; any `*.gguf` whose stem isn't a registry id is
+//!   reported as a *custom* model). Files live under
+//!   `<app_data>/models/<id>.gguf`.
 //! - **Inference** (behind the `local-llm` cargo feature): `ai_generate`
 //!   streams tokens over an IPC channel using llama-cpp-2 (Metal on macOS,
 //!   CPU elsewhere), with a one-model loaded cache in Tauri state and
@@ -18,7 +21,7 @@
 //!   it `ai_generate` returns a clear error string.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 #[cfg(feature = "local-llm")]
@@ -148,6 +151,17 @@ fn part_file_name(id: &str) -> String {
     format!("{}.gguf.part", id)
 }
 
+/// Model ids double as on-disk file stems (`<id>.gguf`), and custom ids come
+/// from user input, so anything that could escape the models dir is rejected.
+/// Every registry id satisfies this by construction (unit-tested).
+fn is_safe_model_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 256
+        && !id.contains('/')
+        && !id.contains('\\')
+        && !id.contains("..")
+}
+
 // ---------------------------------------------------------------------------
 // Chat-template fallback (pure, unit-tested)
 // ---------------------------------------------------------------------------
@@ -243,12 +257,15 @@ pub struct ModelStatus {
     pub downloaded_bytes: Option<u64>,
     /// Size of a leftover `.part` file from an interrupted download, if any.
     pub partial_bytes: Option<u64>,
+    /// True for user-imported models discovered in the models dir (any
+    /// `*.gguf` whose file stem is not a registry id).
+    pub custom: bool,
 }
 
 #[tauri::command]
 pub fn ai_model_status(app: AppHandle) -> Result<Vec<ModelStatus>, String> {
     let dir = models_dir(&app)?;
-    Ok(MODELS
+    let mut statuses: Vec<ModelStatus> = MODELS
         .iter()
         .map(|spec| {
             let file_len = |name: String| fs::metadata(dir.join(name)).ok().map(|m| m.len());
@@ -261,9 +278,50 @@ pub fn ai_model_status(app: AppHandle) -> Result<Vec<ModelStatus>, String> {
                 downloaded: downloaded_bytes.is_some(),
                 downloaded_bytes,
                 partial_bytes: file_len(part_file_name(spec.id)),
+                custom: false,
             }
         })
-        .collect())
+        .collect();
+    statuses.extend(custom_model_statuses(&dir));
+    Ok(statuses)
+}
+
+/// Scans the models dir for user-imported models: every regular `*.gguf`
+/// file whose stem is not a registry id. Sorted by id for a stable order.
+fn custom_model_statuses(dir: &Path) -> Vec<ModelStatus> {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut out: Vec<ModelStatus> = entries
+        .filter_map(|e| e.ok())
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension().is_none_or(|ext| ext != "gguf") {
+                return None;
+            }
+            let id = path.file_stem()?.to_str()?.to_string();
+            if MODELS.iter().any(|m| m.id == id) {
+                return None;
+            }
+            let meta = entry.metadata().ok()?;
+            if !meta.is_file() {
+                return None;
+            }
+            let file_name = path.file_name()?.to_str()?.to_string();
+            Some(ModelStatus {
+                id,
+                display_name: file_name,
+                size_bytes: meta.len(),
+                is_default: false,
+                downloaded: true,
+                downloaded_bytes: Some(meta.len()),
+                partial_bytes: None,
+                custom: true,
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out
 }
 
 #[tauri::command]
@@ -392,12 +450,16 @@ pub fn ai_delete_model(
     id: String,
     state: State<'_, AiState>,
 ) -> Result<(), String> {
-    let spec = spec_for(&id)?;
+    // Works for both registry ids and custom (imported) ids - the id only
+    // needs to be a safe file stem, not a registry entry.
+    if !is_safe_model_id(&id) {
+        return Err(format!("Invalid model id: {}", id));
+    }
     // Unload first so the mmap is released before the file goes away.
     #[cfg(feature = "local-llm")]
     {
         let mut loaded = state.loaded.lock().map_err(|e| e.to_string())?;
-        if loaded.as_ref().is_some_and(|m| m.id == spec.id) {
+        if loaded.as_ref().is_some_and(|m| m.id == id) {
             *loaded = None;
         }
     }
@@ -405,13 +467,55 @@ pub fn ai_delete_model(
     let _ = &state;
 
     let dir = models_dir(&app)?;
-    for name in [model_file_name(spec.id), part_file_name(spec.id)] {
+    for name in [model_file_name(&id), part_file_name(&id)] {
         let path = dir.join(name);
         if path.exists() {
             fs::remove_file(&path).map_err(|e| e.to_string())?;
         }
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn ai_import_model(app: AppHandle, source_path: String) -> Result<String, String> {
+    let dir = models_dir(&app)?;
+    // File copy can take a while for multi-GB models; keep it off the async
+    // runtime thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        let (id, dest) = plan_import(Path::new(&source_path), &dir)?;
+        fs::create_dir_all(&dir).map_err(|e| format!("Cannot create {}: {}", dir.display(), e))?;
+        fs::copy(&source_path, &dest).map_err(|e| format!("Import failed: {}", e))?;
+        Ok(id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Validates an import source and computes the new model id plus destination
+/// path (always `<dir>/<id>.gguf`, so a lookup by id finds the file exactly).
+/// Pure of any copying so the rules are unit-testable.
+fn plan_import(source: &Path, dir: &Path) -> Result<(String, PathBuf), String> {
+    if !source
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("gguf"))
+    {
+        return Err("Only .gguf model files can be imported".to_string());
+    }
+    let id = source
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .filter(|s| is_safe_model_id(s))
+        .ok_or_else(|| format!("Invalid model file name: {}", source.display()))?
+        .to_string();
+    let file_name = model_file_name(&id);
+    let dest = dir.join(&file_name);
+    if dest.exists() {
+        return Err(format!(
+            "A model file named {} already exists. Delete that model first, or rename the file before importing.",
+            file_name
+        ));
+    }
+    Ok((id, dest))
 }
 
 // ---------------------------------------------------------------------------
@@ -423,6 +527,41 @@ pub fn ai_cancel_generate(state: State<'_, AiState>) {
     state.cancel.store(true, Ordering::SeqCst);
 }
 
+/// Where generation reads the model from, plus its prompting knobs. Registry
+/// ids use their spec. Any other id is a custom import: the file must already
+/// exist in the models dir, prompting relies on the GGUF-embedded chat
+/// template (ChatML as the hand-rolled fallback - see `build_prompt`), and
+/// there is no thinking prefill.
+#[cfg(feature = "local-llm")]
+fn resolve_generation_target(
+    app: &AppHandle,
+    model_id: &str,
+) -> Result<(PathBuf, TemplateKind, bool), String> {
+    let dir = models_dir(app)?;
+    match spec_for(model_id) {
+        Ok(spec) => {
+            let path = dir.join(model_file_name(spec.id));
+            if !path.is_file() {
+                return Err(format!(
+                    "Model {} is not downloaded yet - call ai_download_model first",
+                    spec.id
+                ));
+            }
+            Ok((path, spec.template, spec.thinking))
+        }
+        Err(unknown) => {
+            if !is_safe_model_id(model_id) {
+                return Err(format!("Invalid model id: {}", model_id));
+            }
+            let path = dir.join(model_file_name(model_id));
+            if !path.is_file() {
+                return Err(unknown);
+            }
+            Ok((path, TemplateKind::ChatMl, false))
+        }
+    }
+}
+
 #[cfg(feature = "local-llm")]
 #[tauri::command]
 pub async fn ai_generate(
@@ -432,14 +571,7 @@ pub async fn ai_generate(
     prompt: String,
     channel: Channel<GenerateEvent>,
 ) -> Result<(), String> {
-    let spec = spec_for(&model_id)?;
-    let path = models_dir(&app)?.join(model_file_name(spec.id));
-    if !path.is_file() {
-        return Err(format!(
-            "Model {} is not downloaded yet - call ai_download_model first",
-            spec.id
-        ));
-    }
+    let (path, template, thinking) = resolve_generation_target(&app, &model_id)?;
 
     if state
         .busy
@@ -456,7 +588,7 @@ pub async fn ai_generate(
     let cached = {
         let mut loaded = state.loaded.lock().map_err(|e| e.to_string())?;
         match loaded.as_ref() {
-            Some(m) if m.id == spec.id => Some(m.model.clone()),
+            Some(m) if m.id == model_id => Some(m.model.clone()),
             Some(_) => {
                 *loaded = None;
                 None
@@ -472,7 +604,7 @@ pub async fn ai_generate(
                 .map_err(|e| e.to_string())??;
             let model = Arc::new(model);
             *state.loaded.lock().map_err(|e| e.to_string())? = Some(engine::LoadedModel {
-                id: spec.id,
+                id: model_id,
                 model: model.clone(),
             });
             model
@@ -480,8 +612,6 @@ pub async fn ai_generate(
     };
 
     let cancel = state.cancel.clone();
-    let template = spec.template;
-    let thinking = spec.thinking;
     tauri::async_runtime::spawn_blocking(move || {
         let mut prompt = engine::build_prompt(&model, template, &prompt);
         if thinking {
@@ -556,7 +686,8 @@ mod engine {
     const PROMPT_CHUNK: usize = 512;
 
     pub struct LoadedModel {
-        pub id: &'static str,
+        /// Registry id or custom (imported) id - always the on-disk file stem.
+        pub id: String,
         pub model: Arc<LlamaModel>,
     }
 
@@ -720,11 +851,8 @@ mod tests {
 
         for spec in MODELS {
             // Ids become file names - no separators or traversal allowed.
-            assert!(
-                !spec.id.contains('/') && !spec.id.contains('\\') && !spec.id.contains(".."),
-                "unsafe id: {}",
-                spec.id
-            );
+            // (ai_delete_model relies on every registry id passing this.)
+            assert!(is_safe_model_id(spec.id), "unsafe id: {}", spec.id);
             assert!(
                 spec.url.starts_with("https://huggingface.co/"),
                 "unexpected host: {}",
@@ -758,6 +886,97 @@ mod tests {
     fn file_names_derive_from_id() {
         assert_eq!(model_file_name("gemma-4-e2b-it"), "gemma-4-e2b-it.gguf");
         assert_eq!(part_file_name("qwen3.5-4b"), "qwen3.5-4b.gguf.part");
+    }
+
+    #[test]
+    fn custom_id_path_safety() {
+        // Custom ids (file stems of imported models) must stay inside the
+        // models dir - ai_generate/ai_delete_model gate on this.
+        assert!(is_safe_model_id("My-Model.Q4_K_M"));
+        assert!(is_safe_model_id("llama-3.2-1b-instruct-q8_0"));
+        assert!(!is_safe_model_id(""));
+        assert!(!is_safe_model_id(".."));
+        assert!(!is_safe_model_id("../evil"));
+        assert!(!is_safe_model_id("evil/.."));
+        assert!(!is_safe_model_id("a/b"));
+        assert!(!is_safe_model_id("a\\b"));
+        assert!(!is_safe_model_id("/etc/passwd"));
+        assert!(!is_safe_model_id(&"x".repeat(257)));
+    }
+
+    #[test]
+    fn import_plan_rules() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // Only .gguf files (any case) are accepted.
+        assert!(plan_import(Path::new("/tmp/model.bin"), dir.path()).is_err());
+        assert!(plan_import(Path::new("/tmp/model"), dir.path()).is_err());
+        assert!(plan_import(Path::new("/tmp/model.gguf.part"), dir.path()).is_err());
+
+        // Happy path: id is the file stem; destination is <dir>/<id>.gguf
+        // with a normalized (lowercase) extension.
+        let (id, dest) = plan_import(Path::new("/tmp/My-Model.Q4.GGUF"), dir.path()).unwrap();
+        assert_eq!(id, "My-Model.Q4");
+        assert_eq!(dest, dir.path().join("My-Model.Q4.gguf"));
+
+        // Name collision is refused with a clear error, never overwritten.
+        fs::write(dir.path().join("taken.gguf"), b"").unwrap();
+        let err = plan_import(Path::new("/elsewhere/taken.gguf"), dir.path()).unwrap_err();
+        assert!(err.contains("already exists"), "unexpected error: {}", err);
+    }
+
+    #[test]
+    fn custom_model_scan() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("custom-b.gguf"), b"12345").unwrap();
+        fs::write(dir.path().join("custom-a.gguf"), b"123").unwrap();
+        // Registry stems, non-gguf files and .part leftovers are excluded.
+        fs::write(dir.path().join("gemma-4-e2b-it.gguf"), b"x").unwrap();
+        fs::write(dir.path().join("notes.txt"), b"x").unwrap();
+        fs::write(dir.path().join("custom-c.gguf.part"), b"x").unwrap();
+
+        let statuses = custom_model_statuses(dir.path());
+        let ids: Vec<&str> = statuses.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(ids, ["custom-a", "custom-b"], "sorted by id");
+        let a = &statuses[0];
+        assert_eq!(a.display_name, "custom-a.gguf");
+        assert!(a.custom);
+        assert!(a.downloaded);
+        assert!(!a.is_default);
+        assert_eq!(a.size_bytes, 3);
+        assert_eq!(a.downloaded_bytes, Some(3));
+        assert_eq!(a.partial_bytes, None);
+
+        // A missing dir yields no customs (first launch, nothing downloaded).
+        assert!(custom_model_statuses(&dir.path().join("nope")).is_empty());
+    }
+
+    #[test]
+    fn model_status_wire_shape_includes_custom() {
+        let status = serde_json::to_value(ModelStatus {
+            id: "m".into(),
+            display_name: "m.gguf".into(),
+            size_bytes: 1,
+            is_default: false,
+            downloaded: true,
+            downloaded_bytes: Some(1),
+            partial_bytes: None,
+            custom: true,
+        })
+        .unwrap();
+        assert_eq!(
+            status,
+            serde_json::json!({
+                "id": "m",
+                "displayName": "m.gguf",
+                "sizeBytes": 1,
+                "isDefault": false,
+                "downloaded": true,
+                "downloadedBytes": 1,
+                "partialBytes": null,
+                "custom": true,
+            })
+        );
     }
 
     #[test]

@@ -54,8 +54,20 @@ export const AI_MODELS: readonly AiModelInfo[] = [
 /** Mirror of DEFAULT_MODEL_ID in src-tauri/src/ai.rs. */
 export const DEFAULT_AI_MODEL_ID = "gemma-4-e2b-it";
 
-export function isKnownAiModelId(id: unknown): id is string {
-	return typeof id === "string" && AI_MODELS.some((m) => m.id === id);
+/**
+ * Whether `id` can safely be persisted as the selected model. Accepts any
+ * registry id *or* custom (imported) model id - custom ids are file stems, so
+ * the only hard rules are non-empty, bounded length, and no path separators
+ * (mirrors `is_safe_model_id` in src-tauri/src/ai.rs).
+ */
+export function isValidAiModelId(id: unknown): id is string {
+	return (
+		typeof id === "string" &&
+		id.length > 0 &&
+		id.length <= 128 &&
+		!id.includes("/") &&
+		!id.includes("\\")
+	);
 }
 
 export function aiModelInfo(id: string): AiModelInfo | null {
@@ -75,6 +87,9 @@ export interface AiModelStatus {
 	downloadedBytes: number | null;
 	/** Size of a leftover `.part` file from an interrupted download, if any. */
 	partialBytes: number | null;
+	/** True for user-imported models found in the models dir (their id is the
+	 * file stem and they are downloaded by definition). */
+	custom?: boolean;
 }
 
 export type AiDownloadEvent =
@@ -106,6 +121,15 @@ export async function aiDownloadModel(
 
 export async function aiDeleteModel(id: string): Promise<void> {
 	await invoke("ai_delete_model", { id });
+}
+
+/**
+ * Copies a local `.gguf` file into the app's models dir and returns the new
+ * model id (the file stem). Rejects if a model file with that name already
+ * exists - delete it first or rename the source file.
+ */
+export async function aiImportModel(sourcePath: string): Promise<string> {
+	return await invoke<string>("ai_import_model", { sourcePath });
 }
 
 /**
