@@ -289,10 +289,14 @@ fn ollama_chat_blocking(
 ) -> Result<(), String> {
     use std::io::{BufRead, BufReader};
 
-    // No total timeout - generation can take minutes; only connecting must
-    // fail fast so a stopped Ollama surfaces as a clear error.
+    // Connecting fails fast (stopped Ollama → clear error). The generous
+    // total timeout is a hang guard, not a budget: a wedged runner that
+    // accepts the request but never streams a byte (seen in the wild: Ollama
+    // 0.31.2 relaunching a broken llama-server in a loop) would otherwise
+    // hold the busy flag forever, with cancellation powerless because it's
+    // only checked per received line. Real generations finish well inside it.
     let client = reqwest::blocking::Client::builder()
-        .timeout(None)
+        .timeout(Duration::from_secs(600))
         .connect_timeout(Duration::from_secs(2))
         .build()
         .map_err(|e| e.to_string())?;
