@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiModelInfo } from "../lib/ai";
+import { aiErrorSeverity } from "../lib/aiSummary";
 import { useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
@@ -133,7 +134,7 @@ export function AiSummaryPanel() {
 		body = (
 			<>
 				{error && (
-					<Alert severity="error" sx={{ mb: 1.5 }}>
+					<Alert severity={aiErrorSeverity(error)} sx={{ mb: 1.5 }}>
 						{error}
 					</Alert>
 				)}
@@ -141,7 +142,7 @@ export function AiSummaryPanel() {
 			</>
 		);
 	} else if (error) {
-		body = <Alert severity="error">{error}</Alert>;
+		body = <Alert severity={aiErrorSeverity(error)}>{error}</Alert>;
 	} else if (models === null && modelsError) {
 		body = <Alert severity="error">{modelsError}</Alert>;
 	} else if (models !== null && !modelReady) {

@@ -1,7 +1,14 @@
+import { keyframes } from "@emotion/react";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { IconButton, Tooltip } from "@mui/material";
 import { useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
+
+/** Gentle sparkle while a summary is generating anywhere in the app. */
+const sparkle = keyframes`
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.55; transform: scale(1.18) rotate(12deg); }
+`;
 
 interface Props {
 	/** Human document title, e.g. the change or capability name. */
@@ -20,19 +27,27 @@ interface Props {
  */
 export function AiDocSummaryButton({ title, kind, source }: Props) {
 	const aiEnabled = useAppStore((s) => s.settings.aiEnabled);
+	const generating = useAiStore((s) => s.docSummary.generating);
 
 	if (!aiEnabled || !source) return null;
 
 	return (
-		<Tooltip title="AI summary">
+		<Tooltip title={generating ? "Generating AI summary…" : "AI summary"}>
 			<IconButton
 				onClick={() =>
 					void useAiStore.getState().summarizeDoc({ title, kind, source })
 				}
 				aria-label="AI summary"
-				sx={{ color: "text.secondary" }}
+				sx={{ color: generating ? "primary.main" : "text.secondary" }}
 			>
-				<AutoAwesomeIcon fontSize="small" />
+				<AutoAwesomeIcon
+					fontSize="small"
+					sx={
+						generating
+							? { animation: `${sparkle} 1.4s ease-in-out infinite` }
+							: undefined
+					}
+				/>
 			</IconButton>
 		</Tooltip>
 	);

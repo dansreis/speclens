@@ -185,6 +185,17 @@ export function parseSpecLink(href: string | undefined): string | null {
 	}
 }
 
+/**
+ * Busy-rejection ("A generation is already in progress", from ai.rs) is
+ * transient coordination, not a failure - render it as a calm info alert
+ * instead of a red error.
+ */
+export function aiErrorSeverity(message: string): "info" | "error" {
+	return message.toLowerCase().includes("already in progress")
+		? "info"
+		: "error";
+}
+
 /** Human-readable decimal size: "3.11 GB", "512 MB", "12 kB". */
 export function formatBytes(bytes: number): string {
 	if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;

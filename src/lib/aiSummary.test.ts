@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	aiErrorSeverity,
 	buildSummaryPrompt,
 	collectCapabilities,
 	formatBytes,
@@ -202,5 +203,15 @@ describe("stripThinkBlocks", () => {
 
 	it("leaves text without think blocks untouched", () => {
 		expect(stripThinkBlocks("Plain answer.")).toBe("Plain answer.");
+	});
+});
+
+describe("aiErrorSeverity", () => {
+	it("treats busy-rejection as info", () => {
+		expect(aiErrorSeverity("A generation is already in progress")).toBe("info");
+	});
+
+	it("treats real failures as error", () => {
+		expect(aiErrorSeverity("model file is corrupt")).toBe("error");
 	});
 });

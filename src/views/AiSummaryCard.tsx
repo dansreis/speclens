@@ -19,6 +19,7 @@ import {
 	type CachedAiSummary,
 } from "../lib/aiSummaries";
 import {
+	aiErrorSeverity,
 	buildSummaryPrompt,
 	collectCapabilities,
 	linkifyCapabilities,
@@ -269,7 +270,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 		body = (
 			<>
 				{error && (
-					<Alert severity="error" sx={{ mb: 1.5 }}>
+					<Alert severity={aiErrorSeverity(error)} sx={{ mb: 1.5 }}>
 						{error}
 					</Alert>
 				)}
@@ -303,7 +304,7 @@ export function AiSummaryCard({ repo, bare = false }: Props) {
 		body = (
 			<>
 				{error && (
-					<Alert severity="error" sx={{ mb: 1.5 }}>
+					<Alert severity={aiErrorSeverity(error)} sx={{ mb: 1.5 }}>
 						{error}
 					</Alert>
 				)}
