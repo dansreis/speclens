@@ -27,10 +27,10 @@ function assemble(input: DocSummaryPromptInput, sourceChars: number): string {
 		"",
 		truncate(input.source, sourceChars),
 		"",
-		"Write concise markdown and nothing else - no preamble, no headings, no code fences, no link or URL syntax, no closing remarks:",
-		"1. Start with one paragraph (2-3 sentences) explaining what this document is and what it covers.",
-		'2. Then the bold lead-in "**Key points**" on its own line, followed by a short bullet list of the key points, requirements, or decisions in the document.',
-		'3. Then the bold lead-in "**Worth a reviewer\'s attention**" on its own line, followed by a bullet list of risks, ambiguities, or open questions you find. If nothing stands out, write the single bullet "- (nothing stood out)".',
+		"Write markdown and nothing else - no preamble, no headings, no code fences, no link or URL syntax, no closing remarks:",
+		"1. Start with one paragraph (3-5 sentences) explaining what this document is, what it covers, and why it exists - grounded in what the document actually says.",
+		'2. Then the bold lead-in "**Key points**" on its own line, followed by one bullet per major section, requirement, or decision in the document. Be specific and concrete: use the document\'s own names, terms, thresholds, and behaviors (one or two sentences each). Do not write generic statements that could apply to any document, and do not add anything the document does not say.',
+		'3. Then the bold lead-in "**Worth a reviewer\'s attention**" on its own line, followed by a bullet list of risks, ambiguities, contradictions, or open questions grounded in specific passages. If nothing stands out, write the single bullet "- (nothing stood out)".',
 	].join("\n");
 }
 
