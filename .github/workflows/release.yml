@@ -163,6 +163,15 @@ jobs:
             echo "::warning::Apple signing secrets not configured - building unsigned dmg"
           fi
 
+      # ggml refuses MSVC on ARM ("use clang"); build llama.cpp with the
+      # Visual Studio ClangCL toolset on the arm64 leg.
+      - name: Use ClangCL for llama.cpp (Windows ARM)
+        if: matrix.platform == 'windows-arm64'
+        shell: bash
+        run: |
+          echo 'CMAKE_GENERATOR=Visual Studio 17 2022' >> "$GITHUB_ENV"
+          echo 'CMAKE_GENERATOR_TOOLSET=ClangCL' >> "$GITHUB_ENV"
+
       - name: Build app
         run: pnpm tauri build ${{ matrix.args }}
 
