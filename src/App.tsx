@@ -4,6 +4,7 @@ import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutl
 import MenuOpenIcon from "@mui/icons-material/MenuOpen";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+	Alert,
 	Backdrop,
 	Box,
 	Button,
@@ -12,6 +13,7 @@ import {
 	CssBaseline,
 	IconButton,
 	LinearProgress,
+	Snackbar,
 	ThemeProvider,
 	Tooltip,
 	Typography,
@@ -27,7 +29,9 @@ import { pickAndAddRepoSource } from "./repos/addRepo";
 import { SplashScreen } from "./SplashScreen";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
+import { AiSummaryPanel } from "./specs/AiSummaryPanel";
 import { bootstrap } from "./store/bootstrap";
+import { useAiStore } from "./store/useAiStore";
 import {
 	getNavSnapshot,
 	type NavSnapshot,
@@ -94,6 +98,8 @@ function App() {
 	const blockingLoad = useAppStore((s) => s.blockingLoad);
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 	const allComments = useCommentsStore((s) => s.comments);
+	const summaryUnseen = useAiStore((s) => s.docSummary.unseen);
+	const summaryTitle = useAiStore((s) => s.docSummary.title);
 
 	// Show the branded splash for at least 2s on cold start, even if loading is
 	// instant. Measured from launch, so a slow load doesn't stack extra delay.
@@ -508,6 +514,11 @@ function App() {
 								)}
 							</ErrorBoundary>
 						</Box>
+						{/* AI panel sits inside (left of) the comments panel: both are
+						    in-flow when visible, so opening both shows them side by
+						    side. An unpinned comments panel floats over the row edge,
+						    matching how it already overlays document content. */}
+						<AiSummaryPanel />
 						<CommentsPanel
 							open={commentsOpen}
 							pinned={commentsPinned}
@@ -518,6 +529,35 @@ function App() {
 				</Box>
 			</Box>
 			<SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+			<Snackbar
+				open={summaryUnseen}
+				autoHideDuration={8000}
+				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+				onClose={(_event, reason) => {
+					// Ignore clickaway so the notice survives its full 8s unless the
+					// user acts on it.
+					if (reason === "timeout") {
+						useAiStore.getState().clearDocSummaryUnseen();
+					}
+				}}
+			>
+				<Alert
+					severity="info"
+					variant="filled"
+					sx={{ alignItems: "center" }}
+					action={
+						<Button
+							size="small"
+							color="inherit"
+							onClick={() => useAiStore.getState().openDocSummaryPanel()}
+						>
+							View
+						</Button>
+					}
+				>
+					AI summary ready{summaryTitle ? ` · ${summaryTitle}` : ""}
+				</Alert>
+			</Snackbar>
 			<TutorialDialog />
 		</ThemeProvider>
 	);

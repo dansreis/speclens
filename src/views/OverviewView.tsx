@@ -10,9 +10,11 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { aiSummaryGet } from "../lib/aiSummaries";
+import { buildSummaryPrompt, collectCapabilities } from "../lib/aiSummary";
 import {
 	formatCompactDateTime,
 	formatDuration,
@@ -22,6 +24,8 @@ import type { Change, DocAuthorship, Repo } from "../lib/repoLoader";
 import { artifactLabel } from "../lib/schema";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
+import { AiDocSummaryButton } from "../specs/AiDocSummaryButton";
+import { seedDocSummaryCache } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -63,10 +67,45 @@ export function OverviewView({ repo }: Props) {
 	const openFolder = useAppStore((s) => s.openFolder);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const readingWpm = useAppStore((s) => s.settings.readingWpm);
+	const aiModel = useAppStore((s) => s.settings.aiModel);
+	const signature = useAppStore((s) =>
+		repo ? (s.loadedSignatures[repo.id] ?? null) : null,
+	);
 	const [configOpen, setConfigOpen] = useState(false);
 	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
 		"summary",
 	);
+
+	// Project summary "document": the prompt over all capabilities. The prompt
+	// text doubles as the cache key source, so spec changes invalidate it.
+	const overviewPrompt = useMemo(() => {
+		if (!repo) return null;
+		return buildSummaryPrompt({
+			repoName: repo.name,
+			capabilities: collectCapabilities(repo.repoSpecs, repo.changes),
+			activeChangeTitles: repo.changes
+				.filter((c) => !c.archived)
+				.map((c) => c.name),
+		});
+	}, [repo]);
+
+	// Rehydrate the session cache from the SQLite-persisted project summary,
+	// but only when the repo hasn't changed since it was generated.
+	useEffect(() => {
+		if (!repo || !overviewPrompt) return;
+		let stale = false;
+		void aiSummaryGet(repo.id).then((entry) => {
+			if (stale || !entry) return;
+			const fresh =
+				entry.modelId === aiModel &&
+				!!entry.signature &&
+				entry.signature === signature;
+			if (fresh) seedDocSummaryCache(aiModel, overviewPrompt, entry.summary);
+		});
+		return () => {
+			stale = true;
+		};
+	}, [repo, overviewPrompt, aiModel, signature]);
 
 	const stats = useMemo(() => {
 		if (!repo) {
@@ -280,9 +319,20 @@ export function OverviewView({ repo }: Props) {
 
 	return (
 		<Box sx={{ p: 4 }}>
-			<Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
-				{repo?.name ?? "Overview"}
-			</Typography>
+			<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+				<Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+					{repo?.name ?? "Overview"}
+				</Typography>
+				{repo && (
+					<AiDocSummaryButton
+						title={repo.name}
+						kind="project overview"
+						source={overviewPrompt}
+						rawPrompt
+						persist={{ repoId: repo.id, signature }}
+					/>
+				)}
+			</Box>
 			<Tabs
 				value={tab}
 				onChange={(_, v) => setTab(v)}

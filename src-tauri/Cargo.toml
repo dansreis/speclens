@@ -29,6 +29,25 @@ walkdir = "2"
 # dependency); vendored-libgit2 builds libgit2 from source so no system
 # library is needed on any CI target or user machine.
 git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+# Local-LLM support (src/ai.rs). reqwest is used from Rust only (model file
+# downloads with streamed progress); rustls-tls avoids any openssl linkage,
+# blocking keeps the download loop simple inside spawn_blocking.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+sha2 = "0.10"
+llama-cpp-2 = { version = "0.1.151", optional = true }
+encoding_rs = { version = "0.8", optional = true }
+
+# Metal-accelerated inference on macOS; everywhere else llama.cpp builds pure CPU.
+[target.'cfg(target_os = "macos")'.dependencies]
+llama-cpp-2 = { version = "0.1.151", optional = true, features = ["metal"] }
+
+[features]
+# On by default so `pnpm tauri dev` and release builds include inference.
+# Requires cmake (llama-cpp-sys-2 compiles llama.cpp from source); GitHub's
+# hosted runners ship it. Build with --no-default-features for a lean build
+# without the engine - model management still compiles, ai_generate errors.
+default = ["local-llm"]
+local-llm = ["dep:llama-cpp-2", "dep:encoding_rs"]
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,3 +1,5 @@
+mod ai;
+
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::hash::{Hash, Hasher};
@@ -536,10 +538,18 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .manage(ai::AiState::default())
         .invoke_handler(tauri::generate_handler![
             load_repo,
             repo_signature,
-            resolve_repo_root
+            resolve_repo_root,
+            ai::ai_model_status,
+            ai::ai_reveal_models_dir,
+            ai::ai_download_model,
+            ai::ai_delete_model,
+            ai::ai_import_model,
+            ai::ai_generate,
+            ai::ai_cancel_generate
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

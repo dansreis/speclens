@@ -1,6 +1,8 @@
 import type { PaletteMode } from "@mui/material";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { DEFAULT_AI_MODEL_ID, isValidAiModelId } from "../lib/ai";
+import { aiSummaryDelete } from "../lib/aiSummaries";
 import { sourcesDelete } from "../lib/db";
 import { cacheDelete, cacheGet, cacheSet } from "../lib/repoCache";
 import {
@@ -32,6 +34,15 @@ export interface AppSettings {
 	commentsPanelWidth: number;
 	/** Width of the left navigation sidebar in px (expanded mode only). */
 	sidebarWidth: number;
+	/** Width of the AI summary side panel in px (drag-resizable). */
+	aiPanelWidth: number;
+	/** Local AI features (model download + on-device inference). On by
+	 * default - the UI shows, but nothing downloads or runs until the user
+	 * explicitly fetches a model, so the no-network promise holds. */
+	aiEnabled: boolean;
+	/** Selected local model id: a registry id from AI_MODELS or the file stem
+	 * of a user-imported custom model. */
+	aiModel: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -39,6 +50,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	highlightColor: "#fde047",
 	commentsPanelWidth: 340,
 	sidebarWidth: 240,
+	aiPanelWidth: 380,
+	aiEnabled: true,
+	aiModel: DEFAULT_AI_MODEL_ID,
 };
 
 /** Preset highlight colors offered in the settings dialog. */
@@ -79,6 +93,19 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			r.sidebarWidth <= 400
 				? r.sidebarWidth
 				: DEFAULT_SETTINGS.sidebarWidth,
+		aiPanelWidth:
+			typeof r.aiPanelWidth === "number" &&
+			r.aiPanelWidth >= 300 &&
+			r.aiPanelWidth <= 640
+				? r.aiPanelWidth
+				: DEFAULT_SETTINGS.aiPanelWidth,
+		aiEnabled:
+			typeof r.aiEnabled === "boolean"
+				? r.aiEnabled
+				: DEFAULT_SETTINGS.aiEnabled,
+		// Custom (imported) model ids are not in the registry, so any safe file
+		// stem is accepted - a persisted custom selection must survive restarts.
+		aiModel: isValidAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
 	};
 }
 
@@ -313,6 +340,7 @@ export const useAppStore = create<AppState>()(
 			// empty lists (so removing the very last repo still commits).
 			void sourcesDelete(path);
 			void cacheDelete(path);
+			void aiSummaryDelete(path);
 			void useCommentsStore.getState().deleteCommentsForRepo(path);
 			const { [path]: _removedStale, ...restStale } = staleRepos;
 			const { [path]: _removedSig, ...restSigs } = loadedSignatures;

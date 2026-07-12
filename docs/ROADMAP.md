@@ -37,7 +37,7 @@ The plumbing is done (`AppSettings` in `useAppStore`, persisted as one kv blob -
   - consistency: requirements duplicated across capabilities, archived changes still referenced by active ones, task lists that don't match the delta they claim to implement
   - language lint: RFC 2119 misuse (lowercase "shall", `SHOULD` + `MUST` in one clause), ambiguity flags ("fast", "appropriate", "etc.")
   - further out: formalize requirement claims and hand them to an SMT solver (Z3) for contradiction detection, as spec-check does
-- [ ] **Local AI: capability summaries + project Q&A** - opt-in, off by default, fully on-device (preserves the no-network promise; one explicit user-initiated model download). Phased:
+- [ ] **Local AI: capability summaries + project Q&A** - enabled by default but fully on-device and inert until the user explicitly downloads a model (preserves the no-network promise). Phased:
   1. **Overview summaries** - a high-level AI-generated summary of the repo's capabilities on the Overview page, each linking to its spec. Generated per repo, cached in SQLite keyed by the existing repo `signature` (regenerates only when specs change). Internal link scheme routes to the Specs view.
   2. **Inference engine** - embedded in the Rust process (llama.cpp bindings or candle/mistral.rs, Metal on Apple Silicon) running a small instruct model (3-4B, GGUF Q4, ~2.5 GB download managed from Settings). Consider Apple's on-device Foundation Models framework as the zero-download fast path on macOS later.
   3. **Q&A over the openspec** - RAG: chunk docs, local embedding model (~tens of MB), vectors in SQLite (`sqlite-vec`), answers cite and link their source documents.

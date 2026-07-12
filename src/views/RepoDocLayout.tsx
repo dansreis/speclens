@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { DocumentKind } from "../lib/comments";
 import type { DocAuthorship } from "../lib/repoLoader";
 import { artifactLabel } from "../lib/schema";
+import { AiDocSummaryButton } from "../specs/AiDocSummaryButton";
 import { AttributionLine } from "../specs/AttributionLine";
 import { DocumentStatsTooltipContent } from "../specs/DocumentStatsTooltip";
 import { MarkdownView } from "../specs/MarkdownView";
@@ -18,6 +19,9 @@ interface Props {
 	documentKind: DocumentKind;
 	commentsOpen?: boolean;
 	onToggleComments?: () => void;
+	/** Document kind passed to the AI summary prompt (e.g. the folder name);
+	 * when omitted the AI summary button is not rendered. */
+	aiKind?: string;
 }
 
 export function RepoDocLayout({
@@ -29,6 +33,7 @@ export function RepoDocLayout({
 	documentKind,
 	commentsOpen,
 	onToggleComments,
+	aiKind,
 }: Props) {
 	const statsLabel =
 		documentKind === "repo-spec"
@@ -74,6 +79,9 @@ export function RepoDocLayout({
 							alignItems: "center",
 						}}
 					>
+						{aiKind && (
+							<AiDocSummaryButton title={title} kind={aiKind} source={source} />
+						)}
 						<Tooltip
 							title={
 								<DocumentStatsTooltipContent
