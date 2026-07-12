@@ -135,14 +135,14 @@ function ModelRow({
 			actionZone = (
 				<Button
 					size="small"
-					variant="text"
+					variant="outlined"
 					startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
 					disabled={!statusesLoaded}
 					onClick={(e) => {
 						e.stopPropagation();
 						onDownload();
 					}}
-					sx={{ py: 0, px: 0.75, minWidth: 0, whiteSpace: "nowrap" }}
+					sx={{ py: 0, px: 1, minWidth: 0, whiteSpace: "nowrap" }}
 				>
 					Download
 				</Button>
@@ -421,7 +421,7 @@ export function AiSettingsSection() {
 							<Button
 								onClick={() => void aiRevealModelsDir().catch(console.error)}
 								startIcon={<FolderOpenIcon />}
-								variant="text"
+								variant="outlined"
 								size="small"
 							>
 								Reveal models folder

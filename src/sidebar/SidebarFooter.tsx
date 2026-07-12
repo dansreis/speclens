@@ -177,7 +177,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 					<Tab label="AI" />
 					<Tab label="General" />
 				</Tabs>
-				<DialogContent sx={{ minHeight: 340 }}>
+				<DialogContent sx={{ height: 420, overflowY: "auto" }}>
 					{settingsTab === 0 && (
 						<Stack spacing={3} divider={<Divider flexItem />}>
 							<SettingRow
