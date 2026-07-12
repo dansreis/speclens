@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiModelInfo } from "../lib/ai";
@@ -124,6 +124,15 @@ export function AiSummaryPanel() {
 	useEffect(() => {
 		if (open && models === null) void refreshModels();
 	}, [open, models, refreshModels]);
+
+	// Navigating in the left sidebar closes the panel - it belongs to what you
+	// were reading. Generation keeps running; the ready toast announces it.
+	const prevViewRef = useRef(view);
+	useEffect(() => {
+		if (prevViewRef.current === view) return;
+		prevViewRef.current = view;
+		if (useAiStore.getState().docSummary.open) closeDocSummaryPanel();
+	}, [view, closeDocSummaryPanel]);
 
 	const { text, tokens, generating, error } = docSummary;
 	const modelReady =
