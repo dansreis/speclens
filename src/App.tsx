@@ -99,6 +99,7 @@ function App() {
 	const theme = useMemo(() => createAppTheme(themeMode), [themeMode]);
 	const allComments = useCommentsStore((s) => s.comments);
 	const summaryUnseen = useAiStore((s) => s.docSummary.unseen);
+	const summaryTitle = useAiStore((s) => s.docSummary.title);
 
 	// Show the branded splash for at least 2s on cold start, even if loading is
 	// instant. Measured from launch, so a slow load doesn't stack extra delay.
@@ -554,7 +555,7 @@ function App() {
 						</Button>
 					}
 				>
-					AI summary ready
+					AI summary ready{summaryTitle ? ` · ${summaryTitle}` : ""}
 				</Alert>
 			</Snackbar>
 			<TutorialDialog />

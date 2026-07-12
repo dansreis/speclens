@@ -76,6 +76,15 @@ export function clearDocSummaryCache(): void {
 	docSummaryCache.clear();
 }
 
+/** Cached summary text for a document, or undefined. Used by the panel to
+ * show the summary belonging to the *currently viewed* document. */
+export function getCachedDocSummary(
+	model: string,
+	source: string,
+): string | undefined {
+	return docSummaryCache.get(docSummaryCacheKey(model, source));
+}
+
 /**
  * Monotonic token identifying the latest generation. Callbacks from an older
  * (cancelled/replaced) run compare against it and drop their updates.
@@ -100,14 +109,23 @@ interface AiStoreState {
 	removeModel: (id: string) => Promise<void>;
 	docSummary: DocSummaryState;
 	/**
+	 * The document currently on screen (registered by AiDocSummaryButton as
+	 * viewers mount/unmount). The panel always reflects THIS document: its
+	 * cached summary, its in-flight stream, or a generate prompt - never
+	 * another document's content.
+	 */
+	currentDoc: DocSummaryInput | null;
+	setCurrentAiDoc: (input: DocSummaryInput | null) => void;
+	/**
 	 * Summarizes a document and opens the panel. Cache hit → instant text, no
 	 * generation. Model not downloaded → panel opens with the download hint.
 	 * Otherwise starts a detached background generation, replacing (and
 	 * cancelling) any in-flight one.
 	 */
 	summarizeDoc: (input: DocSummaryInput) => Promise<void>;
-	/** Re-runs generation for the current document, bypassing the cache. */
-	regenerateDocSummary: () => Promise<void>;
+	/** Re-runs generation, bypassing the cache. Pass the doc to regenerate
+	 * (the panel passes the currently viewed one); defaults to the last run's. */
+	regenerateDocSummary: (input?: DocSummaryInput) => Promise<void>;
 	/** Best-effort cancel of the in-flight generation (keeps partial text). */
 	cancelDocSummary: () => void;
 	/** Opens the panel and clears the `unseen` notification flag. */
@@ -181,6 +199,12 @@ export const useAiStore = create<AiStoreState>()((set, get) => ({
 
 	docSummary: EMPTY_DOC_SUMMARY,
 
+	currentDoc: null,
+
+	setCurrentAiDoc: (input) => {
+		set({ currentDoc: input });
+	},
+
 	summarizeDoc: async (input) => {
 		const model = useAppStore.getState().settings.aiModel;
 		const docKey = docSummaryCacheKey(model, input.source);
@@ -233,12 +257,18 @@ export const useAiStore = create<AiStoreState>()((set, get) => ({
 		await startDocGeneration(input, model, docKey, set, get);
 	},
 
-	regenerateDocSummary: async () => {
-		const { title, kind, source } = get().docSummary;
-		if (!source) return;
+	regenerateDocSummary: async (input) => {
+		const doc = input ?? get().docSummary;
+		if (!doc.source) return;
 		const model = useAppStore.getState().settings.aiModel;
-		const docKey = docSummaryCacheKey(model, source);
-		await startDocGeneration({ title, kind, source }, model, docKey, set, get);
+		const docKey = docSummaryCacheKey(model, doc.source);
+		await startDocGeneration(
+			{ title: doc.title, kind: doc.kind, source: doc.source },
+			model,
+			docKey,
+			set,
+			get,
+		);
 	},
 
 	cancelDocSummary: () => {

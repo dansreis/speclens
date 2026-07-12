@@ -15,8 +15,9 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { aiModelInfo } from "../lib/ai";
+import { docSummaryCacheKey } from "../lib/aiDocSummary";
 import { aiErrorSeverity, formatTokenCount } from "../lib/aiSummary";
-import { useAiStore } from "../store/useAiStore";
+import { getCachedDocSummary, useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
 /** Views where the panel stays hidden - full-canvas visualizations. */
@@ -55,6 +56,7 @@ export function AiSummaryPanel() {
 	const view = useAppStore((s) => s.view);
 	const [resizing, setResizing] = useState(false);
 	const docSummary = useAiStore((s) => s.docSummary);
+	const currentDoc = useAiStore((s) => s.currentDoc);
 	const models = useAiStore((s) => s.models);
 	const modelsError = useAiStore((s) => s.modelsError);
 	const refreshModels = useAiStore((s) => s.refreshModels);
@@ -100,10 +102,24 @@ export function AiSummaryPanel() {
 		if (open && models === null) void refreshModels();
 	}, [open, models, refreshModels]);
 
-	const { title, kind, text, tokens, generating, error } = docSummary;
+	const { text, tokens, generating, error } = docSummary;
 	const modelReady =
 		models?.some((m) => m.id === aiModel && m.downloaded) ?? false;
 	const modelName = aiModelInfo(aiModel)?.displayName ?? aiModel;
+
+	// The panel reflects the document currently on screen. The in-flight run
+	// and its error only show when they belong to that document; otherwise the
+	// current document's cached summary (or a generate prompt) shows instead.
+	const currentKey = currentDoc
+		? docSummaryCacheKey(aiModel, currentDoc.source)
+		: null;
+	const isCurrentRun = currentKey !== null && docSummary.docKey === currentKey;
+	const cachedForCurrent =
+		currentDoc && currentKey
+			? getCachedDocSummary(aiModel, currentDoc.source)
+			: undefined;
+	const headerTitle = currentDoc?.title ?? docSummary.title;
+	const headerKind = currentDoc?.kind ?? docSummary.kind;
 
 	const renderMarkdown = (markdown: string) => (
 		<Box sx={markdownSx}>
@@ -112,7 +128,22 @@ export function AiSummaryPanel() {
 	);
 
 	let body: React.ReactNode;
-	if (generating) {
+	if (!currentDoc) {
+		body = (
+			<Typography variant="body2" color="text.secondary">
+				Open a document to summarize it.
+			</Typography>
+		);
+	} else if (models === null && modelsError) {
+		body = <Alert severity="error">{modelsError}</Alert>;
+	} else if (models !== null && !modelReady) {
+		body = (
+			<Typography variant="body2" color="text.secondary">
+				The selected model isn't downloaded yet. Open Settings → AI to download
+				it.
+			</Typography>
+		);
+	} else if (generating && isCurrentRun) {
 		body = (
 			<>
 				{text ? (
@@ -133,40 +164,20 @@ export function AiSummaryPanel() {
 				</Box>
 			</>
 		);
-	} else if (text) {
+	} else if (cachedForCurrent) {
 		body = (
 			<>
-				{error && (
+				{error && isCurrentRun && (
 					<Alert severity={aiErrorSeverity(error)} sx={{ mb: 1.5 }}>
 						{error}
 					</Alert>
 				)}
-				{renderMarkdown(text)}
+				{renderMarkdown(cachedForCurrent)}
 			</>
 		);
-	} else if (error) {
+	} else if (error && isCurrentRun) {
 		body = <Alert severity={aiErrorSeverity(error)}>{error}</Alert>;
-	} else if (models === null && modelsError) {
-		body = <Alert severity="error">{modelsError}</Alert>;
-	} else if (models !== null && !modelReady) {
-		body = (
-			<Typography variant="body2" color="text.secondary">
-				The selected model isn't downloaded yet. Open Settings → AI to download
-				it.
-			</Typography>
-		);
-	} else if (models === null) {
-		body = (
-			<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-				<CircularProgress size={14} />
-				<Typography variant="caption" color="text.secondary">
-					Loading…
-				</Typography>
-			</Box>
-		);
 	} else {
-		// Idle with a ready model and nothing to show (e.g. cancelled before any
-		// output): offer a manual start.
 		body = (
 			<>
 				<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -177,15 +188,29 @@ export function AiSummaryPanel() {
 					size="small"
 					variant="outlined"
 					startIcon={<AutoAwesomeIcon />}
-					onClick={() => void regenerateDocSummary()}
+					onClick={() => void useAiStore.getState().summarizeDoc(currentDoc)}
 				>
 					Generate summary
 				</Button>
+				{generating && (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						sx={{ display: "block", mt: 1.5 }}
+					>
+						Still generating for “{docSummary.title}”
+						{tokens > 0 ? ` · ${formatTokenCount(tokens)} tokens` : ""}…
+					</Typography>
+				)}
 			</>
 		);
 	}
 
-	const showFooter = generating || (modelReady && (text || error));
+	const showFooter =
+		(generating && isCurrentRun) ||
+		(modelReady &&
+			!!currentDoc &&
+			(!!cachedForCurrent || (!!error && isCurrentRun)));
 
 	return (
 		<Box
@@ -242,14 +267,14 @@ export function AiSummaryPanel() {
 					<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
 						AI summary
 					</Typography>
-					{title && (
+					{headerTitle && (
 						<Typography
 							variant="caption"
 							color="text.secondary"
 							noWrap
 							component="div"
 						>
-							{title} · {kind}
+							{headerTitle} · {headerKind}
 						</Typography>
 					)}
 				</Box>
@@ -284,7 +309,7 @@ export function AiSummaryPanel() {
 						<Button
 							size="small"
 							startIcon={<RefreshIcon />}
-							onClick={() => void regenerateDocSummary()}
+							onClick={() => void regenerateDocSummary(currentDoc ?? undefined)}
 						>
 							Regenerate
 						</Button>

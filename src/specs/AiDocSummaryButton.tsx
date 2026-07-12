@@ -1,6 +1,7 @@
 import { keyframes } from "@emotion/react";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { IconButton, Tooltip } from "@mui/material";
+import { useEffect } from "react";
 import { useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
@@ -28,6 +29,13 @@ interface Props {
 export function AiDocSummaryButton({ title, kind, source }: Props) {
 	const aiEnabled = useAppStore((s) => s.settings.aiEnabled);
 	const generating = useAiStore((s) => s.docSummary.generating);
+	const setCurrentAiDoc = useAiStore((s) => s.setCurrentAiDoc);
+
+	// Register the document on screen so the AI panel always reflects it.
+	useEffect(() => {
+		setCurrentAiDoc(source ? { title, kind, source } : null);
+		return () => setCurrentAiDoc(null);
+	}, [title, kind, source, setCurrentAiDoc]);
 
 	if (!aiEnabled || !source) return null;
 
