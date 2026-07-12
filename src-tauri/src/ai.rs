@@ -55,6 +55,10 @@ pub struct ModelSpec {
     /// Approximate size as advertised by Hugging Face (decimal GB), for
     /// progress UI before the server reports a Content-Length.
     pub size_bytes: u64,
+    /// Thinking-tuned models open a `<think>` block and can burn the whole
+    /// output budget reasoning; we prefill a closed empty block to skip it
+    /// (Qwen3.5 ignores the older `/no_think` soft switch).
+    pub thinking: bool,
     /// Lowercase hex sha256 of the file, taken from the Hugging Face LFS
     /// metadata. Verified after download when present.
     pub sha256: Option<&'static str>,
@@ -75,6 +79,7 @@ pub const MODELS: &[ModelSpec] = &[
 		size_bytes: 3_110_000_000,
 		sha256: Some("9378bc471710229ef165709b62e34bfb62231420ddaf6d729e727305b5b8672d"),
 		template: TemplateKind::Gemma,
+		thinking: false,
 	},
 	ModelSpec {
 		id: "qwen3.5-4b",
@@ -83,6 +88,7 @@ pub const MODELS: &[ModelSpec] = &[
 		size_bytes: 2_740_000_000,
 		sha256: Some("00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"),
 		template: TemplateKind::ChatMl,
+		thinking: true,
 	},
 ];
 
@@ -448,8 +454,14 @@ pub async fn ai_generate(
 
     let cancel = state.cancel.clone();
     let template = spec.template;
+    let thinking = spec.thinking;
     tauri::async_runtime::spawn_blocking(move || {
-        let prompt = engine::build_prompt(&model, template, &prompt);
+        let mut prompt = engine::build_prompt(&model, template, &prompt);
+        if thinking {
+            // Prefill a completed (empty) reasoning block so the model answers
+            // directly instead of spending the token budget inside <think>.
+            prompt.push_str("<think>\n\n</think>\n\n");
+        }
         engine::generate_blocking(&model, &prompt, engine::MAX_OUTPUT_TOKENS, &cancel, &|ev| {
             let _ = channel.send(ev);
         })
@@ -785,7 +797,12 @@ mod tests {
         );
         eprintln!("ai_smoke: loading {}", path.display());
         let model = engine::load_model(&path).expect("model should load");
-        let prompt = engine::build_prompt(&model, TemplateKind::Gemma, "Reply with one word: hi");
+        let mut prompt =
+            engine::build_prompt(&model, TemplateKind::Gemma, "Reply with one word: hi");
+        // Mirror ai_generate's thinking-model prefill (see spec.thinking).
+        if path.to_string_lossy().contains("qwen") {
+            prompt.push_str("<think>\n\n</think>\n\n");
+        }
         let out = Mutex::new(String::new());
         let done = AtomicBool::new(false);
         let cancel = AtomicBool::new(false);

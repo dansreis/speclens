@@ -13,8 +13,6 @@ export interface AiModelInfo {
 	displayName: string;
 	/** Approximate download size in bytes (decimal, from Hugging Face). */
 	sizeBytes: number;
-	/** Thinking-tuned models emit <think> blocks; we suppress via /no_think. */
-	thinking?: boolean;
 }
 
 /** Keep ids/sizes in sync with `MODELS` in src-tauri/src/ai.rs. */
@@ -28,7 +26,6 @@ export const AI_MODELS: readonly AiModelInfo[] = [
 		id: "qwen3.5-4b",
 		displayName: "Qwen3.5 4B Instruct (Q4_K_M)",
 		sizeBytes: 2_740_000_000,
-		thinking: true,
 	},
 ];
 
@@ -101,12 +98,9 @@ export async function aiGenerate(
 ): Promise<void> {
 	const channel = new Channel<AiGenerateEvent>();
 	channel.onmessage = onEvent;
-	// Qwen-style soft switch: without it a thinking model can spend the whole
-	// output budget inside <think>, leaving nothing visible after stripping.
-	const finalPrompt = aiModelInfo(modelId)?.thinking
-		? `${prompt}\n\n/no_think`
-		: prompt;
-	await invoke("ai_generate", { modelId, prompt: finalPrompt, channel });
+	// Thinking-model handling (e.g. Qwen's <think> blocks) lives in Rust: the
+	// engine prefills a closed think block per the model registry.
+	await invoke("ai_generate", { modelId, prompt, channel });
 }
 
 /** Best-effort cancellation of the in-flight generation. */
