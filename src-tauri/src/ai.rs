@@ -68,9 +68,9 @@ pub struct ModelSpec {
 }
 
 /// Supported models. URLs, sizes and checksums verified against the Hugging
-/// Face repos on 2026-07-10. The bundled llama.cpp (llama-cpp-sys-2 0.1.151)
-/// ships `src/models/gemma4.cpp`, so the Gemma 4 architecture is supported
-/// and stays the default.
+/// Face repos on 2026-07-10 (E2B/Qwen) and 2026-07-12 (E4B/Phi/SmolLM3). The
+/// bundled llama.cpp (llama-cpp-sys-2 0.1.151) ships `src/models/gemma4.cpp`,
+/// so the Gemma 4 architecture is supported and stays the default.
 pub const MODELS: &[ModelSpec] = &[
 	ModelSpec {
 		id: "gemma-4-e2b-it",
@@ -87,6 +87,33 @@ pub const MODELS: &[ModelSpec] = &[
 		url: "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
 		size_bytes: 2_740_000_000,
 		sha256: Some("00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4"),
+		template: TemplateKind::ChatMl,
+		thinking: true,
+	},
+	ModelSpec {
+		id: "gemma-4-e4b-it",
+		display_name: "Gemma 4 E4B Instruct (Q4_K_M)",
+		url: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+		size_bytes: 4_977_169_568,
+		sha256: Some("519b9793ed6ce0ff530f1b7c96e848e08e49e7af4d57bb97f76215963a54146d"),
+		template: TemplateKind::Gemma,
+		thinking: false,
+	},
+	ModelSpec {
+		id: "phi-4-mini",
+		display_name: "Phi-4 Mini Instruct (Q4_K_M)",
+		url: "https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf",
+		size_bytes: 2_491_874_272,
+		sha256: Some("88c00229914083cd112853aab84ed51b87bdf6b9ce42f532d8c85c7c63b1730a"),
+		template: TemplateKind::ChatMl,
+		thinking: false,
+	},
+	ModelSpec {
+		id: "smollm3-3b",
+		display_name: "SmolLM3 3B (Q4_K_M)",
+		url: "https://huggingface.co/unsloth/SmolLM3-3B-GGUF/resolve/main/SmolLM3-3B-Q4_K_M.gguf",
+		size_bytes: 1_915_306_528,
+		sha256: Some("4de907d2d388a5508fb7cb443a06effe14cce3518b0a78d3bdd9e74d9edce989"),
 		template: TemplateKind::ChatMl,
 		thinking: true,
 	},
@@ -683,7 +710,6 @@ mod tests {
 
     #[test]
     fn registry_is_well_formed() {
-        assert_eq!(MODELS.len(), 2);
         // Unique ids, and the default must exist.
         let ids: Vec<&str> = MODELS.iter().map(|m| m.id).collect();
         let mut deduped = ids.clone();

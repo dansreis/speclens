@@ -27,6 +27,21 @@ export const AI_MODELS: readonly AiModelInfo[] = [
 		displayName: "Qwen3.5 4B Instruct (Q4_K_M)",
 		sizeBytes: 2_740_000_000,
 	},
+	{
+		id: "gemma-4-e4b-it",
+		displayName: "Gemma 4 E4B Instruct (Q4_K_M)",
+		sizeBytes: 4_977_169_568,
+	},
+	{
+		id: "phi-4-mini",
+		displayName: "Phi-4 Mini Instruct (Q4_K_M)",
+		sizeBytes: 2_491_874_272,
+	},
+	{
+		id: "smollm3-3b",
+		displayName: "SmolLM3 3B (Q4_K_M)",
+		sizeBytes: 1_915_306_528,
+	},
 ];
 
 /** Mirror of DEFAULT_MODEL_ID in src-tauri/src/ai.rs. */
