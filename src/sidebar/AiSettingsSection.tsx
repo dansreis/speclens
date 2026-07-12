@@ -14,6 +14,11 @@ import {
 } from "@mui/material";
 import { useEffect } from "react";
 import { AI_MODELS } from "../lib/ai";
+
+const MODELS_ALPHABETICAL = [...AI_MODELS].sort((a, b) =>
+	a.displayName.localeCompare(b.displayName),
+);
+
 import { formatBytes } from "../lib/aiSummary";
 import { useAiStore } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
@@ -77,7 +82,7 @@ export function AiSettingsSection() {
 						fullWidth
 						aria-label="AI model"
 					>
-						{AI_MODELS.map((m) => {
+						{MODELS_ALPHABETICAL.map((m) => {
 							const downloaded = models?.some(
 								(s) => s.id === m.id && s.downloaded,
 							);
