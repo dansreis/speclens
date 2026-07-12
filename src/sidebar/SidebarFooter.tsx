@@ -179,7 +179,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 				</Tabs>
 				<DialogContent
 					sx={{
-						height: 420,
+						height: 560,
 						overflow: "hidden",
 						display: "flex",
 						flexDirection: "column",
