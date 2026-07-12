@@ -298,7 +298,14 @@ export function AiSettingsSection() {
 		.reduce((sum, m) => sum + (m.downloadedBytes ?? m.sizeBytes), 0);
 
 	return (
-		<Box>
+		<Box
+			sx={{
+				flex: 1,
+				minHeight: 0,
+				display: "flex",
+				flexDirection: "column",
+			}}
+		>
 			<FormControlLabel
 				sx={{ ml: 0, alignItems: "flex-start" }}
 				control={
@@ -323,7 +330,7 @@ export function AiSettingsSection() {
 				}
 			/>
 			{aiEnabled && (
-				<Stack spacing={1.5} sx={{ mt: 1.5 }}>
+				<Stack spacing={1.5} sx={{ mt: 1.5, flex: 1, minHeight: 0 }}>
 					{modelsError && <Alert severity="error">{modelsError}</Alert>}
 					<Box
 						role="radiogroup"
@@ -332,7 +339,8 @@ export function AiSettingsSection() {
 							border: 1,
 							borderColor: "divider",
 							borderRadius: 1,
-							maxHeight: 260,
+							flex: 1,
+							minHeight: 0,
 							overflowY: "auto",
 							pb: 0.5,
 						}}
