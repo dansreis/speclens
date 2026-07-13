@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-07-13
+
+- Fixed a crash when quitting the app after using AI summaries (Metal resources are now released before exit)
+
 ## [1.1.0] - 2026-07-13
 
 Local AI - on-device summaries, fully private. Nothing runs or downloads until you enable it and fetch a model; nothing ever leaves your machine.
