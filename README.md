@@ -13,7 +13,7 @@ SpecLens reads the OpenSpec convention (`proposal.md` / `tasks.md` / `specs/<cap
 - **Timeline** - changes laid out chronologically, derived from git history.
 - **Graph & Flow views** - how capabilities, changes, and specs relate to each other.
 - **Specs & Schemas views** - the current state of every capability, and the schema that generated it.
-- **Authorship** - when a project is a git repository, SpecLens runs `git log` per document to show who created and last edited each change. Without git it degrades gracefully.
+- **Authorship** - when a project is a git repository, SpecLens derives per-document history (via an embedded git library - no git installation needed) to show who created and last edited each change. Without a repo it degrades gracefully.
 - **Comments** - select any text to attach a comment; highlights persist locally (SQLite) and can be exported as markdown, ready to paste into an LLM conversation.
 - **EARS keyword highlighting** - inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin steps (toggle in Settings).
 - **Reader comforts** - minimap with table of contents, document stats and reading time, search palette, Mermaid diagram rendering, zoom, light/dark theme.
@@ -96,7 +96,7 @@ src/
 ├── search/        # search palette
 ├── store/         # Zustand stores + SQLite bootstrap
 └── lib/           # loaders, git-derived authorship, stats, highlighting
-src-tauri/         # Rust shell: repo walking, git log, signatures
+src-tauri/         # Rust shell: repo walking, git2 authorship, signatures, local AI
 ```
 
 `CLAUDE.md` has deeper architectural notes; `docs/ROADMAP.md` tracks what's missing; `RELEASE.md` describes how releases are cut.
