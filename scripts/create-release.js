@@ -107,6 +107,11 @@ function updateChangelog(newVersion) {
 	for (const entry of entries) {
 		newEntry += `- ${entry}\n`;
 	}
+	// GitHub compare link between this version and the previous tag - keep
+	// this line when curating the section by hand.
+	if (lastTag) {
+		newEntry += `\n**Full diff**: [${lastTag}...v${newVersion}](https://github.com/dansreis/speclens/compare/${lastTag}...v${newVersion})\n`;
+	}
 	newEntry += "\n";
 
 	let existingChangelog = "";
