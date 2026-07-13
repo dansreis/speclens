@@ -103,14 +103,14 @@ function updateChangelog(newVersion) {
 	}
 
 	const date = new Date().toISOString().split("T")[0];
-	let newEntry = `## [${newVersion}] - ${date}\n\n`;
+	// The version number links to the GitHub compare view against the
+	// previous tag (keep-a-changelog style) - preserve it when curating.
+	const header = lastTag
+		? `## [${newVersion}](https://github.com/dansreis/speclens/compare/${lastTag}...v${newVersion}) - ${date}`
+		: `## [${newVersion}] - ${date}`;
+	let newEntry = `${header}\n\n`;
 	for (const entry of entries) {
 		newEntry += `- ${entry}\n`;
-	}
-	// GitHub compare link between this version and the previous tag - keep
-	// this line when curating the section by hand.
-	if (lastTag) {
-		newEntry += `\n**Full diff**: [${lastTag}...v${newVersion}](https://github.com/dansreis/speclens/compare/${lastTag}...v${newVersion})\n`;
 	}
 	newEntry += "\n";
 
