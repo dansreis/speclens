@@ -5,10 +5,6 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 ## Distribution
 
 - [ ] **Ship through official `homebrew/cask`** - installable today via the personal tap ([dansreis/homebrew-tap](https://github.com/dansreis/homebrew-tap), auto-bumped by the release workflow). The official cask is blocked only on the notability bar (~75 stars / 30 forks / 30 watchers - `brew audit --new --cask` enforces it); the other prerequisites (public repo, signed + notarized builds) are met. Then: fork `homebrew/cask`, add `Casks/s/speclens.rb` (version + sha256 + dmg URL), pass `brew audit --new --cask speclens`, open the PR; each later release gets bumped via `brew bump-cask-pr`
-- [ ] **Mac App Store** (decided) - needs, beyond the Apple Developer membership:
-  1. **App Sandbox** (mandatory for MAS) with security-scoped bookmarks - the persisted `repoSources` paths are unreadable across launches under sandbox unless each user-picked folder is saved as a security-scoped bookmark and re-resolved on start (custom Rust/objc; Tauri doesn't provide this)
-  2. MAS build + upload (`tauri build` with MAS provisioning profile/entitlements, upload via Transporter/`altool`), App Store Connect listing, review
-- [ ] **Auto-updates** - Tauri updater plugin; the signing prerequisite is met. Applies to the direct-download build (Homebrew users have `brew upgrade`; an App Store copy would update through Apple)
 
 ## Foundations
 
