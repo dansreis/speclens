@@ -1,4 +1,5 @@
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import ChatBubbleOutlinedIcon from "@mui/icons-material/ChatBubbleOutlined";
 import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutlined";
@@ -89,6 +90,21 @@ const STEPS: TutorialStep[] = [
 				Select any passage in a document to attach a comment to it. Comments
 				collect in the panel on the right, split into unresolved and resolved -
 				and clicking a comment's quote jumps you back to the highlighted text.
+			</>
+		),
+	},
+	{
+		icon: <AutoAwesomeIcon sx={{ fontSize: 40 }} />,
+		title: "AI summaries, fully local",
+		body: (
+			<>
+				The golden{" "}
+				<AutoAwesomeIcon sx={{ fontSize: 14, verticalAlign: "text-bottom" }} />{" "}
+				button on any document - or next to the project name on the Overview -
+				streams an AI summary into a side panel, with links back to the specs.
+				Everything runs on your machine: download a model in{" "}
+				<strong>Settings → AI</strong>, import your own GGUF, or use a local
+				Ollama server. Nothing ever leaves your disk.
 			</>
 		),
 	},

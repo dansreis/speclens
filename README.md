@@ -19,7 +19,7 @@ SpecLens reads the OpenSpec convention (`proposal.md` / `tasks.md` / `specs/<cap
 - **Reader comforts** - minimap with table of contents, document stats and reading time, search palette, Mermaid diagram rendering, zoom, light/dark theme.
 - **Local AI summaries (optional)** - an on-device model summarizes the whole project and individual documents for reviewers, streamed into a side panel with links back to the specs. Five curated models downloaded on demand, any llama.cpp-compatible GGUF you import, or your local [Ollama](https://ollama.com) library. Inference never touches the network.
 
-Everything is local. No accounts, no GitHub integration, no telemetry - SpecLens only reads the folders you add, and the only network call it can ever make is the AI model download you explicitly start.
+Everything is local. No accounts, no GitHub integration, no telemetry - SpecLens only reads the folders you add, and the only network calls it can make are the AI model download you explicitly start and a once-a-day new-version check (which you can turn off in Settings).
 
 ## Demo
 

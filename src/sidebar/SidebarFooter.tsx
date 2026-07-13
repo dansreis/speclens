@@ -6,6 +6,7 @@ import PlayCircleOutlinedIcon from "@mui/icons-material/PlayCircleOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
+	Badge,
 	Box,
 	Button,
 	Dialog,
@@ -71,6 +72,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 	const setSetting = useAppStore((s) => s.setSetting);
 	const resetSettings = useAppStore((s) => s.resetSettings);
 	const openTutorial = useAppStore((s) => s.openTutorial);
+	const updateAvailableTag = useAppStore((s) => s.updateAvailableTag);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [settingsTab, setSettingsTab] = useState(0);
 	const [aboutOpen, setAboutOpen] = useState(false);
@@ -107,7 +109,11 @@ export function SidebarFooter({ collapsed = false }: Props) {
 
 	const aboutBtn = (
 		<Tooltip
-			title="About SpecLens"
+			title={
+				updateAvailableTag
+					? `About SpecLens · ${updateAvailableTag} is available`
+					: "About SpecLens"
+			}
 			placement={collapsed ? "right" : "top"}
 			arrow
 		>
@@ -117,7 +123,14 @@ export function SidebarFooter({ collapsed = false }: Props) {
 				size="small"
 				sx={{ color: "text.secondary" }}
 			>
-				<InfoOutlinedIcon fontSize="small" />
+				<Badge
+					color="info"
+					variant="dot"
+					invisible={!updateAvailableTag}
+					overlap="circular"
+				>
+					<InfoOutlinedIcon fontSize="small" />
+				</Badge>
 			</IconButton>
 		</Tooltip>
 	);
@@ -174,17 +187,18 @@ export function SidebarFooter({ collapsed = false }: Props) {
 					sx={{ px: 3, borderBottom: 1, borderColor: "divider" }}
 				>
 					<Tab label="General" />
+					<Tab label="Reading" />
 					<Tab label="AI" />
 				</Tabs>
 				<DialogContent
 					sx={{
-						height: "min(72vh, 720px)",
+						height: "min(64vh, 620px)",
 						overflow: "hidden",
 						display: "flex",
 						flexDirection: "column",
 					}}
 				>
-					{settingsTab === 0 && (
+					{settingsTab === 1 && (
 						<Stack spacing={3} divider={<Divider flexItem />}>
 							<SettingRow
 								title="Reading speed"
@@ -292,6 +306,34 @@ export function SidebarFooter({ collapsed = false }: Props) {
 									size="small"
 								/>
 							</SettingRow>
+						</Stack>
+					)}
+					{settingsTab === 0 && (
+						<Stack spacing={3} divider={<Divider flexItem />}>
+							<FormControlLabel
+								sx={{ ml: 0, alignItems: "flex-start" }}
+								control={
+									<Switch
+										checked={settings.updateCheck}
+										onChange={(_, checked) =>
+											setSetting("updateCheck", checked)
+										}
+										sx={{ mt: -0.5 }}
+									/>
+								}
+								label={
+									<Box>
+										<Typography variant="body2" sx={{ fontWeight: 500 }}>
+											Check for updates
+										</Typography>
+										<Typography variant="caption" color="text.secondary">
+											Once a day, asks GitHub whether a newer SpecLens exists
+											and shows a notice. The only data sent is the request
+											itself.
+										</Typography>
+									</Box>
+								}
+							/>
 
 							<SettingRow
 								title="Tutorial"
@@ -308,7 +350,7 @@ export function SidebarFooter({ collapsed = false }: Props) {
 							</SettingRow>
 						</Stack>
 					)}
-					{settingsTab === 1 && <AiSettingsSection />}
+					{settingsTab === 2 && <AiSettingsSection />}
 				</DialogContent>
 				<DialogActions
 					sx={{

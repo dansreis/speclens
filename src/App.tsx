@@ -18,10 +18,17 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { setTheme } from "@tauri-apps/api/app";
+import { getVersion, setTheme } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useMemo, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { useDocumentOrphans } from "./lib/orphanDetection";
+import {
+	isNewerVersion,
+	RELEASES_API,
+	RELEASES_PAGE,
+	shouldCheck,
+} from "./lib/updateCheck";
 import { useMinDelay } from "./lib/useMinDelay";
 import { useRepoSyncWatcher } from "./lib/useRepoSyncWatcher";
 import { TutorialDialog } from "./onboarding/TutorialDialog";
@@ -107,6 +114,52 @@ function App() {
 
 	useRepoSyncWatcher();
 	useDocumentOrphans(allComments, repos);
+
+	// Daily update check (disabled via Settings → General). One request to the
+	// GitHub releases API; failures (offline, rate limit) stay silent, and a
+	// dismissed version is never re-announced.
+	const updateCheck = useAppStore((s) => s.settings.updateCheck);
+	const updateTag = useAppStore((s) => s.updateAvailableTag);
+	const setUpdateTag = useAppStore((s) => s.setUpdateAvailableTag);
+	const [updateToastOpen, setUpdateToastOpen] = useState(false);
+	useEffect(() => {
+		if (!updateCheck) return;
+		let stale = false;
+		void (async () => {
+			try {
+				const current = await getVersion();
+				// Badge persists across launches from the cached last result,
+				// even on days the fetch is skipped.
+				const cachedTag = localStorage.getItem("updateLatestTag");
+				if (!stale && cachedTag && isNewerVersion(cachedTag, current)) {
+					setUpdateTag(cachedTag);
+				}
+				const gate = {
+					lastCheckedAt:
+						Number(localStorage.getItem("updateCheckedAt")) || null,
+					dismissedTag: localStorage.getItem("updateDismissedTag"),
+				};
+				if (!shouldCheck(gate, Date.now())) return;
+				const res = await fetch(RELEASES_API);
+				if (!res.ok) return;
+				const rel = (await res.json()) as { tag_name?: string };
+				localStorage.setItem("updateCheckedAt", String(Date.now()));
+				if (stale || !rel.tag_name) return;
+				localStorage.setItem("updateLatestTag", rel.tag_name);
+				if (isNewerVersion(rel.tag_name, current)) {
+					setUpdateTag(rel.tag_name);
+					// The toast is the one-time announcement; the About-icon
+					// badge stays regardless of dismissal.
+					if (gate.dismissedTag !== rel.tag_name) setUpdateToastOpen(true);
+				}
+			} catch {
+				// offline / rate-limited / non-Tauri dev - silently skip
+			}
+		})();
+		return () => {
+			stale = true;
+		};
+	}, [updateCheck, setUpdateTag]);
 
 	// Keep the native window chrome (title bar) on the app's theme instead of
 	// following macOS, so a light app never gets a dark title bar (and vice
@@ -556,6 +609,44 @@ function App() {
 					}
 				>
 					AI summary ready{summaryTitle ? ` · ${summaryTitle}` : ""}
+				</Alert>
+			</Snackbar>
+			<Snackbar
+				open={updateToastOpen && updateTag !== null}
+				anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+			>
+				<Alert
+					severity="info"
+					variant="filled"
+					sx={{ alignItems: "center" }}
+					action={
+						<>
+							<Button
+								size="small"
+								color="inherit"
+								onClick={() => {
+									void openUrl(RELEASES_PAGE).catch(console.error);
+									setUpdateToastOpen(false);
+								}}
+							>
+								View
+							</Button>
+							<Button
+								size="small"
+								color="inherit"
+								onClick={() => {
+									if (updateTag) {
+										localStorage.setItem("updateDismissedTag", updateTag);
+									}
+									setUpdateToastOpen(false);
+								}}
+							>
+								Dismiss
+							</Button>
+						</>
+					}
+				>
+					SpecLens {updateTag} is available
 				</Alert>
 			</Snackbar>
 			<TutorialDialog />

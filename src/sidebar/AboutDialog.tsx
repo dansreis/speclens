@@ -2,6 +2,7 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import LanguageIcon from "@mui/icons-material/Language";
 import PolicyOutlinedIcon from "@mui/icons-material/PolicyOutlined";
 import {
+	Alert,
 	Box,
 	Button,
 	Chip,
@@ -18,6 +19,8 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import changelogRaw from "../../CHANGELOG.md?raw";
+import { RELEASES_PAGE } from "../lib/updateCheck";
+import { useAppStore } from "../store/useAppStore";
 
 const REPO_URL = "https://github.com/dansreis/speclens";
 const WEBSITE_URL = "https://dansreis.github.io/speclens/";
@@ -54,6 +57,7 @@ interface Props {
 
 export function AboutDialog({ open, onClose }: Props) {
 	const [version, setVersion] = useState<string | null>(null);
+	const updateAvailableTag = useAppStore((s) => s.updateAvailableTag);
 
 	useEffect(() => {
 		if (!open || version !== null) return;
@@ -76,6 +80,25 @@ export function AboutDialog({ open, onClose }: Props) {
 						SpecLens
 					</Typography>
 					{version && <Chip label={`Version ${version}`} size="small" />}
+					{updateAvailableTag && (
+						<Alert
+							severity="info"
+							sx={{ width: "100%", alignItems: "center" }}
+							action={
+								<Button
+									size="small"
+									color="inherit"
+									onClick={() =>
+										void openUrl(RELEASES_PAGE).catch(console.error)
+									}
+								>
+									View release
+								</Button>
+							}
+						>
+							SpecLens {updateAvailableTag} is available.
+						</Alert>
+					)}
 					<Typography
 						variant="body2"
 						color="text.secondary"

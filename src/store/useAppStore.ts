@@ -36,6 +36,8 @@ export interface AppSettings {
 	sidebarWidth: number;
 	/** Width of the AI summary side panel in px (drag-resizable). */
 	aiPanelWidth: number;
+	/** Daily new-version check against the GitHub releases API on startup. */
+	updateCheck: boolean;
 	/** Local AI features (model download + on-device inference). On by
 	 * default - the UI shows, but nothing downloads or runs until the user
 	 * explicitly fetches a model, so the no-network promise holds. */
@@ -51,6 +53,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	commentsPanelWidth: 340,
 	sidebarWidth: 240,
 	aiPanelWidth: 380,
+	updateCheck: true,
 	aiEnabled: true,
 	aiModel: DEFAULT_AI_MODEL_ID,
 };
@@ -103,6 +106,10 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			typeof r.aiEnabled === "boolean"
 				? r.aiEnabled
 				: DEFAULT_SETTINGS.aiEnabled,
+		updateCheck:
+			typeof r.updateCheck === "boolean"
+				? r.updateCheck
+				: DEFAULT_SETTINGS.updateCheck,
 		// Custom (imported) model ids are not in the registry, so any safe file
 		// stem is accepted - a persisted custom selection must survive restarts.
 		aiModel: isValidAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
@@ -157,7 +164,12 @@ interface AppState {
 	clearRepoStale: (path: string) => void;
 
 	themeMode: PaletteMode;
+	/** Newest known release tag when it's newer than the running version.
+	 * Transient (re-derived from the daily check / its cache); drives the
+	 * About-icon badge and the About dialog banner. */
+	updateAvailableTag: string | null;
 	setThemeMode: (mode: PaletteMode) => void;
+	setUpdateAvailableTag: (tag: string | null) => void;
 	toggleThemeMode: () => void;
 
 	selectedRepoId: string | null;
@@ -451,6 +463,9 @@ export const useAppStore = create<AppState>()(
 		themeMode: window.matchMedia("(prefers-color-scheme: dark)").matches
 			? "dark"
 			: "light",
+		updateAvailableTag: null,
+		setUpdateAvailableTag: (tag: string | null) =>
+			set({ updateAvailableTag: tag }),
 		setThemeMode: (mode) => set({ themeMode: mode }),
 		toggleThemeMode: () =>
 			set((state) => ({
