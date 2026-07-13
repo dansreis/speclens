@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [1.1.1] - 2026-07-13
 
 - Fixed a crash when quitting the app after using AI summaries (Metal resources are now released before exit)
-\n**Full diff**: [v1.1.0...v1.1.1](https://github.com/dansreis/speclens/compare/v1.1.0...v1.1.1)\n
+
+**Full diff**: [v1.1.0...v1.1.1](https://github.com/dansreis/speclens/compare/v1.1.0...v1.1.1)
+
 ## [1.1.0] - 2026-07-13
 
 Local AI - on-device summaries, fully private. Nothing runs or downloads until you enable it and fetch a model; nothing ever leaves your machine.
@@ -24,23 +26,31 @@ Local AI - on-device summaries, fully private. Nothing runs or downloads until y
 
 - AI inference is Metal-accelerated on Apple Silicon and CPU-based elsewhere; small models can be slow on older machines
 - Windows installers remain unsigned - SmartScreen will warn on first run
-\n**Full diff**: [v1.0.3...v1.1.0](https://github.com/dansreis/speclens/compare/v1.0.3...v1.1.0)\n
+
+**Full diff**: [v1.0.3...v1.1.0](https://github.com/dansreis/speclens/compare/v1.0.3...v1.1.0)
+
 ## [1.0.3] - 2026-07-10
 
 - Fixed a crash when opening a document containing a Mermaid diagram before the diagram renderer had loaded ("Something went wrong rendering this view")
 - Git is no longer required on your machine: authorship and timestamps now come from an embedded git library, with identical rename-following and .mailmap behavior
-\n**Full diff**: [v1.0.2...v1.0.3](https://github.com/dansreis/speclens/compare/v1.0.2...v1.0.3)\n
+
+**Full diff**: [v1.0.2...v1.0.3](https://github.com/dansreis/speclens/compare/v1.0.2...v1.0.3)
+
 ## [1.0.2] - 2026-07-10
 
 - Faster startup - the eager bundle shrank from 1.9 MB to 744 KB; Mermaid now loads on demand, only when a document renders a diagram
 - The project went public: [website](https://dansreis.github.io/speclens/), Homebrew install, CONTRIBUTING.md, and unit tests running in CI
-\n**Full diff**: [v1.0.1...v1.0.2](https://github.com/dansreis/speclens/compare/v1.0.1...v1.0.2)\n
+
+**Full diff**: [v1.0.1...v1.0.2](https://github.com/dansreis/speclens/compare/v1.0.1...v1.0.2)
+
 ## [1.0.1] - 2026-07-10
 
 - Add-repository picker now validates the selection - folders without an `openspec/` directory are rejected with a clear warning instead of being persisted as broken sources
 - Install through Homebrew: `brew install --cask dansreis/tap/speclens` (Apple Silicon), with the cask updated automatically on every release
 - README: feature screenshot gallery, demo video, and a pointer to the [openspec-examples](https://github.com/dansreis/openspec-examples) try-it-now dataset
-\n**Full diff**: [v1.0.0...v1.0.1](https://github.com/dansreis/speclens/compare/v1.0.0...v1.0.1)\n
+
+**Full diff**: [v1.0.0...v1.0.1](https://github.com/dansreis/speclens/compare/v1.0.0...v1.0.1)
+
 ## [1.0.0] - 2026-07-10
 
 First release of SpecLens - a desktop reader for OpenSpec projects.
