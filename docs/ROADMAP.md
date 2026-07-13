@@ -12,6 +12,8 @@ Everything that's still missing, roughly grouped. Not in priority order unless s
 
 ## Foundations
 
+- [ ] **Embedded llama.cpp on Windows ARM** - ggml refuses MSVC on ARM and the VS ClangCL toolset clashes with the `cmake` crate's hardcoded `-Thost=x64`; the windows-arm64 release leg currently ships without the `local-llm` feature (Ollama-based AI still works). Candidate fix: Ninja generator + clang-cl with a properly sourced VS ARM64 environment
+
 - [ ] **Refactor pass** - extract reusable components where views grew organically
 - [ ] **Cross-process source list sync** - two open windows don't see each other's added repos until restart
 - [ ] **i18n scaffolding** - English-only is fine until a second locale is actually needed

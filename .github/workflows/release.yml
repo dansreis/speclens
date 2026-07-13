@@ -163,14 +163,14 @@ jobs:
             echo "::warning::Apple signing secrets not configured - building unsigned dmg"
           fi
 
-      # ggml refuses MSVC on ARM ("use clang"); build llama.cpp with the
-      # Visual Studio ClangCL toolset on the arm64 leg.
-      - name: Use ClangCL for llama.cpp (Windows ARM)
+      # llama.cpp can't build with MSVC on ARM, and the ClangCL toolset
+      # conflicts with the cmake crate's hardcoded -Thost=x64. Ship this leg
+      # without the embedded engine for now - AI via a local Ollama server
+      # still works (pure HTTP, feature-independent). See docs/ROADMAP.md.
+      - name: Disable embedded llama.cpp (Windows ARM)
         if: matrix.platform == 'windows-arm64'
         shell: bash
-        run: |
-          echo 'CMAKE_GENERATOR=Visual Studio 17 2022' >> "$GITHUB_ENV"
-          echo 'CMAKE_GENERATOR_TOOLSET=ClangCL' >> "$GITHUB_ENV"
+        run: sed -i 's/^default = \["local-llm"\]/default = []/' src-tauri/Cargo.toml
 
       - name: Build app
         run: pnpm tauri build ${{ matrix.args }}
