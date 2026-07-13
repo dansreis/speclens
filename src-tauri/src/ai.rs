@@ -420,6 +420,30 @@ pub struct AiState {
     loaded: Arc<Mutex<Option<engine::LoadedModel>>>,
 }
 
+impl AiState {
+    /// Drops the loaded model before process exit. llama.cpp's Metal
+    /// teardown (static destructors) asserts that all Metal resources were
+    /// deallocated; a model kept loaded for consecutive generations would
+    /// otherwise abort() the quit (crash-on-exit reports). Cancels an
+    /// in-flight generation and waits up to ~2s for its decode loop to
+    /// release its model handle.
+    pub fn unload_for_exit(&self) {
+        self.cancel.store(true, Ordering::SeqCst);
+        #[cfg(feature = "local-llm")]
+        {
+            for _ in 0..40 {
+                if !self.busy.load(Ordering::SeqCst) {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            if let Ok(mut loaded) = self.loaded.lock() {
+                *loaded = None;
+            }
+        }
+    }
+}
+
 impl Default for AiState {
     fn default() -> Self {
         Self {

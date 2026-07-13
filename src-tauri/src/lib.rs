@@ -551,8 +551,17 @@ pub fn run() {
             ai::ai_generate,
             ai::ai_cancel_generate
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|app_handle, event| {
+            // Free llama.cpp's Metal resources before exit: ggml's static
+            // destructors abort() if a model is still loaded (see
+            // AiState::unload_for_exit).
+            if let tauri::RunEvent::Exit = event {
+                use tauri::Manager;
+                app_handle.state::<ai::AiState>().unload_for_exit();
+            }
+        });
 }
 
 #[cfg(test)]
