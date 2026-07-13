@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2](https://github.com/dansreis/speclens/compare/v1.1.1...v1.1.2) - 2026-07-13
+
+- SpecLens now tells you when a newer version is available: a notice on launch, a badge on the About icon, and a link in the About dialog. One request to GitHub per day, and it can be turned off in Settings → General
+- Settings reorganized into General / Reading / AI tabs
+- The onboarding tutorial covers the AI summary feature
+- Changelog version numbers link to the code diff between releases
+
 ## [1.1.1](https://github.com/dansreis/speclens/compare/v1.1.0...v1.1.1) - 2026-07-13
 
 - Fixed a crash when quitting the app after using AI summaries (Metal resources are now released before exit)
