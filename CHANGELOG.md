@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3](https://github.com/dansreis/speclens/compare/v1.1.2...v1.1.3) - 2026-07-14
+
+- Fixed the Linux AppImage failing to start on Wayland with `EGL_BAD_PARAMETER`: the app now preloads the system Wayland client library instead of the bundled one and disables unstable WebKitGTK rendering paths inside AppImages (#13)
+
 ## [1.1.2](https://github.com/dansreis/speclens/compare/v1.1.1...v1.1.2) - 2026-07-13
 
 - SpecLens now tells you when a newer version is available: a notice on launch, a badge on the About icon, and a link in the About dialog. One request to GitHub per day, and it can be turned off in Settings → General
