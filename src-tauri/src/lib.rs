@@ -1,4 +1,5 @@
 mod ai;
+mod appimage;
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -534,6 +535,8 @@ fn rollup(commits: &[CommitInfo]) -> DocAuthor {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    appimage::apply_startup_safeguards();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
