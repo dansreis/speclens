@@ -38,6 +38,9 @@ export interface AppSettings {
 	aiPanelWidth: number;
 	/** Daily new-version check against the GitHub releases API on startup. */
 	updateCheck: boolean;
+	/** Deterministic spec lint checks (badge on changes + results list).
+	 * Off by default - opt-in from Settings → General. */
+	specChecks: boolean;
 	/** Local AI features (model download + on-device inference). On by
 	 * default - the UI shows, but nothing downloads or runs until the user
 	 * explicitly fetches a model, so the no-network promise holds. */
@@ -54,6 +57,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	sidebarWidth: 240,
 	aiPanelWidth: 380,
 	updateCheck: true,
+	specChecks: false,
 	aiEnabled: true,
 	aiModel: DEFAULT_AI_MODEL_ID,
 };
@@ -110,6 +114,10 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			typeof r.updateCheck === "boolean"
 				? r.updateCheck
 				: DEFAULT_SETTINGS.updateCheck,
+		specChecks:
+			typeof r.specChecks === "boolean"
+				? r.specChecks
+				: DEFAULT_SETTINGS.specChecks,
 		// Custom (imported) model ids are not in the registry, so any safe file
 		// stem is accepted - a persisted custom selection must survive restarts.
 		aiModel: isValidAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
@@ -208,6 +216,11 @@ interface AppState {
 
 	scrollTarget: ScrollTarget | null;
 	setScrollTarget: (target: ScrollTarget | null) => void;
+
+	/** Right-side spec-check results panel (session-only, not persisted). */
+	specChecksPanelOpen: boolean;
+	setSpecChecksPanelOpen: (open: boolean) => void;
+	toggleSpecChecksPanel: () => void;
 
 	currentDocumentId: string | null;
 	setCurrentDocument: (id: string | null) => void;
@@ -533,6 +546,11 @@ export const useAppStore = create<AppState>()(
 
 		scrollTarget: null,
 		setScrollTarget: (target) => set({ scrollTarget: target }),
+
+		specChecksPanelOpen: false,
+		setSpecChecksPanelOpen: (open) => set({ specChecksPanelOpen: open }),
+		toggleSpecChecksPanel: () =>
+			set((state) => ({ specChecksPanelOpen: !state.specChecksPanelOpen })),
 
 		currentDocumentId: null,
 		setCurrentDocument: (id) => set({ currentDocumentId: id }),

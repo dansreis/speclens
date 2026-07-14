@@ -37,6 +37,7 @@ import { SplashScreen } from "./SplashScreen";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { AiSummaryPanel } from "./specs/AiSummaryPanel";
+import { SpecChecksPanel } from "./specs/SpecChecksPanel";
 import { bootstrap } from "./store/bootstrap";
 import { useAiStore } from "./store/useAiStore";
 import {
@@ -572,6 +573,7 @@ function App() {
 						    side. An unpinned comments panel floats over the row edge,
 						    matching how it already overlays document content. */}
 						<AiSummaryPanel />
+						<SpecChecksPanel />
 						<CommentsPanel
 							open={commentsOpen}
 							pinned={commentsPinned}

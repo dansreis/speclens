@@ -335,6 +335,30 @@ export function SidebarFooter({ collapsed = false }: Props) {
 								}
 							/>
 
+							<FormControlLabel
+								sx={{ ml: 0, alignItems: "flex-start" }}
+								control={
+									<Switch
+										checked={settings.specChecks}
+										onChange={(_, checked) => setSetting("specChecks", checked)}
+										sx={{ mt: -0.5 }}
+									/>
+								}
+								label={
+									<Box>
+										<Typography variant="body2" sx={{ fontWeight: 500 }}>
+											Spec checks
+										</Typography>
+										<Typography variant="caption" color="text.secondary">
+											Lints loaded changes for structural, consistency, and
+											language issues (missing documents, malformed EARS blocks,
+											ambiguous wording) and shows findings on each change.
+											Everything runs locally and deterministically.
+										</Typography>
+									</Box>
+								}
+							/>
+
 							<SettingRow
 								title="Tutorial"
 								caption="Replay the quick tour of SpecLens shown on first launch."

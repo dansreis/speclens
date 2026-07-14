@@ -2,6 +2,9 @@ import { keyframes } from "@emotion/react";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
 	Avatar,
 	Box,
@@ -37,6 +40,11 @@ import {
 	highlightKey,
 } from "../lib/highlight";
 import { formatRelativeTime } from "../lib/relativeTime";
+import {
+	checksByAnchorText,
+	runSpecChecks,
+	type SpecCheckResult,
+} from "../lib/specChecks";
 import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
@@ -177,6 +185,43 @@ export function MarkdownView({
 		[commentsForDoc],
 	);
 
+	// IDE-style wavy underlines for spec-check findings anchored in this
+	// document. runSpecChecks is pure and memoized on repo identity, so this
+	// only recomputes when the repo reloads.
+	const repos = useAppStore((s) => s.repos);
+	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
+	const checksByAnchor = useMemo(() => {
+		if (!specChecksEnabled || !documentId) {
+			return new Map<string, SpecCheckResult[]>();
+		}
+		const repo = repos.find((r) => r.id === selectedRepoId);
+		if (!repo) return new Map<string, SpecCheckResult[]>();
+		return checksByAnchorText(repo, runSpecChecks(repo), documentId);
+	}, [repos, selectedRepoId, specChecksEnabled, documentId]);
+	const checkTargets: HighlightTarget[] = useMemo(
+		() =>
+			[...checksByAnchor.entries()].map(([text, findings]) => ({
+				text,
+				occurrence: 1,
+				className: `spec-check spec-check-${findings[0].severity}`,
+			})),
+		[checksByAnchor],
+	);
+	// highlightKey → findings, for the hover diagnostics on underlined marks.
+	const checksByKey = useMemo(() => {
+		const map = new Map<string, SpecCheckResult[]>();
+		for (const [text, findings] of checksByAnchor) {
+			map.set(highlightKey({ text, occurrence: 1 }), findings);
+		}
+		return map;
+	}, [checksByAnchor]);
+	const checksByKeyRef = useRef(checksByKey);
+	checksByKeyRef.current = checksByKey;
+	const [checkHover, setCheckHover] = useState<{
+		key: string;
+		findings: SpecCheckResult[];
+	} | null>(null);
+
 	// highlightKey (text|occurrence) → the comment(s) sharing that highlight,
 	// used to resolve which comment a hovered <mark> belongs to.
 	const commentsByKey = useMemo(() => {
@@ -273,7 +318,28 @@ export function MarkdownView({
 		void source;
 		void highlightEars;
 		try {
-			const found = applyHighlights(container, highlights);
+			// Comments win key collisions with check underlines; a transient
+			// anchor is added for scroll targets that match no existing mark
+			// (check-finding jumps), so the flash below always has a mark to hit.
+			const commentKeys = new Set(highlights.map((h) => highlightKey(h)));
+			const targets = [
+				...highlights,
+				...checkTargets.filter((t) => !commentKeys.has(highlightKey(t))),
+			];
+			if (
+				scrollTarget &&
+				documentId &&
+				scrollTarget.documentId === documentId
+			) {
+				const blink = {
+					text: scrollTarget.text,
+					occurrence: scrollTarget.occurrence,
+				};
+				if (!targets.some((t) => highlightKey(t) === highlightKey(blink))) {
+					targets.push(blink);
+				}
+			}
+			const found = applyHighlights(container, targets);
 			if (documentId && selectedRepoId) {
 				const orphans: Record<string, boolean> = {};
 				for (const [id, ok] of Object.entries(found)) orphans[id] = !ok;
@@ -310,6 +376,7 @@ export function MarkdownView({
 		}
 	}, [
 		highlights,
+		checkTargets,
 		documentId,
 		selectedRepoId,
 		scrollTarget,
@@ -381,10 +448,16 @@ export function MarkdownView({
 			const mark = target?.closest<HTMLElement>("mark.user-highlight");
 			if (!mark || !container.contains(mark)) return;
 			const key = mark.dataset.highlightKey;
-			const cs = key ? commentsByKeyRef.current.get(key) : undefined;
-			if (cs && cs.length > 0 && key) {
+			if (!key) return;
+			const cs = commentsByKeyRef.current.get(key);
+			if (cs && cs.length > 0) {
 				clearHide();
 				setHover({ key, comments: cs });
+				return;
+			}
+			const findings = checksByKeyRef.current.get(key);
+			if (findings && findings.length > 0) {
+				setCheckHover({ key, findings });
 			}
 		};
 		container.addEventListener("mouseover", onOver);
@@ -416,6 +489,34 @@ export function MarkdownView({
 		document.addEventListener("mouseover", onDocOver);
 		return () => document.removeEventListener("mouseover", onDocOver);
 	}, [hover, clearHide, scheduleHide]);
+
+	// The check-diagnostics popover is read-only, so it hides as soon as the
+	// pointer leaves the underlined mark (no popover-travel grace needed).
+	useEffect(() => {
+		if (!checkHover) return;
+		const markSel = `mark.user-highlight[data-highlight-key="${CSS.escape(checkHover.key)}"]`;
+		const onDocOver = (e: MouseEvent) => {
+			const t = e.target as HTMLElement | null;
+			if (!t?.closest(markSel)) setCheckHover(null);
+		};
+		document.addEventListener("mouseover", onDocOver);
+		return () => document.removeEventListener("mouseover", onDocOver);
+	}, [checkHover]);
+
+	// Same virtual-anchor trick as the comment popover: marks are rebuilt on
+	// every applyHighlights pass, so re-query the live one at measure time.
+	const checkAnchorEl = useMemo(() => {
+		if (!checkHover) return null;
+		return {
+			getBoundingClientRect: () => {
+				const container = contentRef.current;
+				const mark = container?.querySelector<HTMLElement>(
+					`mark.user-highlight[data-highlight-key="${CSS.escape(checkHover.key)}"]`,
+				);
+				return (mark ?? container)?.getBoundingClientRect() ?? new DOMRect();
+			},
+		};
+	}, [checkHover]);
 
 	const handleSubmit = (body: string) => {
 		if (!pending || !documentId || !selectedRepoId) return;
@@ -538,6 +639,29 @@ export function MarkdownView({
 					},
 					"& mark.user-highlight.flash": {
 						animation: `${flashAnim} 0.225s ease-in-out 2`,
+					},
+					// Spec-check findings render as IDE-style wavy underlines, not
+					// comment-style fills. Severity picks the underline color.
+					"& mark.user-highlight.spec-check": {
+						bgcolor: "transparent",
+						cursor: "help",
+						px: 0,
+						textDecorationLine: "underline",
+						textDecorationStyle: "wavy",
+						textDecorationThickness: "1px",
+						textUnderlineOffset: "3px",
+					},
+					"& mark.user-highlight.spec-check:hover": {
+						bgcolor: "transparent",
+					},
+					"& mark.user-highlight.spec-check-error": {
+						textDecorationColor: (t) => t.palette.error.main,
+					},
+					"& mark.user-highlight.spec-check-warning": {
+						textDecorationColor: (t) => t.palette.warning.main,
+					},
+					"& mark.user-highlight.spec-check-info": {
+						textDecorationColor: (t) => t.palette.info.main,
 					},
 					"& .ears-kw": {
 						fontWeight: 600,
@@ -727,6 +851,67 @@ export function MarkdownView({
 									>
 										{c.body}
 									</Typography>
+								</Box>
+							))}
+						</Paper>
+					</Fade>
+				)}
+			</Popper>
+			<Popper
+				open={Boolean(checkHover)}
+				anchorEl={checkAnchorEl}
+				placement="top"
+				transition
+				sx={{ zIndex: (t) => t.zIndex.tooltip, pointerEvents: "none" }}
+				modifiers={[{ name: "offset", options: { offset: [0, 6] } }]}
+			>
+				{({ TransitionProps }) => (
+					<Fade {...TransitionProps} timeout={120}>
+						<Paper elevation={4} sx={{ maxWidth: 380, p: 0 }}>
+							{checkHover?.findings.map((finding, i) => (
+								<Box
+									// biome-ignore lint/suspicious/noArrayIndexKey: findings are recomputed wholesale, never reordered in place
+									key={`${finding.id}-${i}`}
+									sx={{
+										display: "flex",
+										alignItems: "flex-start",
+										gap: 1,
+										px: 1.5,
+										py: 1,
+										borderTop: i === 0 ? 0 : 1,
+										borderColor: "divider",
+									}}
+								>
+									{finding.severity === "error" ? (
+										<ErrorOutlinedIcon
+											color="error"
+											sx={{ fontSize: "1rem", mt: 0.25 }}
+										/>
+									) : finding.severity === "warning" ? (
+										<WarningAmberIcon
+											color="warning"
+											sx={{ fontSize: "1rem", mt: 0.25 }}
+										/>
+									) : (
+										<InfoOutlinedIcon
+											color="info"
+											sx={{ fontSize: "1rem", mt: 0.25 }}
+										/>
+									)}
+									<Box sx={{ minWidth: 0 }}>
+										<Typography variant="body2" sx={{ lineHeight: 1.45 }}>
+											{finding.message}
+										</Typography>
+										<Typography
+											variant="caption"
+											sx={{
+												color: "text.secondary",
+												fontFamily: "ui-monospace, monospace",
+											}}
+										>
+											{finding.id}
+										</Typography>
+									</Box>
 								</Box>
 							))}
 						</Paper>

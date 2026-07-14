@@ -28,6 +28,7 @@ import {
 	isChecklistArtifact,
 	type OpenSpecSchema,
 } from "../lib/schema";
+import type { SpecCheckResult } from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
 import { AiDocSummaryButton } from "./AiDocSummaryButton";
@@ -35,12 +36,14 @@ import { AttributionLine } from "./AttributionLine";
 import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
 import { Minimap } from "./Minimap";
+import { SpecChecksBadge } from "./SpecChecksBadge";
 
 interface Props {
 	change: Change;
 	schema: OpenSpecSchema;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
+	checkResults?: SpecCheckResult[];
 }
 
 function tabLabel(
@@ -61,6 +64,7 @@ export function ChangeViewer({
 	schema,
 	commentsOpen,
 	onToggleComments,
+	checkResults = [],
 }: Props) {
 	const tab = useAppStore((s) => s.activeTab);
 	const setTab = useAppStore((s) => s.setActiveTab);
@@ -303,6 +307,7 @@ export function ChangeViewer({
 							<ZoomInIcon fontSize="small" />
 						</IconButton>
 					</Tooltip>
+					<SpecChecksBadge results={checkResults} />
 					<AiDocSummaryButton
 						title={change.name}
 						kind={

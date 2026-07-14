@@ -634,6 +634,24 @@ mod tests {
             .unwrap()
     }
 
+    /// Temporary benchmark against a real repo. Run with:
+    /// SPECLENS_BENCH_REPO=/path cargo test --release bench_real_repo -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn bench_real_repo() {
+        let Ok(path) = std::env::var("SPECLENS_BENCH_REPO") else {
+            return;
+        };
+        let start = std::time::Instant::now();
+        let payload = load_project("bench", Path::new(&path)).unwrap();
+        println!(
+            "load_project: {:?} ({} files, {} authorship entries)",
+            start.elapsed(),
+            payload.files.len(),
+            payload.authorship.len()
+        );
+    }
+
     #[test]
     fn follows_file_across_rename() {
         let tmp = tempfile::tempdir().unwrap();

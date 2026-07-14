@@ -1,3 +1,6 @@
+import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
 	Box,
 	ButtonBase,
@@ -16,6 +19,13 @@ import {
 } from "../lib/relativeTime";
 import type { Change, Repo } from "../lib/repoLoader";
 import { DEFAULT_SCHEMA } from "../lib/schema";
+import {
+	checksForChange,
+	countBySeverity,
+	maxSeverity,
+	runSpecChecks,
+	type SpecCheckResult,
+} from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";
 import { useAppStore } from "../store/useAppStore";
@@ -49,10 +59,27 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
+	const toggleSpecChecksPanel = useAppStore((s) => s.toggleSpecChecksPanel);
 	const [filter, setFilter] = useState("");
 	const [status, setStatus] = useState<StatusFilter>("all");
 
 	const allChanges = repo?.changes ?? [];
+
+	const checkResults: SpecCheckResult[] = useMemo(
+		() => (repo && specChecksEnabled ? runSpecChecks(repo) : []),
+		[repo, specChecksEnabled],
+	);
+	const checkCounts = countBySeverity(checkResults);
+	const countsByChange = useMemo(() => {
+		const map = new Map<string, ReturnType<typeof countBySeverity>>();
+		for (const change of allChanges) {
+			const key = changeKey(change);
+			const own = checksForChange(checkResults, key);
+			if (own.length > 0) map.set(key, countBySeverity(own));
+		}
+		return map;
+	}, [checkResults, allChanges]);
 
 	const filtered = useMemo(() => {
 		const q = filter.trim().toLowerCase();
@@ -91,6 +118,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 				schema={change.schema ?? repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
+				checkResults={checksForChange(checkResults, selectedChangeKey)}
 			/>
 		);
 	}
@@ -134,6 +162,22 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 						</ToggleButton>
 					</Tooltip>
 				</ToggleButtonGroup>
+				{checkCounts.total > 0 && (
+					<Tooltip
+						title={`Spec checks across this repository: ${checkCounts.errors} errors, ${checkCounts.warnings} warnings, ${checkCounts.infos} info. Click to open the results panel.`}
+						arrow
+					>
+						<Chip
+							label={`${checkCounts.total} check ${checkCounts.total === 1 ? "finding" : "findings"}`}
+							size="small"
+							variant="outlined"
+							clickable
+							onClick={toggleSpecChecksPanel}
+							color={maxSeverity(checkCounts) ?? "default"}
+							sx={{ fontWeight: 500 }}
+						/>
+					</Tooltip>
+				)}
 			</Box>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
 				{filtered.length === 0 ? (
@@ -148,6 +192,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 						const key = changeKey(change);
 						const preview = firstParagraphPreview(change.proposal);
 						const progress = progressLabel(change);
+						const rowCounts = countsByChange.get(key);
 						return (
 							<ButtonBase
 								key={key}
@@ -241,6 +286,79 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 											borderColor: change.archived ? "#d97706" : "success.main",
 										}}
 									/>
+									{rowCounts && (
+										<Tooltip
+											title={`Spec checks: ${rowCounts.errors} errors, ${rowCounts.warnings} warnings, ${rowCounts.infos} info`}
+											arrow
+											placement="left"
+										>
+											<Box
+												sx={{
+													display: "flex",
+													alignItems: "center",
+													gap: 0.75,
+												}}
+											>
+												{rowCounts.errors > 0 && (
+													<Box
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 0.25,
+														}}
+													>
+														<ErrorOutlinedIcon
+															color="error"
+															sx={{ fontSize: 14 }}
+														/>
+														<Typography variant="caption" color="error">
+															{rowCounts.errors}
+														</Typography>
+													</Box>
+												)}
+												{rowCounts.warnings > 0 && (
+													<Box
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 0.25,
+														}}
+													>
+														<WarningAmberIcon
+															color="warning"
+															sx={{ fontSize: 14 }}
+														/>
+														<Typography
+															variant="caption"
+															sx={{ color: "warning.main" }}
+														>
+															{rowCounts.warnings}
+														</Typography>
+													</Box>
+												)}
+												{rowCounts.infos > 0 && (
+													<Box
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 0.25,
+														}}
+													>
+														<InfoOutlinedIcon
+															color="info"
+															sx={{ fontSize: 14 }}
+														/>
+														<Typography
+															variant="caption"
+															sx={{ color: "info.main" }}
+														>
+															{rowCounts.infos}
+														</Typography>
+													</Box>
+												)}
+											</Box>
+										</Tooltip>
+									)}
 									{progress && (
 										<Typography variant="caption" color="text.secondary">
 											{progress}
