@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0](https://github.com/dansreis/speclens/compare/v1.1.3...v1.2.0) - 2026-07-16
+
+- **Spec checks (beta)** - SpecLens now lints changes and specs locally and deterministically: missing documents, malformed EARS/Gherkin blocks, empty or duplicated requirements, RFC 2119 misuse, ambiguous wording. Findings render as IDE-style underlines with hover explanations, plus a new Checks view in the sidebar (group by change or by check type), a resizable results panel scoped to what you're reading, and severity badges across the app. On by default; Settings → General can disable it or opt archived changes in
+- Repositories with large git histories load dramatically faster: authorship now comes from a single history walk instead of one per file (a 4,500-commit repo with 2,800 specs went from hanging indefinitely to about 4 seconds)
+- Only one right panel (comments, spec checks, AI summary) stays open at a time
+- Updated dependencies: Vite 8, TypeScript 7, React plugin 6, js-yaml 5
+
 ## [1.1.3](https://github.com/dansreis/speclens/compare/v1.1.2...v1.1.3) - 2026-07-14
 
 - Fixed the Linux AppImage failing to start on Wayland with `EGL_BAD_PARAMETER`: the app now preloads the system Wayland client library instead of the bundled one and disables unstable WebKitGTK rendering paths inside AppImages (#13)
