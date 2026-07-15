@@ -17,7 +17,14 @@ import {
 	formatRelativeTime,
 } from "../lib/relativeTime";
 import type { Change, Repo, RepoSpecDoc } from "../lib/repoLoader";
+import {
+	type CheckCounts,
+	countBySeverity,
+	type SpecCheckResult,
+} from "../lib/specChecks";
 import { SpecCapabilityViewer } from "../specs/SpecCapabilityViewer";
+import { CheckSeverityCounts } from "../specs/SpecChecksBadge";
+import { useSpecCheckResults } from "../specs/useSpecChecks";
 import { useAppStore } from "../store/useAppStore";
 
 type SortMode = "name" | "changes" | "recent";
@@ -94,6 +101,22 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const [filter, setFilter] = useState("");
 	const [sort, setSort] = useState<SortMode>("name");
+
+	const checkResults: SpecCheckResult[] = useSpecCheckResults(repo);
+	// Per-capability counts: a capability owns its canonical-spec findings and
+	// every delta finding touching it (same scope as the panel's "This spec").
+	const countsByCapability = useMemo(() => {
+		const byCap = new Map<string, SpecCheckResult[]>();
+		for (const result of checkResults) {
+			if (!result.capability) continue;
+			const group = byCap.get(result.capability) ?? [];
+			group.push(result);
+			byCap.set(result.capability, group);
+		}
+		const map = new Map<string, CheckCounts>();
+		for (const [cap, group] of byCap) map.set(cap, countBySeverity(group));
+		return map;
+	}, [checkResults]);
 
 	const openChange = (change: Change) => {
 		setSelectedChangeKey(changeKey(change));
@@ -297,6 +320,13 @@ export function SpecsView({ repo, commentsOpen, onToggleComments }: Props) {
 									minWidth: 100,
 								}}
 							>
+								{countsByCapability.has(row.capability) && (
+									<CheckSeverityCounts
+										counts={
+											countsByCapability.get(row.capability) as CheckCounts
+										}
+									/>
+								)}
 								<Typography variant="caption" color="text.secondary">
 									{row.referencingChanges.length} change
 									{row.referencingChanges.length === 1 ? "" : "s"}

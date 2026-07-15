@@ -11,19 +11,30 @@ import {
 	ListItemIcon,
 	ListItemText,
 	ListSubheader,
+	ToggleButton,
+	ToggleButtonGroup,
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { useMemo } from "react";
+import { alpha } from "@mui/material/styles";
+import { useMemo, useState } from "react";
 import {
 	type CheckSeverity,
 	changeKeyOf,
 	countBySeverity,
-	runSpecChecks,
 	type SpecCheckResult,
 } from "../lib/specChecks";
 import { useAppStore } from "../store/useAppStore";
 import { jumpToFinding } from "./specCheckJump";
+import { useSpecCheckResults } from "./useSpecChecks";
+
+const MIN_WIDTH = 300;
+const MAX_WIDTH = 640;
+
+// Views where findings live (documents + the checks analysis view). On any
+// other view the panel hides; the open state survives, so it reappears when
+// the user returns - same idiom as the AI panel on canvas views.
+const CHECKS_VIEWS = new Set(["changes", "specs", "checks"]);
 
 const SEVERITY_ICON: Record<CheckSeverity, React.ReactNode> = {
 	error: <ErrorOutlinedIcon fontSize="small" color="error" />,
@@ -37,49 +48,118 @@ interface Group {
 	results: SpecCheckResult[];
 }
 
+/** What the panel scopes to when the user is inside a change or a spec. */
+interface ScopeContext {
+	label: string;
+	matches: (result: SpecCheckResult) => boolean;
+}
+
 /**
- * IDE-style "Problems" panel: all spec-check findings for the active repo,
- * grouped by change, docked on the right like the comments panel. Clicking a
- * finding navigates to the change/tab and blink-highlights the offending text
- * via the scrollTarget mechanism comment jumps use.
+ * IDE-style "Problems" panel: spec-check findings for the active repo,
+ * grouped by change, docked on the right like the comments panel and
+ * drag-resizable like the AI panel. While a change or capability spec is
+ * open, the panel scopes to its findings (toggleable back to all). Clicking
+ * a finding navigates and blink-highlights the offending text.
  */
 export function SpecChecksPanel() {
-	const open = useAppStore((s) => s.specChecksPanelOpen);
+	const panelOpen = useAppStore((s) => s.specChecksPanelOpen);
 	const setOpen = useAppStore((s) => s.setSpecChecksPanelOpen);
 	const repos = useAppStore((s) => s.repos);
 	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const enabled = useAppStore((s) => s.settings.specChecks);
-	const panelWidth = useAppStore((s) => s.settings.commentsPanelWidth);
+	const panelWidth = useAppStore((s) => s.settings.checksPanelWidth);
+	const view = useAppStore((s) => s.view);
+	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
+	const selectedSpec = useAppStore((s) => s.selectedSpec);
+	const [showAll, setShowAll] = useState(false);
+	const [resizing, setResizing] = useState(false);
+
+	const open = panelOpen && CHECKS_VIEWS.has(view);
 	const repo = repos.find((r) => r.id === selectedRepoId) ?? null;
 
-	const results = useMemo(
-		() => (repo && enabled ? runSpecChecks(repo) : []),
-		[repo, enabled],
+	const results = useSpecCheckResults(repo);
+
+	// Scope follows what the user is reading. "This spec" covers the
+	// capability's canonical spec and every delta touching it.
+	const context: ScopeContext | null = useMemo(() => {
+		if (view === "changes" && selectedChangeKey) {
+			return {
+				label: "This change",
+				matches: (r) => r.changeKey === selectedChangeKey,
+			};
+		}
+		if (view === "specs" && selectedSpec) {
+			return {
+				label: "This spec",
+				matches: (r) => r.capability === selectedSpec,
+			};
+		}
+		return null;
+	}, [view, selectedChangeKey, selectedSpec]);
+
+	const scoped = context !== null && !showAll;
+	const visible = useMemo(
+		() => (scoped && context ? results.filter(context.matches) : results),
+		[results, scoped, context],
 	);
 
 	const groups = useMemo(() => {
 		const byKey = new Map<string, Group>();
-		for (const result of results) {
-			let group = byKey.get(result.changeKey);
+		for (const result of visible) {
+			// Canonical-spec findings have no owning change; group per capability.
+			const groupKey = result.changeKey ?? `spec:${result.capability}`;
+			let group = byKey.get(groupKey);
 			if (!group) {
-				const change = repo?.changes.find(
-					(c) => changeKeyOf(c) === result.changeKey,
-				);
+				const change = result.changeKey
+					? repo?.changes.find((c) => changeKeyOf(c) === result.changeKey)
+					: undefined;
 				group = {
-					changeKey: result.changeKey,
-					changeName: change?.name ?? result.changeKey,
+					changeKey: groupKey,
+					changeName: result.changeKey
+						? (change?.name ?? result.changeKey)
+						: `${result.capability} (spec)`,
 					results: [],
 				};
-				byKey.set(result.changeKey, group);
+				byKey.set(groupKey, group);
 			}
 			group.results.push(result);
 		}
 		return [...byKey.values()].sort((a, b) =>
 			a.changeName.localeCompare(b.changeName),
 		);
-	}, [results, repo]);
+	}, [visible, repo]);
 
-	const counts = countBySeverity(results);
+	const counts = countBySeverity(visible);
+
+	// Same drag idiom as the AI panel: pointer capture, width written straight
+	// to the persisted setting, no transition while dragging.
+	const handleResizeStart = (e: React.PointerEvent<HTMLElement>) => {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = useAppStore.getState().settings.checksPanelWidth;
+		const handle = e.currentTarget;
+		handle.setPointerCapture(e.pointerId);
+		setResizing(true);
+		const onMove = (ev: PointerEvent) => {
+			// Panel sits on the right, so dragging left grows it.
+			const w = Math.round(
+				Math.min(
+					MAX_WIDTH,
+					Math.max(MIN_WIDTH, startWidth + startX - ev.clientX),
+				),
+			);
+			useAppStore.getState().setSetting("checksPanelWidth", w);
+		};
+		const onUp = () => {
+			setResizing(false);
+			handle.removeEventListener("pointermove", onMove);
+			handle.removeEventListener("pointerup", onUp);
+			handle.removeEventListener("pointercancel", onUp);
+		};
+		handle.addEventListener("pointermove", onMove);
+		handle.addEventListener("pointerup", onUp);
+		handle.addEventListener("pointercancel", onUp);
+	};
 
 	const handleJump = (result: SpecCheckResult) => {
 		if (repo) jumpToFinding(repo, result);
@@ -91,7 +171,7 @@ export function SpecChecksPanel() {
 				position: "relative",
 				width: open ? panelWidth : 0,
 				flexShrink: 0,
-				transition: "width 200ms ease-in-out",
+				transition: resizing ? "none" : "width 200ms ease-in-out",
 				borderLeft: open ? 1 : 0,
 				borderColor: "divider",
 				bgcolor: "background.paper",
@@ -101,6 +181,31 @@ export function SpecChecksPanel() {
 				pointerEvents: open ? "auto" : "none",
 			}}
 		>
+			{open && (
+				<Box
+					onPointerDown={handleResizeStart}
+					onDoubleClick={() =>
+						useAppStore.getState().setSetting("checksPanelWidth", 380)
+					}
+					aria-label="Resize spec checks panel"
+					sx={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						bottom: 0,
+						width: 5,
+						cursor: "col-resize",
+						zIndex: 1,
+						bgcolor: resizing
+							? (t) => alpha(t.palette.primary.main, 0.3)
+							: "transparent",
+						transition: "background-color 150ms",
+						"&:hover": {
+							bgcolor: (t) => alpha(t.palette.primary.main, 0.2),
+						},
+					}}
+				/>
+			)}
 			<Box
 				sx={{
 					display: "flex",
@@ -110,19 +215,31 @@ export function SpecChecksPanel() {
 					borderBottom: 1,
 					borderColor: "divider",
 					flexShrink: 0,
-					gap: 0.5,
+					gap: 1,
 				}}
 			>
 				<Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
 					Spec checks
 				</Typography>
-				<Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
-					{counts.errors > 0 && `${counts.errors} errors`}
-					{counts.errors > 0 && counts.warnings + counts.infos > 0 && " · "}
-					{counts.warnings > 0 && `${counts.warnings} warnings`}
-					{counts.warnings > 0 && counts.infos > 0 && " · "}
-					{counts.infos > 0 && `${counts.infos} info`}
-				</Typography>
+				{context && (
+					<ToggleButtonGroup
+						size="small"
+						exclusive
+						value={scoped ? "scoped" : "all"}
+						onChange={(_, v) => v && setShowAll(v === "all")}
+						sx={{
+							"& .MuiToggleButton-root": {
+								py: 0,
+								px: 1,
+								textTransform: "none",
+								fontSize: "0.6875rem",
+							},
+						}}
+					>
+						<ToggleButton value="scoped">{context.label}</ToggleButton>
+						<ToggleButton value="all">All</ToggleButton>
+					</ToggleButtonGroup>
+				)}
 				<Tooltip title="Close">
 					<IconButton
 						size="small"
@@ -134,8 +251,22 @@ export function SpecChecksPanel() {
 					</IconButton>
 				</Tooltip>
 			</Box>
+			<Box
+				sx={{
+					px: 1.5,
+					py: 0.5,
+					borderBottom: 1,
+					borderColor: "divider",
+					flexShrink: 0,
+				}}
+			>
+				<Typography variant="caption" color="text.secondary">
+					{counts.errors} errors · {counts.warnings} warnings · {counts.infos}{" "}
+					info
+				</Typography>
+			</Box>
 			<Box sx={{ flex: 1, overflowY: "auto" }}>
-				{results.length === 0 ? (
+				{visible.length === 0 ? (
 					<Box
 						sx={{
 							display: "flex",
@@ -149,10 +280,18 @@ export function SpecChecksPanel() {
 					>
 						<CheckCircleOutlinedIcon color="success" />
 						<Typography variant="body2" sx={{ textAlign: "center" }}>
-							{enabled
-								? "No findings - all checks pass for this repository."
-								: "Spec checks are disabled in Settings."}
+							{!enabled
+								? "Spec checks are disabled in Settings."
+								: scoped && context
+									? `No findings for ${context.label.toLowerCase()}.`
+									: "No findings - all checks pass for this repository."}
 						</Typography>
+						{scoped && context && results.length > 0 && (
+							<Typography variant="caption" sx={{ textAlign: "center" }}>
+								{results.length} finding{results.length === 1 ? "" : "s"}{" "}
+								elsewhere in the repository - switch to "All".
+							</Typography>
+						)}
 					</Box>
 				) : (
 					<List dense disablePadding>

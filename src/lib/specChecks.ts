@@ -4,11 +4,17 @@
  * lint engine to stay extractable into a CLI later).
  *
  * Scope decisions for v1:
- * - Checks run over the changes of a loaded repo. Archived changes are
- *   historical records, so they are skipped except where the check is about
- *   the archive state itself (SL011 reference targets, SL013 inverse).
- * - Language checks (SL02x) run on spec deltas only, where prose is
- *   normative; proposals and tasks are free-form.
+ * - Change-level checks run over the changes of a loaded repo. Archived
+ *   changes are historical records, so by default they are skipped except
+ *   where the check is about the archive state itself (SL011 reference
+ *   targets, SL013 inverse). `options.includeArchived` opts archived
+ *   changes into the full set (settings.specChecksIncludeArchived).
+ * - Spec-content checks (SL004/SL005 structure, SL02x language, SL010
+ *   duplicates) run on active change deltas AND the canonical
+ *   `openspec/specs/<cap>/spec.md` files. Canonical-spec findings have no
+ *   owning change: `changeKey` is null and `capability` locates them.
+ * - Language checks are limited to spec documents, where prose is normative;
+ *   proposals and tasks are free-form.
  * - SL003 tolerates deltas that introduce a capability (an ADDED section):
  *   a delta for a brand-new capability is the normal way capabilities are
  *   born, not an error.
@@ -33,8 +39,13 @@ export interface SpecCheckResult {
 	id: CheckId;
 	severity: CheckSeverity;
 	message: string;
-	/** Owning change key: "archive/" prefix + slug for archived changes. */
-	changeKey: string;
+	/**
+	 * Owning change key ("archive/" prefix + slug), or null for findings in
+	 * canonical repo specs, which have no owning change.
+	 */
+	changeKey: string | null;
+	/** Capability the finding belongs to, when it lives in a spec document. */
+	capability: string | null;
 	/** Artifact/tab id to open when deep-linking, when known. */
 	tab: string | null;
 	/** File name within a multi-file tab (e.g. a spec delta), when known. */
@@ -54,10 +65,6 @@ export interface CheckCounts {
 	infos: number;
 	total: number;
 }
-
-const MODALS = ["MUST", "SHALL", "SHOULD", "MAY"] as const;
-const MODAL_REGEX = new RegExp(`\\b(${MODALS.join("|")})\\b`, "g");
-const HAS_MODAL = new RegExp(`\\b(${MODALS.join("|")})\\b`);
 
 export function changeKeyOf(change: Change): string {
 	return `${change.archived ? "archive/" : ""}${change.slug}`;
@@ -89,15 +96,19 @@ export function checksForChange(
 }
 
 /**
- * MarkdownView documentId a finding renders under: `<slug>/<tab>` normally,
- * `<slug>/<tab>/<file>` when the tab resolves to multiple files. Null when
- * the finding has no tab (change-level findings like SL001).
+ * MarkdownView documentId a finding renders under: `spec:<capability>` for
+ * canonical-spec findings, `<slug>/<tab>` for change docs (or
+ * `<slug>/<tab>/<file>` when the tab resolves to multiple files). Null when
+ * the finding has no anchored document (change-level findings like SL001).
  */
 export function findingDocumentId(
-	change: Change,
+	change: Change | null,
 	result: SpecCheckResult,
 ): string | null {
-	if (!result.tab) return null;
+	if (result.changeKey === null) {
+		return result.capability ? `spec:${result.capability}` : null;
+	}
+	if (!change || !result.tab) return null;
 	const tabFiles = change.documentFiles[result.tab] ?? [];
 	return tabFiles.length > 1 && result.file
 		? `${change.slug}/${result.tab}/${result.file}`
@@ -117,10 +128,10 @@ export function checksByAnchorText(
 ): Map<string, SpecCheckResult[]> {
 	const byText = new Map<string, SpecCheckResult[]>();
 	for (const result of results) {
-		const change = repo.changes.find(
-			(c) => changeKeyOf(c) === result.changeKey,
-		);
-		if (!change || findingDocumentId(change, result) !== documentId) continue;
+		const change = result.changeKey
+			? (repo.changes.find((c) => changeKeyOf(c) === result.changeKey) ?? null)
+			: null;
+		if (findingDocumentId(change, result) !== documentId) continue;
 		const text = result.snippet ?? result.heading;
 		if (!text) continue;
 		const group = byText.get(text);
@@ -261,6 +272,10 @@ function scanHeadingBlocks(markdown: string): HeadingBlock[] {
 	return blocks;
 }
 
+const MODALS = ["MUST", "SHALL", "SHOULD", "MAY"] as const;
+const MODAL_REGEX = new RegExp(`\\b(${MODALS.join("|")})\\b`, "g");
+const HAS_MODAL = new RegExp(`\\b(${MODALS.join("|")})\\b`);
+
 /** Location of one spec-delta document inside a change's tab structure. */
 interface SpecDocRef {
 	capability: string;
@@ -321,152 +336,171 @@ function escapeRegex(text: string): string {
 
 const ADDED_SECTION = /^#{1,6}\s+ADDED\b/im;
 
-export function runSpecChecks(repo: Repo): SpecCheckResult[] {
+/** Where a spec document lives, threaded through every finding it produces. */
+interface SpecDocLoc {
+	changeKey: string | null;
+	capability: string;
+	tab: string | null;
+	file: string | null;
+}
+
+interface RequirementEntry extends SpecDocLoc {
+	heading: string;
+}
+
+export interface SpecCheckOptions {
+	/** Also lint archived changes' documents and deltas. Default false. */
+	includeArchived?: boolean;
+}
+
+export function runSpecChecks(
+	repo: Repo,
+	options: SpecCheckOptions = {},
+): SpecCheckResult[] {
 	const results: SpecCheckResult[] = [];
-	const active = repo.changes.filter((c) => !c.archived);
+	const included = options.includeArchived
+		? repo.changes
+		: repo.changes.filter((c) => !c.archived);
 	const archived = repo.changes.filter((c) => c.archived);
 	const repoCapabilities = new Set(repo.repoSpecs.map((s) => s.capability));
 
-	// Requirement headings across all active deltas, for SL010.
-	const requirementIndex = new Map<
-		string,
-		{
-			capability: string;
-			changeKey: string;
-			heading: string;
-			ref: SpecDocRef;
-		}[]
-	>();
+	const emit = (
+		id: CheckId,
+		variant: string,
+		params: Record<string, string>,
+		loc: Partial<
+			Pick<
+				SpecCheckResult,
+				"changeKey" | "capability" | "tab" | "file" | "heading" | "snippet"
+			>
+		>,
+	) => {
+		results.push({
+			id,
+			severity: CHECKS[id].severity,
+			message: formatCheckMessage(id, variant, params),
+			changeKey: loc.changeKey ?? null,
+			capability: loc.capability ?? null,
+			tab: loc.tab ?? null,
+			file: loc.file ?? null,
+			heading: loc.heading ?? null,
+			snippet: loc.snippet ?? null,
+		});
+	};
 
-	for (const change of active) {
+	// Requirement headings across all spec docs (deltas + canonical), for SL010.
+	const requirementIndex = new Map<string, RequirementEntry[]>();
+
+	// SL004 / SL005 structure + SL02x language + SL010 collection, shared by
+	// change deltas and canonical repo specs.
+	const checkSpecDoc = (content: string, loc: SpecDocLoc) => {
+		const blocks = scanHeadingBlocks(content);
+		for (const block of blocks) {
+			const blockLoc = { ...loc, heading: block.text };
+			if (SCENARIO_HEADING.test(block.text)) {
+				const params = { scenario: block.text };
+				if (!block.owningRequirement) {
+					emit("SL004", "orphanScenario", params, blockLoc);
+				}
+				const body = block.body.join("\n");
+				const hasWhen = /\bWHEN\b/.test(body);
+				const hasGiven = /\bGIVEN\b/.test(body);
+				const hasThen = /\bTHEN\b/.test(body);
+				if (hasWhen && !hasThen) {
+					emit("SL004", "whenWithoutThen", params, blockLoc);
+				}
+				if (hasGiven && !hasThen) {
+					emit("SL004", "givenWithoutThen", params, blockLoc);
+				}
+			}
+			if (REQUIREMENT_HEADING.test(block.text)) {
+				const followedByContent =
+					block.body.length > 0 ||
+					blocks.some((b) => b.owningRequirement === block.text);
+				if (!followedByContent) {
+					emit("SL005", "default", { requirement: block.text }, blockLoc);
+				}
+				const normalized = normalizeRequirementText(block.text);
+				if (normalized) {
+					const entries = requirementIndex.get(normalized) ?? [];
+					entries.push({ ...loc, heading: block.text });
+					requirementIndex.set(normalized, entries);
+				}
+			}
+		}
+
+		for (const line of scanLines(content)) {
+			const lineLoc = {
+				...loc,
+				heading: line.heading,
+				snippet: toSnippet(line.raw),
+			};
+
+			// Case-sensitive on purpose: only fully lowercase forms are misuse.
+			const misuse = line.text.match(/\b(shall|must)\b/g);
+			if (misuse) {
+				emit("SL020", "default", { word: misuse[0] }, lineLoc);
+			}
+
+			const modals = new Set(line.text.match(MODAL_REGEX) ?? []);
+			if (modals.size >= 2) {
+				emit("SL021", "default", { modals: [...modals].join(" + ") }, lineLoc);
+			}
+
+			for (const term of AMBIGUITY_TERMS) {
+				const re = new RegExp(`\\b${escapeRegex(term)}(?!\\w)`, "i");
+				if (re.test(line.text)) {
+					emit("SL022", "default", { term }, lineLoc);
+				}
+			}
+
+			if (HAS_MODAL.test(line.text)) {
+				for (const q of UNBOUNDED_QUANTIFIERS) {
+					const re = new RegExp(`\\b${q}\\b`, "i");
+					if (re.test(line.text)) {
+						emit("SL023", "default", { term: q }, lineLoc);
+					}
+				}
+			}
+		}
+	};
+
+	for (const change of included) {
 		const key = changeKeyOf(change);
-		const push = (
-			id: CheckId,
-			variant: string,
-			params: Record<string, string> = {},
-			loc?: Partial<
-				Pick<SpecCheckResult, "tab" | "file" | "heading" | "snippet">
-			>,
-		) => {
-			results.push({
-				id,
-				severity: CHECKS[id].severity,
-				message: formatCheckMessage(id, variant, params),
-				changeKey: key,
-				tab: loc?.tab ?? null,
-				file: loc?.file ?? null,
-				heading: loc?.heading ?? null,
-				snippet: loc?.snippet ?? null,
-			});
-		};
+		const changeLoc = { changeKey: key };
 
 		// SL001 / SL002 - required documents.
 		if (change.proposal === null) {
-			push("SL001", "default");
+			emit("SL001", "default", {}, changeLoc);
 		}
 		if (change.tasks === null) {
-			push("SL002", "default");
+			emit("SL002", "default", {}, changeLoc);
 		}
 
-		const specRefs = specDocRefs(change);
-
-		for (const ref of specRefs) {
-			const loc = { tab: ref.tab, file: ref.file };
+		for (const ref of specDocRefs(change)) {
+			const loc: SpecDocLoc = {
+				changeKey: key,
+				capability: ref.capability,
+				tab: ref.tab,
+				file: ref.file,
+			};
 
 			// SL003 - delta for a capability that neither exists nor is added.
 			if (
 				!repoCapabilities.has(ref.capability) &&
 				!ADDED_SECTION.test(ref.content)
 			) {
-				push("SL003", "default", { capability: ref.capability }, loc);
+				emit("SL003", "default", { capability: ref.capability }, loc);
 			}
 
-			// SL004 / SL005 - heading-block structure.
-			const blocks = scanHeadingBlocks(ref.content);
-			for (const block of blocks) {
-				const blockLoc = { ...loc, heading: block.text };
-				if (SCENARIO_HEADING.test(block.text)) {
-					const params = { scenario: block.text };
-					if (!block.owningRequirement) {
-						push("SL004", "orphanScenario", params, blockLoc);
-					}
-					const body = block.body.join("\n");
-					const hasWhen = /\bWHEN\b/.test(body);
-					const hasGiven = /\bGIVEN\b/.test(body);
-					const hasThen = /\bTHEN\b/.test(body);
-					if (hasWhen && !hasThen) {
-						push("SL004", "whenWithoutThen", params, blockLoc);
-					}
-					if (hasGiven && !hasThen) {
-						push("SL004", "givenWithoutThen", params, blockLoc);
-					}
-				}
-				if (REQUIREMENT_HEADING.test(block.text)) {
-					const followedByContent =
-						block.body.length > 0 ||
-						blocks.some((b) => b.owningRequirement === block.text);
-					if (!followedByContent) {
-						push("SL005", "default", { requirement: block.text }, blockLoc);
-					}
-					// Collect for SL010.
-					const normalized = normalizeRequirementText(block.text);
-					if (normalized) {
-						const entries = requirementIndex.get(normalized) ?? [];
-						entries.push({
-							capability: ref.capability,
-							changeKey: key,
-							heading: block.text,
-							ref,
-						});
-						requirementIndex.set(normalized, entries);
-					}
-				}
-			}
-
-			// SL020-SL023 - language checks on normative spec prose.
-			for (const line of scanLines(ref.content)) {
-				const lineLoc = {
-					...loc,
-					heading: line.heading,
-					snippet: toSnippet(line.raw),
-				};
-
-				// Case-sensitive on purpose: only fully lowercase forms are misuse.
-				const misuse = line.text.match(/\b(shall|must)\b/g);
-				if (misuse) {
-					push("SL020", "default", { word: misuse[0] }, lineLoc);
-				}
-
-				const modals = new Set(line.text.match(MODAL_REGEX) ?? []);
-				if (modals.size >= 2) {
-					push(
-						"SL021",
-						"default",
-						{ modals: [...modals].join(" + ") },
-						lineLoc,
-					);
-				}
-
-				for (const term of AMBIGUITY_TERMS) {
-					const re = new RegExp(`\\b${escapeRegex(term)}(?!\\w)`, "i");
-					if (re.test(line.text)) {
-						push("SL022", "default", { term }, lineLoc);
-					}
-				}
-
-				if (HAS_MODAL.test(line.text)) {
-					for (const q of UNBOUNDED_QUANTIFIERS) {
-						const re = new RegExp(`\\b${q}\\b`, "i");
-						if (re.test(line.text)) {
-							push("SL023", "default", { term: q }, lineLoc);
-						}
-					}
-				}
-			}
+			checkSpecDoc(ref.content, loc);
 		}
 
-		// SL011 - references to archived changes.
+		// SL011 - references to archived changes. Self-references are skipped:
+		// with includeArchived on, an archived change naming its own slug in
+		// its proposal is not a stale reference.
 		for (const other of archived) {
+			if (changeKeyOf(other) === key) continue;
 			const re = new RegExp(`(^|[^\\w-])${escapeRegex(other.slug)}([^\\w-]|$)`);
 			const docs: [string, string | null][] = [
 				["proposal.md", change.proposal],
@@ -474,11 +508,15 @@ export function runSpecChecks(repo: Repo): SpecCheckResult[] {
 			];
 			for (const [relPath, content] of docs) {
 				if (content && re.test(content)) {
-					push(
+					emit(
 						"SL011",
 						"default",
 						{ slug: other.slug },
-						{ tab: tabForPath(change, relPath), snippet: other.slug },
+						{
+							...changeLoc,
+							tab: tabForPath(change, relPath),
+							snippet: other.slug,
+						},
 					);
 					break;
 				}
@@ -493,14 +531,25 @@ export function runSpecChecks(repo: Repo): SpecCheckResult[] {
 				tasksLower.includes(cap.toLowerCase()),
 			);
 			if (!mentioned) {
-				push(
+				emit(
 					"SL012",
 					"default",
 					{ capabilities: capabilities.join(", ") },
-					{ tab: tabForPath(change, "tasks.md") },
+					{ ...changeLoc, tab: tabForPath(change, "tasks.md") },
 				);
 			}
 		}
+	}
+
+	// Canonical repo specs: same structure/language/duplicate checks, no
+	// owning change.
+	for (const spec of repo.repoSpecs) {
+		checkSpecDoc(spec.content, {
+			changeKey: null,
+			capability: spec.capability,
+			tab: null,
+			file: null,
+		});
 	}
 
 	// SL013 - task completion vs archive state (runs on all changes).
@@ -508,26 +557,20 @@ export function runSpecChecks(repo: Repo): SpecCheckResult[] {
 		if (!change.tasks) continue;
 		const { total, done } = countTaskCompletion(change.tasks);
 		if (total === 0) continue;
-		const pushTaskState = (variant: string, params: Record<string, string>) => {
-			results.push({
-				id: "SL013",
-				severity: CHECKS.SL013.severity,
-				message: formatCheckMessage("SL013", variant, params),
-				changeKey: changeKeyOf(change),
-				tab: tabForPath(change, "tasks.md"),
-				file: null,
-				heading: null,
-				snippet: null,
-			});
+		const loc = {
+			changeKey: changeKeyOf(change),
+			tab: tabForPath(change, "tasks.md"),
 		};
 		if (!change.archived && done === total) {
-			pushTaskState("readyToArchive", {});
+			emit("SL013", "readyToArchive", {}, loc);
 		}
 		if (change.archived && done < total) {
-			pushTaskState("archivedIncomplete", {
-				done: String(done),
-				total: String(total),
-			});
+			emit(
+				"SL013",
+				"archivedIncomplete",
+				{ done: String(done), total: String(total) },
+				loc,
+			);
 		}
 	}
 
@@ -537,19 +580,12 @@ export function runSpecChecks(repo: Repo): SpecCheckResult[] {
 		if (capabilities.size < 2) continue;
 		for (const entry of entries) {
 			const others = [...capabilities].filter((c) => c !== entry.capability);
-			results.push({
-				id: "SL010",
-				severity: CHECKS.SL010.severity,
-				message: formatCheckMessage("SL010", "default", {
-					requirement: entry.heading,
-					others: others.join(", "),
-				}),
-				changeKey: entry.changeKey,
-				tab: entry.ref.tab,
-				file: entry.ref.file,
-				heading: entry.heading,
-				snippet: null,
-			});
+			emit(
+				"SL010",
+				"default",
+				{ requirement: entry.heading, others: others.join(", ") },
+				{ ...entry, snippet: null },
+			);
 		}
 	}
 
@@ -557,6 +593,6 @@ export function runSpecChecks(repo: Repo): SpecCheckResult[] {
 		(a, b) =>
 			SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
 			a.id.localeCompare(b.id) ||
-			a.changeKey.localeCompare(b.changeKey),
+			(a.changeKey ?? "").localeCompare(b.changeKey ?? ""),
 	);
 }

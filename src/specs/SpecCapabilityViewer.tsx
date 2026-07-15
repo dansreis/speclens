@@ -24,6 +24,8 @@ import { AttributionLine } from "./AttributionLine";
 import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
 import { Minimap } from "./Minimap";
+import { SpecChecksBadge } from "./SpecChecksBadge";
+import { useSpecCheckResults } from "./useSpecChecks";
 
 interface Props {
 	capability: string;
@@ -54,7 +56,19 @@ export function SpecCapabilityViewer({
 	const resetZoom = useAppStore((s) => s.resetZoom);
 	const storedTab = useAppStore((s) => s.specViewerTab);
 	const setStoredTab = useAppStore((s) => s.setSpecViewerTab);
+	const repos = useAppStore((s) => s.repos);
+	const selectedRepoId = useAppStore((s) => s.selectedRepoId);
 	const contentRef = useRef<HTMLDivElement | null>(null);
+
+	// Findings owned by this capability: its canonical spec plus every delta
+	// touching it (same scope as the panel's "This spec").
+	const allCheckResults = useSpecCheckResults(
+		repos.find((r) => r.id === selectedRepoId) ?? null,
+	);
+	const capabilityCheckResults = useMemo(
+		() => allCheckResults.filter((r) => r.capability === capability),
+		[allCheckResults, capability],
+	);
 
 	const defaultTab: TabValue = repoSpec
 		? "canonical"
@@ -221,6 +235,7 @@ export function SpecCapabilityViewer({
 							<ZoomInIcon fontSize="small" />
 						</IconButton>
 					</Tooltip>
+					<SpecChecksBadge results={capabilityCheckResults} />
 					<AiDocSummaryButton
 						title={
 							tab === "canonical"

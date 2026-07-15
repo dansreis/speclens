@@ -36,11 +36,16 @@ export interface AppSettings {
 	sidebarWidth: number;
 	/** Width of the AI summary side panel in px (drag-resizable). */
 	aiPanelWidth: number;
+	/** Width of the spec-checks results panel in px (drag-resizable). */
+	checksPanelWidth: number;
 	/** Daily new-version check against the GitHub releases API on startup. */
 	updateCheck: boolean;
 	/** Deterministic spec lint checks (badge on changes + results list).
 	 * On by default; can be disabled from Settings → General. */
 	specChecks: boolean;
+	/** Also lint archived changes' documents and deltas. Off by default -
+	 * archived findings are historical and drown live signal. */
+	specChecksIncludeArchived: boolean;
 	/** Local AI features (model download + on-device inference). On by
 	 * default - the UI shows, but nothing downloads or runs until the user
 	 * explicitly fetches a model, so the no-network promise holds. */
@@ -56,8 +61,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	commentsPanelWidth: 340,
 	sidebarWidth: 240,
 	aiPanelWidth: 380,
+	checksPanelWidth: 380,
 	updateCheck: true,
 	specChecks: true,
+	specChecksIncludeArchived: false,
 	aiEnabled: true,
 	aiModel: DEFAULT_AI_MODEL_ID,
 };
@@ -106,6 +113,12 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			r.aiPanelWidth <= 640
 				? r.aiPanelWidth
 				: DEFAULT_SETTINGS.aiPanelWidth,
+		checksPanelWidth:
+			typeof r.checksPanelWidth === "number" &&
+			r.checksPanelWidth >= 300 &&
+			r.checksPanelWidth <= 640
+				? r.checksPanelWidth
+				: DEFAULT_SETTINGS.checksPanelWidth,
 		aiEnabled:
 			typeof r.aiEnabled === "boolean"
 				? r.aiEnabled
@@ -118,6 +131,10 @@ export function sanitizeSettings(raw: unknown): AppSettings {
 			typeof r.specChecks === "boolean"
 				? r.specChecks
 				: DEFAULT_SETTINGS.specChecks,
+		specChecksIncludeArchived:
+			typeof r.specChecksIncludeArchived === "boolean"
+				? r.specChecksIncludeArchived
+				: DEFAULT_SETTINGS.specChecksIncludeArchived,
 		// Custom (imported) model ids are not in the registry, so any safe file
 		// stem is accepted - a persisted custom selection must survive restarts.
 		aiModel: isValidAiModelId(r.aiModel) ? r.aiModel : DEFAULT_SETTINGS.aiModel,
@@ -128,6 +145,7 @@ export type AppView =
 	| "overview"
 	| "specs"
 	| "changes"
+	| "checks"
 	| "flow"
 	| "graph"
 	| "timeline"

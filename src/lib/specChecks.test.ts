@@ -103,6 +103,28 @@ describe("structural checks", () => {
 		expect(ids(runSpecChecks(repo))).toEqual([]);
 	});
 
+	it("includeArchived opts archived changes into the full check set", () => {
+		const spec = "### Requirement: R\nThe system must respond quickly.\n";
+		const repo = makeRepo([
+			makeChange({
+				archived: true,
+				proposal: null,
+				specs: { search: spec },
+				tasks: "- [x] wire add-search search flow",
+			}),
+		]);
+		const results = runSpecChecks(repo, { includeArchived: true });
+		const found = ids(results);
+		expect(found).toContain("SL001");
+		expect(found).toContain("SL020");
+		expect(found).toContain("SL022");
+		expect(results.find((r) => r.id === "SL001")?.changeKey).toBe(
+			"archive/add-search",
+		);
+		// An archived change naming its own slug is not a stale reference.
+		expect(found).not.toContain("SL011");
+	});
+
 	it("SL003 flags a delta for an unknown capability without ADDED", () => {
 		const spec = "## MODIFIED Requirements\n\n### Requirement: X\n\nBody.\n";
 		const repo = makeRepo(
@@ -313,6 +335,61 @@ describe("language checks", () => {
 		);
 		const finding = results.find((r) => r.id === "SL022");
 		expect(finding?.snippet).toBe("The system must respond quickly.");
+	});
+});
+
+describe("canonical repo specs", () => {
+	function repoWithSpec(content: string): Repo {
+		const repo = makeRepo([makeChange()], ["search"]);
+		repo.repoSpecs[0].content = content;
+		return repo;
+	}
+
+	it("runs structure and language checks with no owning change", () => {
+		const results = runSpecChecks(
+			repoWithSpec(
+				[
+					"### Requirement: Search",
+					"The system must respond quickly.",
+					"#### Scenario: bad",
+					"- WHEN the user types",
+				].join("\n"),
+			),
+		);
+		const ids = results.map((r) => r.id);
+		expect(ids).toContain("SL020");
+		expect(ids).toContain("SL022");
+		expect(ids).toContain("SL004");
+		for (const r of results) {
+			expect(r.changeKey).toBeNull();
+			expect(r.capability).toBe("search");
+		}
+	});
+
+	it("maps canonical findings to the spec viewer documentId", () => {
+		const results = runSpecChecks(
+			repoWithSpec("### Requirement: R\nThe system must respond.\n"),
+		);
+		const finding = results.find((r) => r.id === "SL020");
+		expect(finding).toBeDefined();
+		expect(finding && findingDocumentId(null, finding)).toBe("spec:search");
+	});
+
+	it("SL010 spans canonical specs and deltas across capabilities", () => {
+		const heading = "### Requirement: Reject over-limit input";
+		const repo = makeRepo(
+			[
+				makeChange({
+					specs: { ui: `${heading}\nThe ui MUST reject.\n` },
+					tasks: "- [ ] ui",
+				}),
+			],
+			["api"],
+		);
+		repo.repoSpecs[0].content = `${heading}\nThe api MUST reject.\n`;
+		const results = runSpecChecks(repo).filter((r) => r.id === "SL010");
+		expect(results).toHaveLength(2);
+		expect(results.map((r) => r.capability).sort()).toEqual(["api", "ui"]);
 	});
 });
 

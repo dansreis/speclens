@@ -22,15 +22,11 @@ import {
 } from "../lib/relativeTime";
 import type { Change, DocAuthorship, Repo } from "../lib/repoLoader";
 import { artifactLabel } from "../lib/schema";
-import {
-	countBySeverity,
-	runSpecChecks,
-	type SpecCheckResult,
-} from "../lib/specChecks";
+import { countBySeverity, type SpecCheckResult } from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { AiDocSummaryButton } from "../specs/AiDocSummaryButton";
-import { jumpToFinding } from "../specs/specCheckJump";
+import { useSpecCheckResults } from "../specs/useSpecChecks";
 import { seedDocSummaryCache } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
@@ -75,14 +71,10 @@ export function OverviewView({ repo }: Props) {
 	const readingWpm = useAppStore((s) => s.settings.readingWpm);
 	const aiModel = useAppStore((s) => s.settings.aiModel);
 	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
-	const setSpecChecksPanelOpen = useAppStore((s) => s.setSpecChecksPanelOpen);
 	const signature = useAppStore((s) =>
 		repo ? (s.loadedSignatures[repo.id] ?? null) : null,
 	);
-	const checkResults: SpecCheckResult[] = useMemo(
-		() => (repo && specChecksEnabled ? runSpecChecks(repo) : []),
-		[repo, specChecksEnabled],
-	);
+	const checkResults: SpecCheckResult[] = useSpecCheckResults(repo);
 	const checkCounts = countBySeverity(checkResults);
 	const [configOpen, setConfigOpen] = useState(false);
 	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
@@ -434,115 +426,6 @@ export function OverviewView({ repo }: Props) {
 							/>
 						)}
 					</Box>
-					{specChecksEnabled && checkCounts.total > 0 && (
-						<Section title="Spec checks">
-							<Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
-								{checkCounts.errors > 0 && (
-									<Chip
-										label={`${checkCounts.errors} errors`}
-										size="small"
-										color="error"
-										variant="outlined"
-									/>
-								)}
-								{checkCounts.warnings > 0 && (
-									<Chip
-										label={`${checkCounts.warnings} warnings`}
-										size="small"
-										color="warning"
-										variant="outlined"
-									/>
-								)}
-								{checkCounts.infos > 0 && (
-									<Chip
-										label={`${checkCounts.infos} info`}
-										size="small"
-										color="info"
-										variant="outlined"
-									/>
-								)}
-								<Button
-									size="small"
-									onClick={() => setSpecChecksPanelOpen(true)}
-									sx={{ ml: "auto", textTransform: "none" }}
-								>
-									View all
-								</Button>
-							</Box>
-							<Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-								{checkResults.slice(0, 5).map((finding, i) => (
-									<ButtonBase
-										// biome-ignore lint/suspicious/noArrayIndexKey: results are recomputed wholesale, never reordered in place
-										key={`${finding.id}-${i}`}
-										onClick={() => repo && jumpToFinding(repo, finding)}
-										sx={{
-											display: "flex",
-											alignItems: "center",
-											gap: 2,
-											px: 1.5,
-											py: 1,
-											borderRadius: 1,
-											textAlign: "left",
-											transition: "background-color 150ms",
-											"&:hover": { bgcolor: "action.hover" },
-										}}
-									>
-										<Chip
-											label={finding.severity}
-											size="small"
-											variant="outlined"
-											color={
-												finding.severity === "error"
-													? "error"
-													: finding.severity === "warning"
-														? "warning"
-														: "info"
-											}
-											sx={{
-												height: 18,
-												fontSize: "0.6875rem",
-												minWidth: 64,
-												fontFamily: "ui-monospace, monospace",
-											}}
-										/>
-										<Typography
-											variant="body2"
-											sx={{
-												overflow: "hidden",
-												textOverflow: "ellipsis",
-												whiteSpace: "nowrap",
-												flex: 1,
-											}}
-										>
-											{finding.message}
-										</Typography>
-										<Typography
-											variant="caption"
-											color="text.secondary"
-											sx={{
-												flexShrink: 0,
-												fontFamily: "ui-monospace, monospace",
-											}}
-										>
-											{repo?.changes.find(
-												(c) => changeKey(c) === finding.changeKey,
-											)?.name ?? finding.changeKey}{" "}
-											· {finding.id}
-										</Typography>
-									</ButtonBase>
-								))}
-								{checkCounts.total > 5 && (
-									<Typography
-										variant="caption"
-										color="text.secondary"
-										sx={{ px: 1.5, pt: 0.5 }}
-									>
-										{checkCounts.total - 5} more in the panel
-									</Typography>
-								)}
-							</Box>
-						</Section>
-					)}
 					{repo?.config?.context && (
 						<Box
 							sx={{

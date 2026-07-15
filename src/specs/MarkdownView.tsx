@@ -40,14 +40,11 @@ import {
 	highlightKey,
 } from "../lib/highlight";
 import { formatRelativeTime } from "../lib/relativeTime";
-import {
-	checksByAnchorText,
-	runSpecChecks,
-	type SpecCheckResult,
-} from "../lib/specChecks";
+import { checksByAnchorText, type SpecCheckResult } from "../lib/specChecks";
 import { useCurrentDocument } from "../lib/useCurrentDocument";
 import { useAppStore } from "../store/useAppStore";
 import { useCommentsStore } from "../store/useCommentsStore";
+import { useSpecCheckResults } from "./useSpecChecks";
 
 // Lazy: mermaid is ~3 MB across its chunks and only needed when a document
 // actually contains a ```mermaid fence - keep it off the startup path.
@@ -186,18 +183,17 @@ export function MarkdownView({
 	);
 
 	// IDE-style wavy underlines for spec-check findings anchored in this
-	// document. runSpecChecks is pure and memoized on repo identity, so this
+	// document. Results are memoized on repo identity + settings, so this
 	// only recomputes when the repo reloads.
 	const repos = useAppStore((s) => s.repos);
-	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
+	const checksRepo = repos.find((r) => r.id === selectedRepoId) ?? null;
+	const checkResults = useSpecCheckResults(checksRepo);
 	const checksByAnchor = useMemo(() => {
-		if (!specChecksEnabled || !documentId) {
+		if (!checksRepo || !documentId) {
 			return new Map<string, SpecCheckResult[]>();
 		}
-		const repo = repos.find((r) => r.id === selectedRepoId);
-		if (!repo) return new Map<string, SpecCheckResult[]>();
-		return checksByAnchorText(repo, runSpecChecks(repo), documentId);
-	}, [repos, selectedRepoId, specChecksEnabled, documentId]);
+		return checksByAnchorText(checksRepo, checkResults, documentId);
+	}, [checksRepo, checkResults, documentId]);
 	const checkTargets: HighlightTarget[] = useMemo(
 		() =>
 			[...checksByAnchor.entries()].map(([text, findings]) => ({

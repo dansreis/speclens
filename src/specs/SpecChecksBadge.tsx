@@ -1,6 +1,10 @@
+import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import RuleIcon from "@mui/icons-material/Rule";
-import { Badge, IconButton, Tooltip } from "@mui/material";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { Badge, Box, IconButton, Tooltip, Typography } from "@mui/material";
 import {
+	type CheckCounts,
 	countBySeverity,
 	maxSeverity,
 	type SpecCheckResult,
@@ -9,6 +13,48 @@ import { useAppStore } from "../store/useAppStore";
 
 interface Props {
 	results: SpecCheckResult[];
+}
+
+/**
+ * Compact per-row severity indicator (error/warning/info icons + counts)
+ * used by the changes and specs listings. Renders nothing when clean.
+ */
+export function CheckSeverityCounts({ counts }: { counts: CheckCounts }) {
+	if (counts.total === 0) return null;
+	return (
+		<Tooltip
+			title={`Spec checks: ${counts.errors} errors, ${counts.warnings} warnings, ${counts.infos} info`}
+			arrow
+			placement="left"
+		>
+			<Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+				{counts.errors > 0 && (
+					<Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+						<ErrorOutlinedIcon color="error" sx={{ fontSize: 14 }} />
+						<Typography variant="caption" color="error">
+							{counts.errors}
+						</Typography>
+					</Box>
+				)}
+				{counts.warnings > 0 && (
+					<Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+						<WarningAmberIcon color="warning" sx={{ fontSize: 14 }} />
+						<Typography variant="caption" sx={{ color: "warning.main" }}>
+							{counts.warnings}
+						</Typography>
+					</Box>
+				)}
+				{counts.infos > 0 && (
+					<Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
+						<InfoOutlinedIcon color="info" sx={{ fontSize: 14 }} />
+						<Typography variant="caption" sx={{ color: "info.main" }}>
+							{counts.infos}
+						</Typography>
+					</Box>
+				)}
+			</Box>
+		</Tooltip>
+	);
 }
 
 /**

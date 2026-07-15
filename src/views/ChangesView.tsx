@@ -1,6 +1,3 @@
-import ErrorOutlinedIcon from "@mui/icons-material/ErrorOutlined";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
 	Box,
 	ButtonBase,
@@ -23,11 +20,12 @@ import {
 	checksForChange,
 	countBySeverity,
 	maxSeverity,
-	runSpecChecks,
 	type SpecCheckResult,
 } from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";
+import { CheckSeverityCounts } from "../specs/SpecChecksBadge";
+import { useSpecCheckResults } from "../specs/useSpecChecks";
 import { useAppStore } from "../store/useAppStore";
 
 type StatusFilter = "all" | "active" | "archived" | "archived-incomplete";
@@ -59,17 +57,13 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
-	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
 	const toggleSpecChecksPanel = useAppStore((s) => s.toggleSpecChecksPanel);
 	const [filter, setFilter] = useState("");
 	const [status, setStatus] = useState<StatusFilter>("all");
 
 	const allChanges = repo?.changes ?? [];
 
-	const checkResults: SpecCheckResult[] = useMemo(
-		() => (repo && specChecksEnabled ? runSpecChecks(repo) : []),
-		[repo, specChecksEnabled],
-	);
+	const checkResults: SpecCheckResult[] = useSpecCheckResults(repo);
 	const checkCounts = countBySeverity(checkResults);
 	const countsByChange = useMemo(() => {
 		const map = new Map<string, ReturnType<typeof countBySeverity>>();
@@ -286,79 +280,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 											borderColor: change.archived ? "#d97706" : "success.main",
 										}}
 									/>
-									{rowCounts && (
-										<Tooltip
-											title={`Spec checks: ${rowCounts.errors} errors, ${rowCounts.warnings} warnings, ${rowCounts.infos} info`}
-											arrow
-											placement="left"
-										>
-											<Box
-												sx={{
-													display: "flex",
-													alignItems: "center",
-													gap: 0.75,
-												}}
-											>
-												{rowCounts.errors > 0 && (
-													<Box
-														sx={{
-															display: "flex",
-															alignItems: "center",
-															gap: 0.25,
-														}}
-													>
-														<ErrorOutlinedIcon
-															color="error"
-															sx={{ fontSize: 14 }}
-														/>
-														<Typography variant="caption" color="error">
-															{rowCounts.errors}
-														</Typography>
-													</Box>
-												)}
-												{rowCounts.warnings > 0 && (
-													<Box
-														sx={{
-															display: "flex",
-															alignItems: "center",
-															gap: 0.25,
-														}}
-													>
-														<WarningAmberIcon
-															color="warning"
-															sx={{ fontSize: 14 }}
-														/>
-														<Typography
-															variant="caption"
-															sx={{ color: "warning.main" }}
-														>
-															{rowCounts.warnings}
-														</Typography>
-													</Box>
-												)}
-												{rowCounts.infos > 0 && (
-													<Box
-														sx={{
-															display: "flex",
-															alignItems: "center",
-															gap: 0.25,
-														}}
-													>
-														<InfoOutlinedIcon
-															color="info"
-															sx={{ fontSize: 14 }}
-														/>
-														<Typography
-															variant="caption"
-															sx={{ color: "info.main" }}
-														>
-															{rowCounts.infos}
-														</Typography>
-													</Box>
-												)}
-											</Box>
-										</Tooltip>
-									)}
+									{rowCounts && <CheckSeverityCounts counts={rowCounts} />}
 									{progress && (
 										<Typography variant="caption" color="text.secondary">
 											{progress}
