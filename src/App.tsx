@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import { getVersion, setTheme } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CommentsPanel } from "./comments/CommentsPanel";
 import { useDocumentOrphans } from "./lib/orphanDetection";
 import {
@@ -37,6 +37,7 @@ import { SplashScreen } from "./SplashScreen";
 import { SearchPalette } from "./search/SearchPalette";
 import { AppSidebar } from "./sidebar/AppSidebar";
 import { AiSummaryPanel } from "./specs/AiSummaryPanel";
+import { SpecChecksPanel } from "./specs/SpecChecksPanel";
 import { bootstrap } from "./store/bootstrap";
 import { useAiStore } from "./store/useAiStore";
 import {
@@ -49,6 +50,7 @@ import { useCommentsStore } from "./store/useCommentsStore";
 import { createAppTheme } from "./theme/theme";
 import { Breadcrumbs } from "./views/Breadcrumbs";
 import { ChangesView } from "./views/ChangesView";
+import { ChecksView } from "./views/ChecksView";
 import { ErrorBoundary } from "./views/ErrorBoundary";
 import { FlowView } from "./views/FlowView";
 import { FolderView } from "./views/FolderView";
@@ -289,6 +291,41 @@ function App() {
 	const [commentsOpen, setCommentsOpen] = useState(false);
 	const [commentsPinned, setCommentsPinned] = useState(false);
 	const [searchOpen, setSearchOpen] = useState(false);
+
+	// Only one right panel (comments / spec checks / AI summary) may be open
+	// at a time - side-by-side stacking eats the document area. Whichever
+	// opened last wins: the effect detects the false→true transition and
+	// closes the other two. Their own open state lives where it always did
+	// (App, useAppStore, useAiStore); this is just the arbiter.
+	const checksPanelOpen = useAppStore((s) => s.specChecksPanelOpen);
+	const setSpecChecksPanelOpen = useAppStore((s) => s.setSpecChecksPanelOpen);
+	const aiPanelOpen = useAiStore((s) => s.docSummary.open);
+	const closeDocSummaryPanel = useAiStore((s) => s.closeDocSummaryPanel);
+	const prevPanels = useRef({ comments: false, checks: false, ai: false });
+	useEffect(() => {
+		const prev = prevPanels.current;
+		if (commentsOpen && !prev.comments) {
+			setSpecChecksPanelOpen(false);
+			closeDocSummaryPanel();
+		} else if (checksPanelOpen && !prev.checks) {
+			setCommentsOpen(false);
+			closeDocSummaryPanel();
+		} else if (aiPanelOpen && !prev.ai) {
+			setCommentsOpen(false);
+			setSpecChecksPanelOpen(false);
+		}
+		prevPanels.current = {
+			comments: commentsOpen,
+			checks: checksPanelOpen,
+			ai: aiPanelOpen,
+		};
+	}, [
+		commentsOpen,
+		checksPanelOpen,
+		aiPanelOpen,
+		setSpecChecksPanelOpen,
+		closeDocSummaryPanel,
+	]);
 
 	const hasActiveDocument =
 		!!activeChange ||
@@ -554,6 +591,8 @@ function App() {
 									<SpecsView repo={activeRepo} {...sharedDetailProps} />
 								) : view === "changes" ? (
 									<ChangesView repo={activeRepo} {...sharedDetailProps} />
+								) : view === "checks" ? (
+									<ChecksView repo={activeRepo} />
 								) : view === "schemas" ? (
 									<SchemasView repo={activeRepo} />
 								) : view === "folder" ? (
@@ -572,6 +611,7 @@ function App() {
 						    side. An unpinned comments panel floats over the row edge,
 						    matching how it already overlays document content. */}
 						<AiSummaryPanel />
+						<SpecChecksPanel />
 						<CommentsPanel
 							open={commentsOpen}
 							pinned={commentsPinned}

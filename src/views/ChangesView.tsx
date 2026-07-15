@@ -16,8 +16,16 @@ import {
 } from "../lib/relativeTime";
 import type { Change, Repo } from "../lib/repoLoader";
 import { DEFAULT_SCHEMA } from "../lib/schema";
+import {
+	checksForChange,
+	countBySeverity,
+	maxSeverity,
+	type SpecCheckResult,
+} from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { ChangeViewer } from "../specs/ChangeViewer";
+import { CheckSeverityCounts } from "../specs/SpecChecksBadge";
+import { useSpecCheckResults } from "../specs/useSpecChecks";
 import { useAppStore } from "../store/useAppStore";
 
 type StatusFilter = "all" | "active" | "archived" | "archived-incomplete";
@@ -49,10 +57,31 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 	const selectedChangeKey = useAppStore((s) => s.selectedChangeKey);
 	const setSelectedChangeKey = useAppStore((s) => s.setSelectedChangeKey);
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
+	const toggleSpecChecksPanel = useAppStore((s) => s.toggleSpecChecksPanel);
 	const [filter, setFilter] = useState("");
 	const [status, setStatus] = useState<StatusFilter>("all");
 
 	const allChanges = repo?.changes ?? [];
+
+	const checkResults: SpecCheckResult[] = useSpecCheckResults(repo);
+	// The header chip must reconcile with the rows below it, so it counts only
+	// change-owned findings. Canonical-spec findings (changeKey null) live in
+	// the Specs listing and the Checks view instead; the tooltip points there.
+	const changeFindings = useMemo(
+		() => checkResults.filter((r) => r.changeKey !== null),
+		[checkResults],
+	);
+	const checkCounts = countBySeverity(changeFindings);
+	const specFindingsCount = checkResults.length - changeFindings.length;
+	const countsByChange = useMemo(() => {
+		const map = new Map<string, ReturnType<typeof countBySeverity>>();
+		for (const change of allChanges) {
+			const key = changeKey(change);
+			const own = checksForChange(checkResults, key);
+			if (own.length > 0) map.set(key, countBySeverity(own));
+		}
+		return map;
+	}, [checkResults, allChanges]);
 
 	const filtered = useMemo(() => {
 		const q = filter.trim().toLowerCase();
@@ -91,6 +120,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 				schema={change.schema ?? repo?.schema ?? DEFAULT_SCHEMA}
 				commentsOpen={commentsOpen}
 				onToggleComments={onToggleComments}
+				checkResults={checksForChange(checkResults, selectedChangeKey)}
 			/>
 		);
 	}
@@ -134,6 +164,22 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 						</ToggleButton>
 					</Tooltip>
 				</ToggleButtonGroup>
+				{checkCounts.total > 0 && (
+					<Tooltip
+						title={`Spec checks on this repository's changes: ${checkCounts.errors} errors, ${checkCounts.warnings} warnings, ${checkCounts.infos} info.${specFindingsCount > 0 ? ` ${specFindingsCount} more finding${specFindingsCount === 1 ? "" : "s"} live in capability specs - see the Specs listing or the Checks view.` : ""} Click to open the results panel.`}
+						arrow
+					>
+						<Chip
+							label={`${checkCounts.total} check ${checkCounts.total === 1 ? "finding" : "findings"}`}
+							size="small"
+							variant="outlined"
+							clickable
+							onClick={toggleSpecChecksPanel}
+							color={maxSeverity(checkCounts) ?? "default"}
+							sx={{ fontWeight: 500 }}
+						/>
+					</Tooltip>
+				)}
 			</Box>
 			<Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
 				{filtered.length === 0 ? (
@@ -148,6 +194,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 						const key = changeKey(change);
 						const preview = firstParagraphPreview(change.proposal);
 						const progress = progressLabel(change);
+						const rowCounts = countsByChange.get(key);
 						return (
 							<ButtonBase
 								key={key}
@@ -241,6 +288,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 											borderColor: change.archived ? "#d97706" : "success.main",
 										}}
 									/>
+									{rowCounts && <CheckSeverityCounts counts={rowCounts} />}
 									{progress && (
 										<Typography variant="caption" color="text.secondary">
 											{progress}

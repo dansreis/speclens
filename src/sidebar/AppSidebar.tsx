@@ -2,6 +2,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
+import RuleIcon from "@mui/icons-material/Rule";
 import SchemaOutlinedIcon from "@mui/icons-material/SchemaOutlined";
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
@@ -19,6 +20,7 @@ import {
 import { alpha } from "@mui/material/styles";
 import { type ReactNode, useMemo, useState } from "react";
 import { RepositorySwitcher } from "../repos/RepositorySwitcher";
+import { useSpecCheckResults } from "../specs/useSpecChecks";
 import {
 	type AppView,
 	DEFAULT_SETTINGS,
@@ -92,13 +94,15 @@ export function AppSidebar() {
 	const setSelectedSpec = useAppStore((s) => s.setSelectedSpec);
 	const setSelectedSchema = useAppStore((s) => s.setSelectedSchema);
 	const repos = useAppStore((s) => s.repos);
+	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
 	const activeRepo = repos.find((r) => r.id === selectedRepoId) ?? repos[0];
+	const checksCount = useSpecCheckResults(activeRepo ?? null).length;
 	const resolvedWorkflow = useMemo<ResolvedNavItem[]>(() => {
 		const counts: Partial<Record<AppView, number>> = {};
 		if (activeRepo) {
 			counts.changes = activeRepo.changes.length;
 		}
-		return workflowNav.map((item) => ({
+		const items = workflowNav.map((item) => ({
 			key: item.key,
 			label: item.label,
 			icon: item.icon,
@@ -109,7 +113,26 @@ export function AppSidebar() {
 				setView(item.id);
 			},
 		}));
-	}, [activeRepo, view, setView, setSelectedChangeKey]);
+		if (specChecksEnabled) {
+			// After Overview and Changes: analysis of what the changes contain.
+			items.splice(2, 0, {
+				key: "checks",
+				label: "Checks",
+				icon: <RuleIcon />,
+				count: checksCount > 0 ? checksCount : undefined,
+				active: view === "checks",
+				onClick: () => setView("checks"),
+			});
+		}
+		return items;
+	}, [
+		activeRepo,
+		view,
+		setView,
+		setSelectedChangeKey,
+		specChecksEnabled,
+		checksCount,
+	]);
 	// Library tabs: Specs and Schemas are special (their views render content
 	// differently from generic markdown). Everything else under openspec/ - any
 	// folder - is auto-discovered from repo.folders and surfaced as a tab.

@@ -14,6 +14,7 @@ const titles: Record<AppView, string> = {
 	overview: "Overview",
 	specs: "Specs",
 	changes: "Changes",
+	checks: "Checks",
 	flow: "Flow",
 	graph: "Graph",
 	timeline: "Timeline",

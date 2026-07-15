@@ -3,6 +3,8 @@ export interface HighlightTarget {
 	occurrence: number;
 	/** Optional tag carried in the returned found-map (typically a commentId). */
 	id?: string;
+	/** Extra class(es) on the <mark>, e.g. spec-check severity styling. */
+	className?: string;
 }
 
 const MARK_CLASS = "user-highlight";
@@ -239,7 +241,9 @@ function applyOne(container: HTMLElement, target: HighlightTarget): boolean {
 			range.setEnd(end.node, end.offset);
 			const fragment = range.extractContents();
 			const mark = document.createElement("mark");
-			mark.className = MARK_CLASS;
+			mark.className = target.className
+				? `${MARK_CLASS} ${target.className}`
+				: MARK_CLASS;
 			mark.dataset.highlightKey = key;
 			mark.appendChild(fragment);
 			range.insertNode(mark);

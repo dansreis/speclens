@@ -16,6 +16,7 @@ SpecLens reads the OpenSpec convention (`proposal.md` / `tasks.md` / `specs/<cap
 - **Authorship** - when a project is a git repository, SpecLens derives per-document history (via an embedded git library - no git installation needed) to show who created and last edited each change. Without a repo it degrades gracefully.
 - **Comments** - select any text to attach a comment; highlights persist locally (SQLite) and can be exported as markdown, ready to paste into an LLM conversation.
 - **EARS keyword highlighting** - inline coloring for [EARS](https://alistairmavin.com/ears/) keywords, RFC 2119 modal verbs, and Gherkin steps (toggle in Settings).
+- **Spec checks (beta)** - deterministic, local-only linting of changes and specs: missing documents, malformed EARS/Gherkin blocks, empty or duplicated requirements, RFC 2119 misuse, ambiguous wording. Findings render as IDE-style underlines with hover diagnostics, plus a dedicated Checks view (groupable by change or check type), a scoped results panel, and severity badges across the app. No LLM involved; everything is explainable and reproducible. Toggle in Settings, with an opt-in for archived changes.
 - **Reader comforts** - minimap with table of contents, document stats and reading time, search palette, Mermaid diagram rendering, zoom, light/dark theme.
 - **Local AI summaries (optional)** - an on-device model summarizes the whole project and individual documents for reviewers, streamed into a side panel with links back to the specs. Five curated models downloaded on demand, any llama.cpp-compatible GGUF you import, or your local [Ollama](https://ollama.com) library. Inference never touches the network.
 
@@ -88,14 +89,14 @@ Tauri 2 (Rust) · React 19 + TypeScript + Vite · MUI + Emotion · Zustand with 
 ```
 src/
 ├── App.tsx        # top-level layout: sidebar | header + content + comments
-├── views/         # overview, changes, specs, schemas, folder, graph, flow, timeline
-├── specs/         # change viewer, markdown rendering, minimap, stats
+├── views/         # overview, changes, checks, specs, schemas, folder, graph, flow, timeline
+├── specs/         # change viewer, markdown rendering, minimap, stats, spec-check panel
 ├── comments/      # comments panel + selection-to-comment
 ├── repos/         # repository switcher + add-repository flow
 ├── sidebar/       # navigation, settings, theme toggle
 ├── search/        # search palette
 ├── store/         # Zustand stores + SQLite bootstrap
-└── lib/           # loaders, git-derived authorship, stats, highlighting
+└── lib/           # loaders, spec-check lint engine, stats, highlighting
 src-tauri/         # Rust shell: repo walking, git2 authorship, signatures, local AI
 ```
 

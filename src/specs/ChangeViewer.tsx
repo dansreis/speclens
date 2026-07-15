@@ -28,6 +28,11 @@ import {
 	isChecklistArtifact,
 	type OpenSpecSchema,
 } from "../lib/schema";
+import {
+	countBySeverity,
+	maxSeverity,
+	type SpecCheckResult,
+} from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { type TabKey, useAppStore } from "../store/useAppStore";
 import { AiDocSummaryButton } from "./AiDocSummaryButton";
@@ -35,12 +40,14 @@ import { AttributionLine } from "./AttributionLine";
 import { DocumentStatsTooltipContent } from "./DocumentStatsTooltip";
 import { MarkdownView } from "./MarkdownView";
 import { Minimap } from "./Minimap";
+import { SpecChecksBadge } from "./SpecChecksBadge";
 
 interface Props {
 	change: Change;
 	schema: OpenSpecSchema;
 	commentsOpen: boolean;
 	onToggleComments: () => void;
+	checkResults?: SpecCheckResult[];
 }
 
 function tabLabel(
@@ -61,6 +68,7 @@ export function ChangeViewer({
 	schema,
 	commentsOpen,
 	onToggleComments,
+	checkResults = [],
 }: Props) {
 	const tab = useAppStore((s) => s.activeTab);
 	const setTab = useAppStore((s) => s.setActiveTab);
@@ -153,6 +161,22 @@ export function ChangeViewer({
 		const { total, done } = countTaskCompletion(change.tasks);
 		return total > 0 && done === total;
 	}, [change.archived, change.tasks]);
+
+	// Findings with no text anchor (SL001/SL002 missing docs, SL012 task/spec
+	// drift, SL013 archive state) can't render as underlines - surface them as
+	// a banner so a badge count is never invisible in the document itself.
+	// SL013's ready-to-archive variant is skipped: the dedicated alert below
+	// already covers that state.
+	const unanchoredFindings = useMemo(
+		() =>
+			checkResults.filter(
+				(r) =>
+					!(r.snippet ?? r.heading) && !(r.id === "SL013" && !change.archived),
+			),
+		[checkResults, change.archived],
+	);
+	const unanchoredSeverity =
+		maxSeverity(countBySeverity(unanchoredFindings)) ?? "info";
 
 	const fileAuthorship = useMemo(() => {
 		if (!change.authorship) return null;
@@ -303,6 +327,7 @@ export function ChangeViewer({
 							<ZoomInIcon fontSize="small" />
 						</IconButton>
 					</Tooltip>
+					<SpecChecksBadge results={checkResults} />
 					<AiDocSummaryButton
 						title={change.name}
 						kind={
@@ -362,6 +387,37 @@ export function ChangeViewer({
 					}}
 				>
 					All tasks are complete - this change is ready to archive.
+				</Alert>
+			)}
+			{unanchoredFindings.length > 0 && (
+				<Alert
+					severity={unanchoredSeverity}
+					variant="outlined"
+					sx={{
+						mx: 4,
+						mt: 2,
+						py: 0.25,
+						"& .MuiAlert-message": { py: 0.5 },
+					}}
+				>
+					{unanchoredFindings.map((finding, i) => (
+						<Typography
+							// biome-ignore lint/suspicious/noArrayIndexKey: results are recomputed wholesale, never reordered in place
+							key={`${finding.id}-${i}`}
+							variant="body2"
+							sx={{ lineHeight: 1.6 }}
+						>
+							{finding.message}{" "}
+							<Typography
+								component="span"
+								variant="caption"
+								color="text.secondary"
+								sx={{ fontFamily: "ui-monospace, monospace" }}
+							>
+								{finding.id}
+							</Typography>
+						</Typography>
+					))}
 				</Alert>
 			)}
 			<Box

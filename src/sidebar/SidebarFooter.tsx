@@ -9,6 +9,7 @@ import {
 	Badge,
 	Box,
 	Button,
+	Chip,
 	Dialog,
 	DialogActions,
 	DialogContent,
@@ -334,6 +335,78 @@ export function SidebarFooter({ collapsed = false }: Props) {
 									</Box>
 								}
 							/>
+
+							<Box>
+								<FormControlLabel
+									sx={{ ml: 0, alignItems: "flex-start" }}
+									control={
+										<Switch
+											checked={settings.specChecks}
+											onChange={(_, checked) =>
+												setSetting("specChecks", checked)
+											}
+											sx={{ mt: -0.5 }}
+										/>
+									}
+									label={
+										<Box>
+											<Box
+												sx={{ display: "flex", alignItems: "center", gap: 1 }}
+											>
+												<Typography variant="body2" sx={{ fontWeight: 500 }}>
+													Spec checks
+												</Typography>
+												<Chip
+													label="Beta"
+													size="small"
+													color="info"
+													variant="outlined"
+													sx={{
+														height: 18,
+														fontSize: "0.625rem",
+														fontWeight: 600,
+														"& .MuiChip-label": { px: 0.75 },
+													}}
+												/>
+											</Box>
+											<Typography variant="caption" color="text.secondary">
+												Lints loaded changes and specs for structural,
+												consistency, and language issues (missing documents,
+												malformed EARS blocks, ambiguous wording) and shows
+												findings on each change. Everything runs locally and
+												deterministically. Experimental - checks and their
+												severities may change.
+											</Typography>
+										</Box>
+									}
+								/>
+								<FormControlLabel
+									sx={{ ml: 3, mt: 1, alignItems: "flex-start" }}
+									control={
+										<Switch
+											checked={settings.specChecksIncludeArchived}
+											onChange={(_, checked) =>
+												setSetting("specChecksIncludeArchived", checked)
+											}
+											disabled={!settings.specChecks}
+											size="small"
+											sx={{ mt: -0.25 }}
+										/>
+									}
+									label={
+										<Box>
+											<Typography variant="body2" sx={{ fontWeight: 500 }}>
+												Include archived changes
+											</Typography>
+											<Typography variant="caption" color="text.secondary">
+												Also lint the documents and spec deltas of archived
+												changes. Off by default - archived findings are
+												historical and can drown the live signal.
+											</Typography>
+										</Box>
+									}
+								/>
+							</Box>
 
 							<SettingRow
 								title="Tutorial"

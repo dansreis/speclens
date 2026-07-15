@@ -22,9 +22,11 @@ import {
 } from "../lib/relativeTime";
 import type { Change, DocAuthorship, Repo } from "../lib/repoLoader";
 import { artifactLabel } from "../lib/schema";
+import { countBySeverity, type SpecCheckResult } from "../lib/specChecks";
 import { countTaskCompletion } from "../lib/tasksCompletion";
 import { RepoConfigModal } from "../repos/RepoConfigModal";
 import { AiDocSummaryButton } from "../specs/AiDocSummaryButton";
+import { useSpecCheckResults } from "../specs/useSpecChecks";
 import { seedDocSummaryCache } from "../store/useAiStore";
 import { useAppStore } from "../store/useAppStore";
 
@@ -68,9 +70,12 @@ export function OverviewView({ repo }: Props) {
 	const setActiveTab = useAppStore((s) => s.setActiveTab);
 	const readingWpm = useAppStore((s) => s.settings.readingWpm);
 	const aiModel = useAppStore((s) => s.settings.aiModel);
+	const specChecksEnabled = useAppStore((s) => s.settings.specChecks);
 	const signature = useAppStore((s) =>
 		repo ? (s.loadedSignatures[repo.id] ?? null) : null,
 	);
+	const checkResults: SpecCheckResult[] = useSpecCheckResults(repo);
+	const checkCounts = countBySeverity(checkResults);
 	const [configOpen, setConfigOpen] = useState(false);
 	const [tab, setTab] = useState<"summary" | "activity" | "changes" | "config">(
 		"summary",
@@ -413,6 +418,13 @@ export function OverviewView({ repo }: Props) {
 							label="Total reading time"
 							help={`Estimated time to read every proposal, spec, and tasks file in this repo at ${readingWpm} words per minute.`}
 						/>
+						{specChecksEnabled && (
+							<StatCard
+								value={checkCounts.total}
+								label="Check findings"
+								help={`Spec-check lint findings across this repo: ${checkCounts.errors} errors, ${checkCounts.warnings} warnings, ${checkCounts.infos} info.`}
+							/>
+						)}
 					</Box>
 					{repo?.config?.context && (
 						<Box
