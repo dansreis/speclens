@@ -30,10 +30,10 @@ The plumbing is done (`AppSettings` in `useAppStore`, persisted as one kv blob -
 
 ## Features
 
-- [ ] **Spec validation without LLMs** - in the spirit of [spec-check](https://github.com/ohpauleez/spec-check): deterministic, read-only analysis of the loaded OpenSpec docs to surface errors and mistakes before implementation. Candidate checks, roughly in order of effort:
-  - structural: change folders missing `proposal.md` / `tasks.md`, spec deltas referencing capabilities that don't exist, malformed EARS/Gherkin blocks (`WHEN` without `THEN`, scenario without a requirement)
-  - consistency: requirements duplicated across capabilities, archived changes still referenced by active ones, task lists that don't match the delta they claim to implement
-  - language lint: RFC 2119 misuse (lowercase "shall", `SHOULD` + `MUST` in one clause), ambiguity flags ("fast", "appropriate", "etc.")
+- [ ] **Spec validation (deterministic core, local-AI assist)** - deterministic first, local-LLM assist second, never silent; full design and tier policy in [docs/design/checks-and-claims.md](./design/checks-and-claims.md).
+  - [x] **Checks (Tier 0 lint engine)** - shipped: structural / consistency / language checks (`SL0xx` ids) in `src/lib/specChecks.ts` with a config registry, surfaced as a results panel, badges, in-document underlines with hover diagnostics, and an Overview section. `settings.specChecks`, on by default.
+  - [ ] **Claims (Tier 0 parsing)** - EARS parsing into structured claims, readiness gaps, approval state in SQLite
+  - [ ] **Assist + Export (Tier 1)** - "Interpret with AI" via the local model with grammar-constrained output; JSON claim export
   - further out: formalize requirement claims and hand them to an SMT solver (Z3) for contradiction detection, as spec-check does
 - [ ] **Local AI: capability summaries + project Q&A** - enabled by default but fully on-device and inert until the user explicitly downloads a model (preserves the no-network promise). Phased:
   1. **Overview summaries** - a high-level AI-generated summary of the repo's capabilities on the Overview page, each linking to its spec. Generated per repo, cached in SQLite keyed by the existing repo `signature` (regenerates only when specs change). Internal link scheme routes to the Specs view.
