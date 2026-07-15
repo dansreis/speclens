@@ -72,10 +72,10 @@ Checks are recomputed when a repo (re)loads - same lifecycle as the repo cache, 
 Where the implementation settled relative to the sketch above:
 
 - **Engine + config split.** Detection logic lives in `src/lib/specChecks.ts`; everything user-facing or tunable - ids, severities, titles, message templates, the SL022/SL023 word lists - lives in the `src/lib/specChecksConfig.ts` registry. Changing a severity or message is a one-line config edit. Both modules are pure (no Tauri imports), preserving the CLI extraction path.
-- **Surfacing went further than the badge sketch:** an IDE-style right panel (like the comments panel) with findings grouped by change, per-row severity counts in the changes list, severity-colored wavy underlines on the offending text in rendered documents, hover diagnostics on the underlines, and a findings section + stat card on the Overview. Clicking a finding anywhere navigates and blink-highlights the offending text via the existing scrollTarget mechanism (`jumpToFinding`).
+- **Surfacing went further than the badge sketch:** a dedicated Checks navigation view (two-level tree groupable by change or by check id, severity/text filters, collapsed by default), an IDE-style right panel (drag-resizable, scoped to the open change/spec, hidden on non-checkable views), per-row severity counts in the changes and specs listings, severity-colored wavy underlines with hover diagnostics in rendered documents, a ChangeViewer banner for findings with no text anchor, and a stat card on the Overview. Clicking a finding anywhere navigates and blink-highlights the offending text via the existing scrollTarget mechanism (`jumpToFinding`). Only one right panel (comments / checks / AI) is open at a time.
 - **Scoping decisions:** archived changes are skipped except where the archive state is the point (SL011 reference targets, SL013 inverse), so history doesn't drown the signal. SL003 tolerates deltas that introduce a capability via an ADDED section. Language checks (SL02x) run on spec deltas only, where prose is normative.
 - **Findings carry a `snippet`** - the offending line as it renders (markdown syntax stripped) - so the highlight engine can locate it in the DOM.
-- `settings.specChecks` defaults to **on**.
+- `settings.specChecks` defaults to **on**, labelled **Beta** in Settings; `settings.specChecksIncludeArchived` (off by default) opts archived changes into the full check set. All UI surfaces read results through the `useSpecCheckResults` hook.
 
 ## Feature 2: Claims (structured requirements)
 

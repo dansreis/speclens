@@ -16,7 +16,8 @@ Reads OpenSpec projects from local folders at runtime via a Tauri command. Users
 - **Tauri `load_repo(path)` command** in `src-tauri/src/lib.rs` loads one project: walks its `openspec/` subtree, reads markdown + yaml, and (when a `.git/` exists at the project root or its immediate parent - see `find_git_root`) derives `DocAuthorship` per file via the `git2` crate (vendored libgit2 - no git binary needed). Authorship comes from **one history walk for all files** (`collect_file_histories`) - see "Authorship pipeline". The git-root walk is intentionally capped at one level up so that loading a folder from inside an unrelated git checkout (e.g. somewhere under `~`) doesn't pull authorship from that repo. JS calls the command once per source and catches per-source errors to mark `missing: true`. **Git is optional** - when absent, `Change.authorship`, `createdAt`, and `archivedAt` are `null` and the UI degrades gracefully.
 - **Per-repo cold-start cache.** Each `load_repo` response includes a `signature` (git: `HEAD-sha + scoped porcelain status` hash; non-git: hash of `openspec/` file mtimes). The fast Tauri command `repo_signature(path)` returns the signature alone (no file reads). On cold start, `reloadAllSources` fetches the signature first; if it matches the cached entry in SQLite (`repo_cache` table, keyed by path), the saved `Repo` is used as-is - no walking, no git log. Mismatch → full reload + cache overwrite. See `src/lib/repoCache.ts` (thin wrapper over `src/lib/db.ts`). Dates in cached entries get revived (JSON round-trip loses the `Date` type). `useRepoSyncWatcher` polls the selected repo's signature (15s + window focus) and only *marks* it stale - reload is always user-initiated.
 - **Local AI (`src-tauri/src/ai.rs`).** On-device summaries via llama.cpp (Metal) or an Ollama backend, exposed as `ai_*` commands. Nothing downloads or runs until the user fetches a model, so the no-network promise holds. Prompts are built on the JS side (`src/lib/aiSummary.ts`, `aiDocSummary.ts` - pure, unit-tested); Rust just receives the final string.
-- **Spec checks (deterministic lint).** `src/lib/specChecks.ts` is the engine (structural SL00x errors, consistency SL01x warnings, language SL02x checks); `src/lib/specChecksConfig.ts` is the registry - ids, severities, titles, message templates, and word lists all live there, the engine holds only detection logic. Both modules must stay pure (no Tauri imports) so the lint core can be extracted into a CLI later (see `docs/design/checks-and-claims.md`). Surfaced as a right-side results panel, list badges, and in-document wavy underlines with hover diagnostics. `settings.specChecks` (default on) gates all computation.
+- **Spec checks (deterministic lint, labelled Beta).** `src/lib/specChecks.ts` is the engine (structural SL00x errors, consistency SL01x warnings, language SL02x checks) covering active change deltas + canonical `specs/<cap>/spec.md`; `src/lib/specChecksConfig.ts` is the registry - ids, severities, titles, message templates, and word lists all live there, the engine holds only detection logic. Both modules must stay pure (no Tauri imports) so the lint core can be extracted into a CLI later (see `docs/design/checks-and-claims.md`). Surfaced as: a Checks navigation view (two-level tree, by change or by check), a drag-resizable right panel that scopes to the open change/spec and hides on non-checkable views, in-document wavy underlines with hover diagnostics, list badges, and a ChangeViewer banner for findings with no text anchor. **All UI reads results through `src/specs/useSpecChecks.ts` (`useSpecCheckResults`)** - never call `runSpecChecks` from a component directly, the hook owns the settings wiring (`specChecks`, default on; `specChecksIncludeArchived`, default off).
+- **One right panel at a time.** Comments, spec checks, and the AI summary are mutually exclusive: an arbiter effect in App.tsx closes the other two on any panel's closed→open transition (last opened wins). Panel open state stays where it always lived (App / useAppStore / useAiStore).
 - **`@tauri-apps/plugin-dialog`** powers the "Add repository" folder picker (capability `dialog:default`).
 - **No i18n** - deferred. Tests: Vitest covers the pure `src/lib` helpers (`*.test.ts` co-located); `cargo test` covers the git2 authorship/signature layer (temp repos built with git2, no git binary). UI is untested. See `docs/ROADMAP.md`.
 
@@ -51,6 +52,7 @@ src/
 ├── views/                        # one component per sidebar destination
 │   ├── OverviewView.tsx          # stats, AI overview summary, activity, spec-check findings
 │   ├── ChangesView.tsx           # filterable change list (per-row check badges) → ChangeViewer
+│   ├── ChecksView.tsx            # spec-check analysis: two-level tree, severity/text filters
 │   ├── SpecsView.tsx             # capability specs → SpecCapabilityViewer
 │   ├── SchemasView.tsx           # openspec/schemas/ YAML viewer
 │   ├── FolderView.tsx            # auto-discovered Library folders (adr/, playbooks/, ...)
@@ -63,9 +65,10 @@ src/
 │   ├── Minimap.tsx               # spine + slide-out TOC panel (HackMD-style)
 │   ├── AttributionLine.tsx       # avatar(s) + "Created by X · edited by Y, 2d ago"
 │   ├── AiDocSummaryButton.tsx / AiSummaryPanel.tsx
-│   ├── SpecChecksBadge.tsx       # title-row toggle for the checks panel
-│   ├── SpecChecksPanel.tsx       # right panel: findings grouped by change, click = jump
+│   ├── SpecChecksBadge.tsx       # title-row panel toggle + shared CheckSeverityCounts
+│   ├── SpecChecksPanel.tsx       # right panel: resizable, scoped to open change/spec
 │   ├── specCheckJump.ts          # shared navigate-and-highlight for check findings
+│   ├── useSpecChecks.ts          # useSpecCheckResults - the only component entry to the engine
 │   ├── DocumentStatsTooltip.tsx  # words / read time / headings tooltip
 │   └── MermaidDiagram.tsx / MermaidLightbox.tsx   # lazy-loaded ```mermaid rendering
 ├── comments/

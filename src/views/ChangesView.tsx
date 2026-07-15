@@ -64,7 +64,15 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 	const allChanges = repo?.changes ?? [];
 
 	const checkResults: SpecCheckResult[] = useSpecCheckResults(repo);
-	const checkCounts = countBySeverity(checkResults);
+	// The header chip must reconcile with the rows below it, so it counts only
+	// change-owned findings. Canonical-spec findings (changeKey null) live in
+	// the Specs listing and the Checks view instead; the tooltip points there.
+	const changeFindings = useMemo(
+		() => checkResults.filter((r) => r.changeKey !== null),
+		[checkResults],
+	);
+	const checkCounts = countBySeverity(changeFindings);
+	const specFindingsCount = checkResults.length - changeFindings.length;
 	const countsByChange = useMemo(() => {
 		const map = new Map<string, ReturnType<typeof countBySeverity>>();
 		for (const change of allChanges) {
@@ -158,7 +166,7 @@ export function ChangesView({ repo, commentsOpen, onToggleComments }: Props) {
 				</ToggleButtonGroup>
 				{checkCounts.total > 0 && (
 					<Tooltip
-						title={`Spec checks across this repository: ${checkCounts.errors} errors, ${checkCounts.warnings} warnings, ${checkCounts.infos} info. Click to open the results panel.`}
+						title={`Spec checks on this repository's changes: ${checkCounts.errors} errors, ${checkCounts.warnings} warnings, ${checkCounts.infos} info.${specFindingsCount > 0 ? ` ${specFindingsCount} more finding${specFindingsCount === 1 ? "" : "s"} live in capability specs - see the Specs listing or the Checks view.` : ""} Click to open the results panel.`}
 						arrow
 					>
 						<Chip

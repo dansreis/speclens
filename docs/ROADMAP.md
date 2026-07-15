@@ -31,7 +31,7 @@ The plumbing is done (`AppSettings` in `useAppStore`, persisted as one kv blob -
 ## Features
 
 - [ ] **Spec validation (deterministic core, local-AI assist)** - deterministic first, local-LLM assist second, never silent; full design and tier policy in [docs/design/checks-and-claims.md](./design/checks-and-claims.md).
-  - [x] **Checks (Tier 0 lint engine)** - shipped: structural / consistency / language checks (`SL0xx` ids) in `src/lib/specChecks.ts` with a config registry, surfaced as a results panel, badges, in-document underlines with hover diagnostics, and an Overview section. `settings.specChecks`, on by default.
+  - [x] **Checks (Tier 0 lint engine, beta)** - shipped: structural / consistency / language checks (`SL0xx` ids) in `src/lib/specChecks.ts` with a config registry, over active deltas + canonical specs (archived opt-in). Surfaced as a Checks navigation view (tree, by change/by check), a scoped resizable results panel, in-document underlines with hover diagnostics, and badges. `settings.specChecks` on by default, labelled Beta.
   - [ ] **Claims (Tier 0 parsing)** - EARS parsing into structured claims, readiness gaps, approval state in SQLite
   - [ ] **Assist + Export (Tier 1)** - "Interpret with AI" via the local model with grammar-constrained output; JSON claim export
   - further out: formalize requirement claims and hand them to an SMT solver (Z3) for contradiction detection, as spec-check does
