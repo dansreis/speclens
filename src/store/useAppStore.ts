@@ -39,7 +39,7 @@ export interface AppSettings {
 	/** Daily new-version check against the GitHub releases API on startup. */
 	updateCheck: boolean;
 	/** Deterministic spec lint checks (badge on changes + results list).
-	 * Off by default - opt-in from Settings → General. */
+	 * On by default; can be disabled from Settings → General. */
 	specChecks: boolean;
 	/** Local AI features (model download + on-device inference). On by
 	 * default - the UI shows, but nothing downloads or runs until the user
@@ -57,7 +57,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	sidebarWidth: 240,
 	aiPanelWidth: 380,
 	updateCheck: true,
-	specChecks: false,
+	specChecks: true,
 	aiEnabled: true,
 	aiModel: DEFAULT_AI_MODEL_ID,
 };
