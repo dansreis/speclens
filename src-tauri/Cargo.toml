@@ -33,7 +33,7 @@ git2 = { version = "0.20", default-features = false, features = ["vendored-libgi
 # downloads with streamed progress); rustls-tls avoids any openssl linkage,
 # blocking keeps the download loop simple inside spawn_blocking.
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
-sha2 = "0.10"
+sha2 = "0.11"
 llama-cpp-2 = { version = "0.1.151", optional = true }
 encoding_rs = { version = "0.8", optional = true }
 
