@@ -28,7 +28,7 @@ walkdir = "2"
 # default-features = false drops the ssh/https transports (and their openssl
 # dependency); vendored-libgit2 builds libgit2 from source so no system
 # library is needed on any CI target or user machine.
-git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+git2 = { version = "0.21", default-features = false, features = ["vendored-libgit2"] }
 # Local-LLM support (src/ai.rs). reqwest is used from Rust only (model file
 # downloads with streamed progress); rustls-tls avoids any openssl linkage,
 # blocking keeps the download loop simple inside spawn_blocking.
