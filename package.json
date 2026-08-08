@@ -28,7 +28,7 @@
 		"@xyflow/react": "^12.11.2",
 		"github-slugger": "^2.0.0",
 		"js-yaml": "^5.2.1",
-		"mermaid": "^11.16.0",
+		"mermaid": "^11.16.1",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
 		"react-markdown": "^10.1.0",
